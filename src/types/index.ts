@@ -42,8 +42,7 @@ export interface Documento {
   tipoBaixa?: string; // 1.19
   dataBaixa?: string; // 1.20 - ISO Date string
   classificacaoArquivisticaId?: string; // 1.22 - FK to Classificacao
-  historicoClassificacoesArquivisticas?: string[]; // 1.28 - System-managed log 
-
+  
   // Campos para exibição, populados a partir da Classificação (manuais por enquanto)
   prazoArquivoCorrenteDisplay?: string; // 1.23
   prazoArquivoIntermediarioDisplay?: string; // 1.24
@@ -65,7 +64,6 @@ export interface Documento {
   observacoesGerais?: string; // 1.35
   codigoClassificacaoJudicialId?: string; // 1.36 - FK to ClasseJudicial, habilitado se categoria for "Processo Judicial"
   
-  classificacaoInativa?: boolean; 
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)
 }
 
@@ -132,4 +130,3 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
-

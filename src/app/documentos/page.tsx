@@ -98,7 +98,6 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA001",
-    historicoClassificacoesArquivisticas: ["020.1 - Processos Judiciais Cíveis"],
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
@@ -113,7 +112,6 @@ const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Nenhuma observação específica para este documento de exemplo.",
     codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
-    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo,
   },
   { 
     id: "DOC002", 
@@ -142,7 +140,6 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
     classificacaoArquivisticaId: "CLA002", 
-    historicoClassificacoesArquivisticas: ["030.5 - Correspondências Recebidas"],
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
@@ -157,7 +154,6 @@ const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Prioridade alta.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
-    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
   },
   { 
     id: "DOC003", 
@@ -186,7 +182,6 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA003", 
-    historicoClassificacoesArquivisticas: ["045.2 - Relatórios Anuais"],
     prazoArquivoCorrenteDisplay: "1 Ano",
     prazoArquivoIntermediarioDisplay: "0 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
@@ -201,7 +196,6 @@ const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Documento de acesso restrito.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
-    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo,
   },
    { 
     id: "DOC004", 
@@ -230,7 +224,6 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
     classificacaoArquivisticaId: "CLA002",
-    historicoClassificacoesArquivisticas: ["030.5 - Correspondências Recebidas"], 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos", 
     destinacaoFinalDisplay: "Eliminação",      
@@ -245,7 +238,6 @@ const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Documento eliminado conforme edital.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
-    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
   },
   { 
     id: "DOC005", 
@@ -274,7 +266,6 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA001", 
-    historicoClassificacoesArquivisticas: ["020.1 - Processos Judiciais Cíveis"],
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos", 
     destinacaoFinalDisplay: "Guarda Permanente", 
@@ -289,7 +280,6 @@ const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Documento sujeito à análise da CPAD.",
     codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
-    classificacaoInativa: false,
   },
 ];
 
@@ -317,7 +307,6 @@ const initialFormState: Partial<Documento> = {
   dataBaixa: undefined,
   descricaoDocumento: "",
   classificacaoArquivisticaId: "",
-  historicoClassificacoesArquivisticas: [],
   prazoArquivoCorrenteDisplay: "",
   prazoArquivoIntermediarioDisplay: "",
   destinacaoFinalDisplay: undefined,
@@ -412,23 +401,6 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
   { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
   { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
-  { 
-    id: 'mensagens', 
-    header: 'Mensagens', 
-    accessorKey: 'mensagens', 
-    defaultVisible: true, 
-    enableSorting: false,
-    cellFormatter: (_value, doc) => {
-      if (doc.classificacaoInativa) {
-        return (
-          <span className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
-            CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
-          </span>
-        );
-      }
-      return null; 
-    }
-  },
 ];
 
 
@@ -512,11 +484,7 @@ export default function DocumentosPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
-     if (id === 'historicoClassificacoes') {
-      setFormState(prev => ({ ...prev, historicoClassificacoesArquivisticas: value.split('\n') }));
-    } else {
-      setFormState(prev => ({ ...prev, [id]: value }));
-    }
+    setFormState(prev => ({ ...prev, [id]: value }));
   };
   
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -555,8 +523,6 @@ export default function DocumentosPage() {
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental!,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
-      historicoClassificacoesArquivisticas: formState.historicoClassificacoesArquivisticas || [],
-      classificacaoInativa: formState.classificacaoArquivisticaId ? (placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId)?.inativo || false) : false,
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -584,7 +550,6 @@ export default function DocumentosPage() {
         ...initialFormState, 
         ...doc,
         classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
-        historicoClassificacoesArquivisticas: doc.historicoClassificacoesArquivisticas || [],
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
@@ -890,6 +855,33 @@ export default function DocumentosPage() {
                 <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" />
               </div>
 
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
+                <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nomePartePrincipal">Nome da Parte Principal</Label>
+                <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tipoPartePrincipal">Tipo da Parte Principal</Label>
+                <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal}>
+                  <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                  <SelectContent>
+                    {tiposParteOpcoes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {formState.tipoPartePrincipal === 'Outro' && (
+                  <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" />
+                )}
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados (IDs)</Label>
+                <Input id="documentosRelacionadosIds" value={formState.documentosRelacionadosIds || ""} onChange={handleInputChange} placeholder="IDs separados por vírgula" />
+              </div>
+
+
               <div className="space-y-2">
                 <Label htmlFor="dataArquivamento">Data de Arquivamento</Label>
                  <DatePicker 
@@ -977,11 +969,6 @@ export default function DocumentosPage() {
                   placeholder="Selecione a data"
                 />
               </div>
-
-              <div className="space-y-2 md:col-span-3">
-                <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" />
-              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="classificacaoArquivisticaIdCombobox">Código de Classificação Arquivística</Label>
@@ -1046,16 +1033,6 @@ export default function DocumentosPage() {
                 <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               
-              <div className="space-y-2 md:col-span-3">
-                <Label htmlFor="historicoClassificacoes">Histórico de Classificações</Label>
-                <Textarea
-                  id="historicoClassificacoes"
-                  value={(formState.historicoClassificacoesArquivisticas || []).join("\n")}
-                  onChange={handleInputChange}
-                  className="min-h-[60px]"
-                  rows={Math.max(3, (formState.historicoClassificacoesArquivisticas || []).length || 1)}
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
@@ -1079,23 +1056,6 @@ export default function DocumentosPage() {
                 <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="nomePartePrincipal">Nome da Parte Principal</Label>
-                <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipoPartePrincipal">Tipo da Parte Principal</Label>
-                <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal}>
-                  <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                  <SelectContent>
-                    {tiposParteOpcoes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {formState.tipoPartePrincipal === 'Outro' && (
-                  <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" />
-                )}
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
                 <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica}>
@@ -1129,11 +1089,6 @@ export default function DocumentosPage() {
                 <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados (IDs)</Label>
-                <Input id="documentosRelacionadosIds" value={formState.documentosRelacionadosIds || ""} onChange={handleInputChange} placeholder="IDs separados por vírgula" />
-              </div>
-
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="observacoesGerais">Observações Gerais</Label>
                 <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" />
@@ -1434,6 +1389,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
