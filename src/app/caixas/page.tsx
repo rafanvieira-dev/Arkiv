@@ -92,6 +92,8 @@ const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
   { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
 ];
 
+type SortConfig = { id: string; direction: 'asc' | 'desc' };
+
 export default function CaixasPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa>>(initialFormStateCaixa);
@@ -105,7 +107,7 @@ export default function CaixasPage() {
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
-  const [sortingCaixas, setSortingCaixas] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
   const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>(placeholderCaixas);
 
   const resetFormAndDialogState = () => {
@@ -177,18 +179,23 @@ export default function CaixasPage() {
 
   React.useEffect(() => {
     let sortedCaixas = [...placeholderCaixas];
-    if (sortingCaixas) {
+    if (sortingCaixas.length > 0) {
       sortedCaixas.sort((a, b) => {
-        const valA = getSortableValueCaixas(a, sortingCaixas.id);
-        const valB = getSortableValueCaixas(b, sortingCaixas.id);
+        for (const sortConfig of sortingCaixas) {
+          const valA = getSortableValueCaixas(a, sortConfig.id);
+          const valB = getSortableValueCaixas(b, sortConfig.id);
 
-        if (valA === null || valA === undefined) return sortingCaixas.direction === 'asc' ? 1 : -1;
-        if (valB === null || valB === undefined) return sortingCaixas.direction === 'asc' ? -1 : 1;
-
-        const strA = String(valA).toLowerCase();
-        const strB = String(valB).toLowerCase();
-        if (strA < strB) return sortingCaixas.direction === 'asc' ? -1 : 1;
-        if (strA > strB) return sortingCaixas.direction === 'asc' ? 1 : -1;
+          let comparisonResult = 0;
+          if (valA === null || valA === undefined) comparisonResult = 1;
+          else if (valB === null || valB === undefined) comparisonResult = -1;
+          else {
+            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+          }
+    
+          if (comparisonResult !== 0) {
+            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
+          }
+        }
         return 0;
       });
     }
@@ -200,20 +207,29 @@ export default function CaixasPage() {
     const columnConfig = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
     if (!columnConfig || !columnConfig.enableSorting) return;
 
-    setSortingCaixas(prev => {
-      if (prev?.id === columnId) {
-        if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
-        return null;
+    setSortingCaixas(prevSorting => {
+      const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
+      let newSorting = [...prevSorting];
+
+      if (existingSortIndex !== -1) {
+        if (newSorting[existingSortIndex].direction === 'asc') {
+          newSorting[existingSortIndex].direction = 'desc';
+        } else {
+          newSorting.splice(existingSortIndex, 1);
+        }
+      } else {
+        newSorting.push({ id: columnId, direction: 'asc' });
       }
-      return { id: columnId, direction: 'asc' };
+      return newSorting;
     });
   };
 
   const renderSortIconCaixas = (columnId: string) => {
-    if (!sortingCaixas || sortingCaixas.id !== columnId) {
+    const sortConfig = sortingCaixas.find(s => s.id === columnId);
+    if (!sortConfig) {
       return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
     }
-    if (sortingCaixas.direction === 'asc') {
+    if (sortConfig.direction === 'asc') {
       return <ArrowUp className="ml-2 h-4 w-4" />;
     }
     return <ArrowDown className="ml-2 h-4 w-4" />;
@@ -476,3 +492,4 @@ export default function CaixasPage() {
     </TooltipProvider>
   );
 }
+

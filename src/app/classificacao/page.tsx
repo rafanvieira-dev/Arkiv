@@ -148,6 +148,7 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
   },
 ];
 
+type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -158,7 +159,7 @@ export default function ClassificacaoPage() {
   const [columnVisibilityClassificacoes, setColumnVisibilityClassificacoes] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
-  const [sortingClassificacoes, setSortingClassificacoes] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sortingClassificacoes, setSortingClassificacoes] = React.useState<SortConfig[]>([]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -220,25 +221,28 @@ export default function ClassificacaoPage() {
 
   React.useEffect(() => {
     let sortedClassificacoes = [...placeholderClassificacoes];
-    if (sortingClassificacoes) {
+    if (sortingClassificacoes.length > 0) {
       sortedClassificacoes.sort((a, b) => {
-        const valA = getSortableValueClassificacoes(a, sortingClassificacoes.id);
-        const valB = getSortableValueClassificacoes(b, sortingClassificacoes.id);
-
-        if (valA === null || valA === undefined) return sortingClassificacoes.direction === 'asc' ? 1 : -1;
-        if (valB === null || valB === undefined) return sortingClassificacoes.direction === 'asc' ? -1 : 1;
-        
-        if (typeof valA === 'boolean' && typeof valB === 'boolean') {
-           return sortingClassificacoes.direction === 'asc' ? (valA === valB ? 0 : valA ? -1 : 1) : (valA === valB ? 0 : valA ? 1 : -1);
+        for (const sortConfig of sortingClassificacoes) {
+          const valA = getSortableValueClassificacoes(a, sortConfig.id);
+          const valB = getSortableValueClassificacoes(b, sortConfig.id);
+    
+          let comparisonResult = 0;
+    
+          if (valA === null || valA === undefined) comparisonResult = 1;
+          else if (valB === null || valB === undefined) comparisonResult = -1;
+          else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+            comparisonResult = valA === valB ? 0 : valA ? -1 : 1; // true before false
+          } else if (typeof valA === 'number' && typeof valB === 'number') {
+            comparisonResult = valA - valB;
+          } else {
+            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+          }
+    
+          if (comparisonResult !== 0) {
+            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
+          }
         }
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sortingClassificacoes.direction === 'asc' ? valA - valB : valB - valA;
-        }
-
-        const strA = String(valA).toLowerCase();
-        const strB = String(valB).toLowerCase();
-        if (strA < strB) return sortingClassificacoes.direction === 'asc' ? -1 : 1;
-        if (strA > strB) return sortingClassificacoes.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -250,20 +254,29 @@ export default function ClassificacaoPage() {
     const columnConfig = ALL_COLUMNS_CONFIG_CLASSIFICACOES.find(col => col.id === columnId);
     if (!columnConfig || !columnConfig.enableSorting) return;
 
-    setSortingClassificacoes(prev => {
-      if (prev?.id === columnId) {
-        if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
-        return null;
+    setSortingClassificacoes(prevSorting => {
+      const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
+      let newSorting = [...prevSorting];
+
+      if (existingSortIndex !== -1) {
+        if (newSorting[existingSortIndex].direction === 'asc') {
+          newSorting[existingSortIndex].direction = 'desc';
+        } else {
+          newSorting.splice(existingSortIndex, 1);
+        }
+      } else {
+        newSorting.push({ id: columnId, direction: 'asc' });
       }
-      return { id: columnId, direction: 'asc' };
+      return newSorting;
     });
   };
 
   const renderSortIconClassificacoes = (columnId: string) => {
-    if (!sortingClassificacoes || sortingClassificacoes.id !== columnId) {
+    const sortConfig = sortingClassificacoes.find(s => s.id === columnId);
+    if (!sortConfig) {
       return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
     }
-    if (sortingClassificacoes.direction === 'asc') {
+    if (sortConfig.direction === 'asc') {
       return <ArrowUp className="ml-2 h-4 w-4" />;
     }
     return <ArrowDown className="ml-2 h-4 w-4" />;

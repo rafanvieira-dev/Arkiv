@@ -404,6 +404,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
 ];
 
+type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
@@ -424,11 +425,12 @@ export default function DocumentosPage() {
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
-  const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [classificacaoPopoverOpen, setClassificacaoPopoverOpen] = React.useState(false);
 
+
   React.useEffect(() => {
-    const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId);
+    const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
     if (classification) {
       let prazoCorrente = "";
       if (classification.tipoPrazoFaseCorrente === "Anos") {
@@ -463,7 +465,7 @@ export default function DocumentosPage() {
         anoEliminacaoPrevisto: anoEliminacao
       }));
 
-    } else {
+    } else if (formState.classificacaoArquivisticaId === "" || !classification) { // Also clear if ID is cleared or no active classification found
        setFormState(prev => ({
         ...prev,
         prazoArquivoCorrenteDisplay: "",
@@ -578,15 +580,13 @@ export default function DocumentosPage() {
     let newFilteredDocumentos = placeholderDocumentos.filter(doc => {
       let passesAll = true;
 
-      // Filter by caixaId from URL first
       if (caixaIdFromUrl) {
         if (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(caixaIdFromUrl)) {
           passesAll = false;
         }
       }
-      if (!passesAll) return false; // Early exit if caixaId filter fails
+      if (!passesAll) return false; 
 
-      // Then apply accordion filters
       if (filters.status && doc.status !== filters.status) passesAll = false;
       if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
       if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) passesAll = false;
@@ -620,8 +620,6 @@ export default function DocumentosPage() {
       if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) passesAll = false;
       if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) passesAll = false;
       
-      // This check was changed to ensure it works even if filters.codigoCaixa is an empty string (which means no filter on this field)
-      // It also now checks against the specific caixaIdFromUrl if it's present
       if (!caixaIdFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
       
 
@@ -644,25 +642,28 @@ export default function DocumentosPage() {
       return passesAll;
     });
 
-    if (sorting) {
+    if (sorting.length > 0) {
       newFilteredDocumentos.sort((a, b) => {
-        const valA = getSortableValue(a, sorting.id as string);
-        const valB = getSortableValue(b, sorting.id as string);
-
-        if (valA === null || valA === undefined) return sorting.direction === 'asc' ? 1 : -1;
-        if (valB === null || valB === undefined) return sorting.direction === 'asc' ? -1 : 1;
-        
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sorting.direction === 'asc' ? valA - valB : valB - valA;
+        for (const sortConfig of sorting) {
+          const valA = getSortableValue(a, sortConfig.id);
+          const valB = getSortableValue(b, sortConfig.id);
+    
+          let comparisonResult = 0;
+    
+          if (valA === null || valA === undefined) comparisonResult = 1;
+          else if (valB === null || valB === undefined) comparisonResult = -1;
+          else if (typeof valA === 'number' && typeof valB === 'number') {
+            comparisonResult = valA - valB;
+          } else if (valA instanceof Date && valB instanceof Date) {
+            comparisonResult = valA.getTime() - valB.getTime();
+          } else {
+            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+          }
+    
+          if (comparisonResult !== 0) {
+            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
+          }
         }
-        if (valA instanceof Date && valB instanceof Date) {
-          return sorting.direction === 'asc' ? valA.getTime() - valB.getTime() : valB.getTime() - valA.getTime();
-        }
-
-        const strA = String(valA).toLowerCase();
-        const strB = String(valB).toLowerCase();
-        if (strA < strB) return sorting.direction === 'asc' ? -1 : 1;
-        if (strA > strB) return sorting.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -699,12 +700,20 @@ export default function DocumentosPage() {
     const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
     if (!columnConfig || !columnConfig.enableSorting) return;
 
-    setSorting(prev => {
-      if (prev?.id === columnId) {
-        if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
-        return null; 
+    setSorting(prevSorting => {
+      const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
+      let newSorting = [...prevSorting];
+
+      if (existingSortIndex !== -1) {
+        if (newSorting[existingSortIndex].direction === 'asc') {
+          newSorting[existingSortIndex].direction = 'desc';
+        } else {
+          newSorting.splice(existingSortIndex, 1);
+        }
+      } else {
+        newSorting.push({ id: columnId, direction: 'asc' });
       }
-      return { id: columnId, direction: 'asc' };
+      return newSorting;
     });
   };
 
@@ -721,20 +730,24 @@ export default function DocumentosPage() {
     if (!column) return null;
     const value = doc[column.accessorKey as keyof Documento];
 
-    if (column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') {
-      return value && isValid(parseISO(value as string)) ? parseISO(value as string) : null;
+    if ((column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') && value && typeof value === 'string') {
+      return isValid(parseISO(value)) ? parseISO(value) : null;
     }
     return value;
   };
 
   const renderSortIcon = (columnId: string) => {
-    if (!sorting || sorting.id !== columnId) {
+    const sortConfig = sorting.find(s => s.id === columnId);
+    if (!sortConfig) {
       return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
     }
-    if (sorting.direction === 'asc') {
-      return <ArrowUp className="ml-2 h-4 w-4" />;
+    // Optional: Display sort order if multiple columns are sorted
+    // const sortOrder = sorting.findIndex(s => s.id === columnId) + 1;
+    // const displaySortOrder = sorting.length > 1 ? ` (${sortOrder})` : "";
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="ml-2 h-4 w-4" />; // {displaySortOrder}
     }
-    return <ArrowDown className="ml-2 h-4 w-4" />;
+    return <ArrowDown className="ml-2 h-4 w-4" />; // {displaySortOrder}
   };
 
   const selectedClassificationDisplay = formState.classificacaoArquivisticaId
@@ -1006,11 +1019,8 @@ export default function DocumentosPage() {
                               <CommandItem
                                 key={classificacao.id}
                                 value={classificacao.id}
-                                onSelect={(selectedId) => {
-                                  setFormState(prev => ({
-                                    ...prev,
-                                    classificacaoArquivisticaId: selectedId,
-                                  }));
+                                onSelect={(currentValue) => {
+                                  setFormState(prev => ({ ...prev, classificacaoArquivisticaId: currentValue === formState.classificacaoArquivisticaId ? "" : currentValue }));
                                   setClassificacaoPopoverOpen(false);
                                 }}
                               >
@@ -1400,6 +1410,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
