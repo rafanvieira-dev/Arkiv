@@ -11,7 +11,7 @@ import {
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
   ChevronLeft, ChevronRight, CheckSquare, Square
-} from "lucide-react";
+} from "lucide-react"; // Ensured ArrowUp and ArrowDown are imported
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -89,7 +89,7 @@ const placeholderDocumentos: Documento[] = [
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "", 
+    anoEliminacaoPrevisto: "2039", 
     nomePartePrincipal: "Empresa Exemplo Ltda",
     tipoPartePrincipal: "Autor",
     outroTipoPartePrincipal: "",
@@ -345,7 +345,7 @@ const initialFiltersState = {
   prazoIntermediario: "",
 };
 
-const ALL_VALUES_SENTINEL = "ALL_VALUES"; // Changed from ALL_VALUES_SENTINEL to avoid conflict with potential future enums and ensure it's a valid, non-empty string.
+const ALL_VALUES_SENTINEL = "ALL_VALUES"; 
 
 type ColumnConfig = {
   id: keyof Documento | string;
@@ -356,7 +356,6 @@ type ColumnConfig = {
   cellFormatter?: (value: any, doc: Documento) => React.ReactNode;
 };
 
-// Moved ALL_COLUMNS_CONFIG outside the component
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
   { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Emprestado' ? 'outline' : 'default' }>{value || 'N/A'}</Badge> },
@@ -417,6 +416,7 @@ export default function DocumentosPage() {
   );
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
   const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const SCROLL_AMOUNT = 200;
 
 
   React.useEffect(() => {
@@ -714,12 +714,11 @@ export default function DocumentosPage() {
     return <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  const SCROLL_AMOUNT = 200; // pixels
-
   const handleHorizontalScroll = (direction: 'left' | 'right') => {
     if (tableScrollRef.current) {
       const viewport = tableScrollRef.current.children[0] as HTMLDivElement | undefined;
       if (viewport) {
+        viewport.style.scrollBehavior = 'auto'; 
         if (direction === 'left') {
           viewport.scrollLeft -= SCROLL_AMOUNT;
         } else {
@@ -1319,7 +1318,7 @@ export default function DocumentosPage() {
                       ) : null
                     )}
                     <TableCell className="sticky right-0 bg-background z-10 py-2 px-3">
-                      <div className="flex flex-col items-end">
+                       <div className="flex flex-col items-end">
                         {doc.classificacaoInativa && (
                           <div className="w-full text-left mb-1">
                             <p className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
@@ -1350,4 +1349,4 @@ export default function DocumentosPage() {
     </div>
   );
 }
-
+    
