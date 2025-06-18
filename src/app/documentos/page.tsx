@@ -150,6 +150,7 @@ const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 0,
     tipoMidiaDetalhe: undefined,
+    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "",
     paginaMidiaDetalhe: "",
     digitalizado: "Não", 
@@ -192,6 +193,7 @@ const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 0,
     tipoMidiaDetalhe: undefined,
+    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "",
     paginaMidiaDetalhe: "",
     digitalizado: "Não", 
@@ -282,8 +284,7 @@ const initialFiltersState = {
   segredoJustica: "",
   grauSigilo: "",
   digitalizado: "", 
-  // Campos de filtro antigos que não estão na imagem, mas mantidos na lógica
-  anoLimiteDocumento: "", // Era 'Documentos Até o Ano (Arquivamento)'
+  anoLimiteDocumento: "", 
   prazoCorrente: "",
   prazoIntermediario: "",
 };
@@ -444,7 +445,7 @@ export default function DocumentosPage() {
 
   const parseDataAbrangenteForYear = (dataAbrangente?: string): string | undefined => {
     if (!dataAbrangente) return undefined;
-    const matchAno = dataAbrangente.match(/\d{4}/); // Pega o primeiro ano que encontrar
+    const matchAno = dataAbrangente.match(/\d{4}/); 
     return matchAno ? matchAno[0] : undefined;
   };
   
@@ -452,7 +453,6 @@ export default function DocumentosPage() {
     const newFilteredDocumentos = placeholderDocumentos.filter(doc => {
       let passesAll = true;
 
-      // Filtros da imagem
       if (filters.status && doc.status !== filters.status) passesAll = false;
       if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
       if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) passesAll = false;
@@ -493,16 +493,14 @@ export default function DocumentosPage() {
       if (filters.codigoAtoM && doc.codigoAtoM && !doc.codigoAtoM.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) passesAll = false;
       if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) passesAll = false;
       if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) passesAll = false;
-
-      // Filtros antigos mantidos na lógica (para não quebrar se ainda forem usados no estado)
+      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) passesAll = false;
+      
       if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
         const docYear = getYear(parseISO(doc.dataArquivamento));
         if (docYear > parseInt(filters.anoLimiteDocumento, 10)) passesAll = false;
       }
       if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) passesAll = false;
       if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) passesAll = false;
-      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) passesAll = false;
-
 
       return passesAll;
     });
@@ -941,7 +939,6 @@ export default function DocumentosPage() {
                     <SelectItem value="Sonoro">Sonoro</SelectItem>
                     <SelectItem value="Filmográfico">Filmográfico</SelectItem>
                     <SelectItem value="Audiovisual">Audiovisual</SelectItem>
-                    {/* Adicionar outros se necessário */}
                   </SelectContent>
                 </Select>
               </div>
@@ -1005,20 +1002,6 @@ export default function DocumentosPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              {/* Campos de filtro que existiam antes e não estão na imagem, mas mantidos na lógica interna */}
-              {/* <div className="space-y-2">
-                <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arquivamento)</Label>
-                <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2014" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
-                <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
-                <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div> */}
             </CardContent>
             <CardFooter className="flex justify-end gap-2 px-6 pb-6">
               <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
@@ -1029,7 +1012,7 @@ export default function DocumentosPage() {
       </Accordion>
 
 
-      <Card className="mt-0"> {/* Removido mt-6 para ficar junto ao accordion */}
+      <Card className="mt-0">
         <CardHeader>
           <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
         </CardHeader>
@@ -1038,43 +1021,16 @@ export default function DocumentosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nº Documento</TableHead>
+                  <TableHead>ID Interno</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Órgão</TableHead>
                   <TableHead>Origem</TableHead>
-                  <TableHead>Tipo Meio</TableHead>
-                  <TableHead>Gênero Doc.</TableHead>
+                  <TableHead>Segredo de Justiça</TableHead>
+                  <TableHead>Sigilo LAI</TableHead>
+                  <TableHead>Gênero</TableHead>
                   <TableHead>Categoria</TableHead>
-                  <TableHead>Tipo Doc.</TableHead>
+                  <TableHead>Tipo Documento</TableHead>
+                  <TableHead>Nº Documento</TableHead>
                   <TableHead>Data Abrangente</TableHead>
-                  <TableHead>Data Arq.</TableHead>
-                  <TableHead>Qtd. Vol.</TableHead>
-                  <TableHead>Qtd. Apen.</TableHead>
-                  <TableHead>Nºs Apensos</TableHead>
-                  <TableHead>Tot. Mídias</TableHead>
-                  <TableHead>Tipo Mídia</TableHead>
-                  <TableHead>Nº Mídia</TableHead>
-                  <TableHead>Pág. Mídia</TableHead>
-                  <TableHead>Digitalizado</TableHead>
-                  <TableHead>Tipo Baixa</TableHead>
-                  <TableHead>Data Baixa</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>ID Class. Arq.</TableHead>
-                  <TableHead>Prazo Corr.</TableHead>
-                  <TableHead>Prazo Interm.</TableHead>
-                  <TableHead>Dest. Final (Class.)</TableHead>
-                  <TableHead>Alt. Dest. Final</TableHead>
-                  <TableHead>Ano Elim. Prev.</TableHead>
-                  <TableHead>Parte Princ.</TableHead>
-                  <TableHead>Tipo Parte</TableHead>
-                  <TableHead>Segredo Justiça</TableHead>
-                  <TableHead>Grau Sigilo</TableHead>
-                  <TableHead>Caixa(s)</TableHead>
-                  <TableHead>Cód. AtoM</TableHead>
-                  <TableHead>Docs. Relac.</TableHead>
-                  <TableHead>Obs. Gerais</TableHead>
-                  <TableHead>ID Class. Jud.</TableHead>
-                  <TableHead>Data Cad.</TableHead>
                   <TableHead className="text-right sticky right-0 bg-background z-10">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1082,7 +1038,7 @@ export default function DocumentosPage() {
                 {displayedDocumentos.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">
-                      {doc.numeroDocumento || doc.id}
+                      {doc.id}
                       {doc.classificacaoInativa && (
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1 whitespace-normal">
                           CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
@@ -1090,41 +1046,14 @@ export default function DocumentosPage() {
                       )}
                     </TableCell>
                     <TableCell><Badge variant={doc.status === 'Arquivado' ? 'secondary' : doc.status === 'Emprestado' ? 'outline' : 'default' }>{doc.status || 'N/A'}</Badge></TableCell>
-                    <TableCell>{doc.orgao || 'N/A'}</TableCell>
                     <TableCell>{doc.origem || 'N/A'}</TableCell>
-                    <TableCell>{doc.tipoMeio || 'N/A'}</TableCell>
+                    <TableCell>{doc.segredoJustica || 'N/A'}</TableCell>
+                    <TableCell>{doc.grauSigilo || 'N/A'}</TableCell>
                     <TableCell>{doc.generoDocumental || 'N/A'}</TableCell>
                     <TableCell>{doc.categoria || 'N/A'}</TableCell>
                     <TableCell>{doc.tipoDocumento || 'N/A'}</TableCell>
+                    <TableCell>{doc.numeroDocumento || 'N/A'}</TableCell>
                     <TableCell>{doc.dataAbrangente || 'N/A'}</TableCell>
-                    <TableCell>{doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento)) ? format(parseISO(doc.dataArquivamento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
-                    <TableCell>{doc.quantidadeVolumes ?? 'N/A'}</TableCell>
-                    <TableCell>{doc.quantidadeApensos ?? 'N/A'}</TableCell>
-                    <TableCell>{doc.numerosApensos || 'N/A'}</TableCell>
-                    <TableCell>{doc.totalMidias ?? 'N/A'}</TableCell>
-                    <TableCell>{doc.tipoMidiaDetalhe || 'N/A'}</TableCell>
-                    <TableCell>{doc.numeroMidiaDetalhe || 'N/A'}</TableCell>
-                    <TableCell>{doc.paginaMidiaDetalhe || 'N/A'}</TableCell>
-                    <TableCell>{doc.digitalizado || 'N/A'}</TableCell>
-                    <TableCell>{doc.tipoBaixa || 'N/A'}</TableCell>
-                    <TableCell>{doc.dataBaixa && isValid(parseISO(doc.dataBaixa)) ? format(parseISO(doc.dataBaixa), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
-                    <TableCell className="max-w-[200px] truncate whitespace-normal">{doc.descricaoDocumento || 'N/A'}</TableCell>
-                    <TableCell>{doc.classificacaoArquivisticaId || 'N/A'}</TableCell>
-                    <TableCell>{doc.prazoArquivoCorrenteDisplay || 'N/A'}</TableCell>
-                    <TableCell>{doc.prazoArquivoIntermediarioDisplay || 'N/A'}</TableCell>
-                    <TableCell>{doc.destinacaoFinalDisplay || 'N/A'}</TableCell>
-                    <TableCell>{doc.alteracaoDestinacaoFinal || 'N/A'}</TableCell>
-                    <TableCell>{doc.anoEliminacaoPrevisto || 'N/A'}</TableCell>
-                    <TableCell>{doc.nomePartePrincipal || 'N/A'}</TableCell>
-                    <TableCell>{doc.tipoPartePrincipal || 'N/A'}</TableCell>
-                    <TableCell>{doc.segredoJustica || 'N/A'}</TableCell>
-                    <TableCell>{doc.grauSigilo || 'N/A'}</TableCell>
-                    <TableCell>{doc.codigosCaixa || 'N/A'}</TableCell>
-                    <TableCell>{doc.codigoAtoM || 'N/A'}</TableCell>
-                    <TableCell>{doc.documentosRelacionadosIds || 'N/A'}</TableCell>
-                    <TableCell className="max-w-[200px] truncate whitespace-normal">{doc.observacoesGerais || 'N/A'}</TableCell>
-                    <TableCell>{doc.codigoClassificacaoJudicialId || 'N/A'}</TableCell>
-                    <TableCell>{doc.dataCadastro && isValid(parseISO(doc.dataCadastro)) ? format(parseISO(doc.dataCadastro), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</TableCell>
                     <TableCell className="text-right sticky right-0 bg-background z-10">
                       <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
                         <Edit className="h-4 w-4" />
@@ -1146,8 +1075,3 @@ export default function DocumentosPage() {
     </div>
   );
 }
-
-
-    
-
-    
