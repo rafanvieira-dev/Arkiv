@@ -24,6 +24,9 @@ export interface Documento {
   tipoDocumento: string; // 1.7 - Campo para cadastramento do Tipo de Documento.
   numeroDocumento?: string; // 1.8
   dataAbrangente?: string; // 1.9 - Pode ser data completa, mês/ano, ou um intervalo. Ex.: 01/2023 – 12/2024
+  descricaoDocumento?: string; // 1.21 - Antigo 'observacoes' ou campo principal de descrição.
+  nomePartePrincipal?: string;
+  documentosRelacionadosIds?: string; // 1.34 - Simplificado para string (separada por vírgula)
   dataArquivamento?: string; // 1.10 - ISO Date string
   quantidadeVolumes?: number; // 1.11
   quantidadeApensos?: number; // 1.12
@@ -38,8 +41,8 @@ export interface Documento {
   digitalizado: 'Sim' | 'Não'; // 1.18
   tipoBaixa?: string; // 1.19
   dataBaixa?: string; // 1.20 - ISO Date string
-  descricaoDocumento?: string; // 1.21 - Antigo 'observacoes' ou campo principal de descrição.
   classificacaoArquivisticaId?: string; // 1.22 - FK to Classificacao
+  historicoClassificacoesArquivisticas?: string[]; // 1.28 - System-managed log 
 
   // Campos para exibição, populados a partir da Classificação (manuais por enquanto)
   prazoArquivoCorrenteDisplay?: string; // 1.23
@@ -49,10 +52,7 @@ export interface Documento {
   alteracaoDestinacaoFinal: 'Não Alterar' | 'Guarda Permanente – Guarda Amostral' | 'Guarda Permanente – Decisão da CPAD'; // 1.26 - Opção padrão “Não Alterar”
   anoEliminacaoPrevisto?: string; // 1.27 - Calculado
 
-  historicoClassificacoesArquivisticas?: string[]; // 1.28 - System-managed log (não é campo de formulário direto)
-
   // Simplificado para Partes (1.29)
-  nomePartePrincipal?: string;
   tipoPartePrincipal?: string; // Lista extensa, permitir "Outro"
   outroTipoPartePrincipal?: string;
   // partes?: ParteDocumento[]; // Estrutura completa para o futuro
@@ -62,7 +62,6 @@ export interface Documento {
   
   codigosCaixa?: string; // 1.32 - Simplificado para string (separada por vírgula) por agora
   codigoAtoM?: string; // 1.33
-  documentosRelacionadosIds?: string; // 1.34 - Simplificado para string (separada por vírgula)
   observacoesGerais?: string; // 1.35
   codigoClassificacaoJudicialId?: string; // 1.36 - FK to ClasseJudicial, habilitado se categoria for "Processo Judicial"
   
@@ -133,3 +132,4 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+

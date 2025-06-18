@@ -98,6 +98,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA001",
+    historicoClassificacoesArquivisticas: ["020.1 - Processos Judiciais Cíveis"],
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
@@ -141,6 +142,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
     classificacaoArquivisticaId: "CLA002", 
+    historicoClassificacoesArquivisticas: [],
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
@@ -184,6 +186,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA003", 
+    historicoClassificacoesArquivisticas: [],
     prazoArquivoCorrenteDisplay: "1 Ano",
     prazoArquivoIntermediarioDisplay: "0 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
@@ -226,7 +229,8 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Não", 
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
-    classificacaoArquivisticaId: "CLA002", 
+    classificacaoArquivisticaId: "CLA002",
+    historicoClassificacoesArquivisticas: [], 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos", 
     destinacaoFinalDisplay: "Eliminação",      
@@ -270,6 +274,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA001", 
+    historicoClassificacoesArquivisticas: [],
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos", 
     destinacaoFinalDisplay: "Guarda Permanente", 
@@ -312,6 +317,7 @@ const initialFormState: Partial<Documento> = {
   dataBaixa: undefined,
   descricaoDocumento: "",
   classificacaoArquivisticaId: "",
+  historicoClassificacoesArquivisticas: [],
   prazoArquivoCorrenteDisplay: "",
   prazoArquivoIntermediarioDisplay: "",
   destinacaoFinalDisplay: undefined,
@@ -525,6 +531,17 @@ export default function DocumentosPage() {
   };
 
   const handleSaveChanges = () => {
+    const currentClassificationId = formState.classificacaoArquivisticaId;
+    const currentClassification = placeholderClassificacoesSimulado.find(c => c.id === currentClassificationId);
+    let updatedHistorico = [...(formState.historicoClassificacoesArquivisticas || [])];
+
+    if (currentClassification) {
+        const historyEntry = `${currentClassification.codigo} - ${currentClassification.descricao}`;
+        if (!updatedHistorico.length || updatedHistorico[updatedHistorico.length - 1] !== historyEntry) {
+            updatedHistorico.push(historyEntry);
+        }
+    }
+
     const finalFormState = {
       ...formState,
       id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
@@ -532,8 +549,17 @@ export default function DocumentosPage() {
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
+      historicoClassificacoesArquivisticas: updatedHistorico,
     };
     console.log("Salvando documento:", finalFormState);
+
+    const docIndex = placeholderDocumentos.findIndex(doc => doc.id === finalFormState.id);
+    if (docIndex > -1) {
+      placeholderDocumentos[docIndex] = finalFormState as Documento;
+    } else {
+      placeholderDocumentos.push(finalFormState as Documento);
+    }
+    applyFiltersAndSorting();
 
     setIsDialogOpen(false);
   };
@@ -558,6 +584,7 @@ export default function DocumentosPage() {
       setFormState({
         ...initialFormState, 
         ...doc,
+        historicoClassificacoesArquivisticas: doc.historicoClassificacoesArquivisticas || [],
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         prazoArquivoCorrenteDisplay: prazoCorr,
@@ -1018,6 +1045,18 @@ export default function DocumentosPage() {
                 <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
                 <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
+              
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="historicoClassificacoes">Histórico de Classificações</Label>
+                <Textarea
+                  id="historicoClassificacoes"
+                  value={formState.historicoClassificacoesArquivisticas?.join("\n") || ""}
+                  readOnly
+                  className="bg-muted/50 cursor-not-allowed min-h-[60px]"
+                  rows={3}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
                  <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
@@ -1394,6 +1433,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
