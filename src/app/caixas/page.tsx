@@ -44,11 +44,21 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
 
-const placeholderCaixas: Caixa[] = [
+const placeholderCaixasInitial: Caixa[] = [
   { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
   { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
   { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
 ];
+
+const initialFormStateCaixa: Partial<Caixa> = {
+  codigoCaixa: "",
+  descricao: "",
+  tipo: "",
+  status: "Aberta",
+  localizacao: "",
+  situacao: "Incompleta",
+};
+
 
 type ColumnConfigCaixas = {
   id: keyof Caixa | string;
@@ -70,8 +80,12 @@ const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
 
 export default function CaixasPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa>>(initialFormStateCaixa);
   const [selectedTipoCaixa, setSelectedTipoCaixa] = React.useState<string>("");
   const [outroTipoCaixa, setOutroTipoCaixa] = React.useState<string>("");
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  const [placeholderCaixas, setPlaceholderCaixas] = React.useState<Caixa[]>(placeholderCaixasInitial);
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
@@ -79,15 +93,64 @@ export default function CaixasPage() {
   const [sortingCaixas, setSortingCaixas] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
   const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>(placeholderCaixas);
 
-  const handleSaveChanges = () => {
-    const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
-    console.log("Salvando nova caixa com tipo:", tipoFinal);
-    // Lógica para salvar nova caixa (será implementada futuramente)
-    // Adicionar aqui a lógica para coletar todos os campos do formulário
-    setIsDialogOpen(false);
+  const resetFormAndDialogState = () => {
+    setFormStateCaixa(initialFormStateCaixa);
     setSelectedTipoCaixa("");
     setOutroTipoCaixa("");
+    setIsEditing(false);
   };
+
+  const handleOpenDialog = (caixa?: Caixa) => {
+    if (caixa) {
+      setIsEditing(true);
+      setFormStateCaixa(caixa);
+      if (tiposCaixaPadrao.includes(caixa.tipo)) {
+        setSelectedTipoCaixa(caixa.tipo);
+        setOutroTipoCaixa("");
+      } else {
+        setSelectedTipoCaixa("Outro");
+        setOutroTipoCaixa(caixa.tipo);
+      }
+    } else {
+      resetFormAndDialogState();
+    }
+    setIsDialogOpen(true);
+  };
+  
+  const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormStateCaixa(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleFormSelectChange = (id: keyof Caixa) => (value: string) => {
+    setFormStateCaixa(prev => ({ ...prev, [id]: value }));
+  };
+
+
+  const handleSaveChanges = () => {
+    const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
+    
+    const caixaDataToSave: Caixa = {
+      ...initialFormStateCaixa, // ensure all fields are present
+      ...formStateCaixa,
+      tipo: tipoFinal,
+      id: isEditing && formStateCaixa.id ? formStateCaixa.id : `CX${Date.now()}`,
+      status: formStateCaixa.status || 'Aberta',
+      situacao: formStateCaixa.situacao || 'Incompleta',
+    };
+
+    let updatedCaixas;
+    if (isEditing) {
+      updatedCaixas = placeholderCaixas.map(c => c.id === caixaDataToSave.id ? caixaDataToSave : c);
+    } else {
+      updatedCaixas = [...placeholderCaixas, caixaDataToSave];
+    }
+    setPlaceholderCaixas(updatedCaixas);
+    
+    setIsDialogOpen(false);
+    // resetFormAndDialogState() is called by onOpenChange of Dialog
+  };
+  
 
   const getSortableValueCaixas = (caixa: Caixa, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
@@ -114,7 +177,7 @@ export default function CaixasPage() {
       });
     }
     setDisplayedCaixas(sortedCaixas);
-  }, [sortingCaixas]);
+  }, [sortingCaixas, placeholderCaixas]);
 
 
   const handleSortCaixas = (columnId: string) => {
@@ -171,21 +234,20 @@ export default function CaixasPage() {
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
           setIsDialogOpen(isOpen);
           if (!isOpen) {
-            setSelectedTipoCaixa("");
-            setOutroTipoCaixa("");
+            resetFormAndDialogState();
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Caixa
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle className="font-headline text-primary">Nova Caixa</DialogTitle>
+              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
               <DialogDescription>
-                Preencha as informações abaixo para cadastrar uma nova caixa. Campos marcados com * são obrigatórios.
+                Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -193,20 +255,26 @@ export default function CaixasPage() {
                 <Label htmlFor="codigoCaixa" className="text-right">
                   Código*
                 </Label>
-                <Input id="codigoCaixa" placeholder="Ex: CX-A-001" className="col-span-3" />
+                <Input id="codigoCaixa" placeholder="Ex: CX-A-001" className="col-span-3" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricaoCaixa" className="text-right">
+                <Label htmlFor="descricao" className="text-right">
                   Descrição
                 </Label>
-                <Textarea id="descricaoCaixa" placeholder="Detalhes adicionais sobre a caixa" className="col-span-3" />
+                <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" className="col-span-3" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tipoCaixa" className="text-right">
+                <Label htmlFor="tipo" className="text-right">
                   Tipo*
                 </Label>
-                <Select onValueChange={setSelectedTipoCaixa} value={selectedTipoCaixa}>
-                  <SelectTrigger id="tipoCaixa" className="col-span-3">
+                <Select onValueChange={(value) => {
+                  setSelectedTipoCaixa(value);
+                  if (value !== "Outro") {
+                    setFormStateCaixa(prev => ({ ...prev, tipo: value }));
+                    setOutroTipoCaixa("");
+                  }
+                }} value={selectedTipoCaixa}>
+                  <SelectTrigger id="tipo" className="col-span-3">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -227,22 +295,25 @@ export default function CaixasPage() {
                     placeholder="Digite o novo tipo"
                     className="col-span-3"
                     value={outroTipoCaixa}
-                    onChange={(e) => setOutroTipoCaixa(e.target.value)}
+                    onChange={(e) => {
+                      setOutroTipoCaixa(e.target.value);
+                      setFormStateCaixa(prev => ({ ...prev, tipo: e.target.value }));
+                    }}
                   />
                 </div>
               )}
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="localizacaoCaixa" className="text-right">
+                <Label htmlFor="localizacao" className="text-right">
                   Localização
                 </Label>
-                <Input id="localizacaoCaixa" placeholder="Ex: Estante 1, Prateleira A" className="col-span-3" />
+                <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" className="col-span-3" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="statusCaixa" className="text-right">
+                <Label htmlFor="status" className="text-right">
                   Status*
                 </Label>
-                <Select defaultValue="Aberta">
-                  <SelectTrigger id="statusCaixa" className="col-span-3">
+                <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
+                  <SelectTrigger id="status" className="col-span-3">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -252,11 +323,11 @@ export default function CaixasPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="situacaoCaixa" className="text-right">
+                <Label htmlFor="situacao" className="text-right">
                   Situação*
                 </Label>
-                <Select defaultValue="Incompleta">
-                  <SelectTrigger id="situacaoCaixa" className="col-span-3">
+                <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
+                  <SelectTrigger id="situacao" className="col-span-3">
                     <SelectValue placeholder="Selecione a situação" />
                   </SelectTrigger>
                   <SelectContent>
@@ -361,7 +432,7 @@ export default function CaixasPage() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Editar Caixa">
+                            <Button variant="ghost" size="icon" aria-label="Editar Caixa" onClick={() => handleOpenDialog(item)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
