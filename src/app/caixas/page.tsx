@@ -78,10 +78,10 @@ const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
     defaultVisible: true,
     enableSorting: true,
     cellFormatter: (value, caixa) => (
-      <Link href={`/documentos?caixaId=${caixa.id}`} passHref legacyBehavior>
-        <a target="_blank" rel="noopener noreferrer" className="text-primary hover:underline cursor-pointer font-medium">
+      <Link href={`/documentos?caixaId=${caixa.id}`} passHref>
+        <span className="text-primary hover:underline cursor-pointer font-medium">
           {value}
-        </a>
+        </span>
       </Link>
     )
   },
@@ -151,10 +151,10 @@ export default function CaixasPage() {
       ...initialFormStateCaixa,
       ...formStateCaixa,
       tipo: tipoFinal,
-      id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`, // Use editingCaixaId if editing
+      id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`, 
       status: formStateCaixa.status || 'Aberta',
       situacao: formStateCaixa.situacao || 'Incompleta',
-    } as Caixa; // Cast to Caixa to ensure all fields are there
+    } as Caixa; 
 
     let updatedCaixas;
     if (isEditing && editingCaixaId) {
@@ -165,7 +165,6 @@ export default function CaixasPage() {
     setPlaceholderCaixas(updatedCaixas);
 
     setIsDialogOpen(false);
-    // resetFormAndDialogState() is called by onOpenChange of Dialog
   };
 
 
@@ -291,7 +290,7 @@ export default function CaixasPage() {
                     setFormStateCaixa(prev => ({ ...prev, tipo: value }));
                     setOutroTipoCaixa("");
                   } else {
-                     setFormStateCaixa(prev => ({ ...prev, tipo: "" })); // Clear tipo if "Outro" is selected, user must specify
+                     setFormStateCaixa(prev => ({ ...prev, tipo: "" })); 
                   }
                 }} value={selectedTipoCaixa}>
                   <SelectTrigger id="tipo" className="col-span-3">
