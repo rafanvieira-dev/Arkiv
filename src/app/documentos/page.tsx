@@ -358,7 +358,7 @@ type ColumnConfig = {
 
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
-  { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Emprestado' ? 'outline' : 'default' }>{value || 'N/A'}</Badge> },
+  { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Emprestado' ? 'outline' : value === 'Eliminado' ? 'destructive' : 'default' }>{value || 'N/A'}</Badge> },
   { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: true, enableSorting: true },
   { id: 'origem', header: 'Origem', accessorKey: 'origem', defaultVisible: true, enableSorting: true },
   { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
@@ -367,7 +367,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'tipoDocumento', header: 'Tipo Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
   { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
   { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
-  { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
+  { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
   { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: false, enableSorting: true },
   { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: false, enableSorting: true },
   { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: false, enableSorting: true },
@@ -375,21 +375,21 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: false, enableSorting: true, cellFormatter: (value, doc) => doc.tipoMidiaDetalhe === 'Outro' ? doc.outroTipoMidiaDetalhe : doc.tipoMidiaDetalhe },
   { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: false, enableSorting: true },
   { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: false, enableSorting: true },
-  { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
+  { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true },
   { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: false, enableSorting: true },
   { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
   { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
   { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: false, enableSorting: true },
-  { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: true, enableSorting: true, cellFormatter: (value, doc) => {
+  { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: false, enableSorting: true, cellFormatter: (value, doc) => {
       const classif = placeholderClassificacoesSimulado.find(c => c.id === value);
       return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
     } 
   },
   { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: false, enableSorting: true },
   { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: false, enableSorting: true },
-  { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
+  { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: false, enableSorting: true },
   { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: false, enableSorting: true },
-  { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: true, enableSorting: true },
+  { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: false, enableSorting: true },
   { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
   { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
@@ -1261,12 +1261,12 @@ export default function DocumentosPage() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="w-full">
-            <Table className="whitespace-nowrap">
+            <Table className="min-w-full whitespace-nowrap">
               <TableHeader>
                 <TableRow>
                   {ALL_COLUMNS_CONFIG.map((column) =>
                     columnVisibility[column.id as string] ? (
-                      <TableHead key={column.id as string}>
+                      <TableHead key={column.id as string} className="py-2 px-3">
                         {column.enableSorting ? (
                           <Button
                             variant="ghost"
@@ -1282,7 +1282,7 @@ export default function DocumentosPage() {
                       </TableHead>
                     ) : null
                   )}
-                  <TableHead className="text-right sticky right-0 bg-background z-10">Ações</TableHead>
+                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1330,3 +1330,4 @@ export default function DocumentosPage() {
     
 
     
+
