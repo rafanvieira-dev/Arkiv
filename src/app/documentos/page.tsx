@@ -455,15 +455,9 @@ export default function DocumentosPage() {
 
           if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
-          } else {
-             const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
-             if (prazoIntermediarioMatch && prazoIntermediarioMatch[0]) {
-               const parsedAnos = parseInt(prazoIntermediarioMatch[0], 10);
-               if (!isNaN(parsedAnos)) {
-                 prazoIntermediarioAnosNum = parsedAnos;
-               }
-             }
-          }
+          } 
+          // No need for an else here if the type is strictly number.
+          // If it could be a string like "X Anos", parsing would be needed, but type says number.
           
           const anoArquivamento = getYear(dataArquivamentoDate);
           anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
@@ -1024,24 +1018,17 @@ export default function DocumentosPage() {
                         <CommandGroup>
                           {placeholderClassificacoesSimulado
                             .filter((c) => !c.inativo)
-                            .map((classificacao) => {
-                              const displayValue = `${classificacao.codigo} - ${classificacao.descricao}`;
-                              return (
+                            .map((classificacao) => (
                                 <CommandItem
                                   key={classificacao.id}
-                                  value={displayValue}
-                                  onSelect={(currentDisplayValue) => {
-                                    const selected = placeholderClassificacoesSimulado.find(
-                                      (c) => `${c.codigo} - ${c.descricao}` === currentDisplayValue
-                                    );
-                                    if (selected) {
-                                      setFormState(prev => ({ 
-                                        ...prev, 
-                                        classificacaoArquivisticaId: selected.id === prev.classificacaoArquivisticaId 
-                                                                      ? "" 
-                                                                      : selected.id 
-                                      }));
-                                    }
+                                  value={classificacao.id} 
+                                  onSelect={(selectedId) => {
+                                    setFormState(prev => ({ 
+                                      ...prev, 
+                                      classificacaoArquivisticaId: selectedId === prev.classificacaoArquivisticaId 
+                                                                    ? "" 
+                                                                    : selectedId 
+                                    }));
                                     setClassificacaoPopoverOpen(false);
                                   }}
                                 >
@@ -1053,10 +1040,10 @@ export default function DocumentosPage() {
                                         : "opacity-0"
                                     )}
                                   />
-                                  {displayValue}
+                                  {`${classificacao.codigo} - ${classificacao.descricao}`}
                                 </CommandItem>
-                              );
-                            })}
+                              )
+                            )}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -1432,6 +1419,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
