@@ -32,9 +32,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
 const placeholderClassificacoes: Classificacao[] = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
+  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPlanoClassificacao: "Judicial", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPlanoClassificacao: "Administrativo", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tipoPlanoClassificacao: "Administrativo", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
 ];
 
 const opcoesCondicaoTextualFaseCorrente = [
@@ -75,11 +75,12 @@ const opcoesCondicaoTextualFaseCorrente = [
   "Validade do Concurso",
 ];
 
-const initialState = {
+const initialState: Omit<Classificacao, 'id' | 'prazoGuardaFaseIntermediariaAnos' | 'destinacaoFinal' | 'inativo'> & { prazoGuardaFaseIntermediariaAnos: string, destinacaoFinal: string, inativo: boolean, tipoPlanoClassificacao: string } = {
   codigo: "",
   descricao: "",
+  tipoPlanoClassificacao: "",
   tipoPrazoFaseCorrente: "",
-  prazoGuardaFaseCorrenteAnos: "",
+  prazoGuardaFaseCorrenteAnos: undefined,
   prazoGuardaFaseCorrenteCondicaoTextual: "",
   prazoGuardaFaseIntermediariaAnos: "",
   destinacaoFinal: "",
@@ -96,13 +97,18 @@ export default function ClassificacaoPage() {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+     setFormState(prev => ({ ...prev, [id]: value === "" ? "" : value }));
+  };
+
   const handleSelectChange = (id: keyof typeof initialState) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
      if (id === 'tipoPrazoFaseCorrente') {
       if (value === 'Anos') {
         setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteCondicaoTextual: "" }));
       } else if (value === 'Condição Textual') {
-        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteAnos: "" }));
+        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteAnos: undefined }));
       }
     }
   };
@@ -118,8 +124,10 @@ export default function ClassificacaoPage() {
   const handleSaveChanges = () => {
     console.log("Salvando nova classificação:", {
       ...formState,
-      prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' ? parseInt(formState.prazoGuardaFaseCorrenteAnos, 10) || 0 : undefined,
+      prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' && formState.prazoGuardaFaseCorrenteAnos ? parseInt(String(formState.prazoGuardaFaseCorrenteAnos), 10) : undefined,
       prazoGuardaFaseIntermediariaAnos: parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) || 0,
+      destinacaoFinal: formState.destinacaoFinal as Classificacao['destinacaoFinal'],
+      tipoPlanoClassificacao: formState.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'],
     });
     setIsDialogOpen(false);
     resetForm();
@@ -160,6 +168,20 @@ export default function ClassificacaoPage() {
                 </Label>
                 <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
               </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="tipoPlanoClassificacao" className="text-right">
+                  Tipo de Plano
+                </Label>
+                <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
+                  <SelectTrigger id="tipoPlanoClassificacao" className="col-span-3">
+                    <SelectValue placeholder="Selecione o tipo de plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Administrativo">Administrativo</SelectItem>
+                    <SelectItem value="Judicial">Judicial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="tipoPrazoFaseCorrente" className="text-right">
@@ -181,7 +203,7 @@ export default function ClassificacaoPage() {
                   <Label htmlFor="prazoGuardaFaseCorrenteAnos" className="text-right">
                     Prazo Corrente (Anos)
                   </Label>
-                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos} onChange={handleInputChange} placeholder="Nº de anos (ex: 5)" className="col-span-3" />
+                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" className="col-span-3" />
                 </div>
               )}
 
@@ -194,7 +216,7 @@ export default function ClassificacaoPage() {
                     <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual" className="col-span-3">
                       <SelectValue placeholder="Selecione a condição textual" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-48 overflow-y-auto">
                       {opcoesCondicaoTextualFaseCorrente.map(opcao => (
                         <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
                       ))}
@@ -207,7 +229,7 @@ export default function ClassificacaoPage() {
                 <Label htmlFor="prazoGuardaFaseIntermediariaAnos" className="text-right">
                   Prazo Intermed. (Anos)*
                 </Label>
-                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" className="col-span-3" />
+                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" className="col-span-3" />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
@@ -259,6 +281,7 @@ export default function ClassificacaoPage() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead>Tipo Plano</TableHead>
                 <TableHead>Destinação Final</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -269,6 +292,7 @@ export default function ClassificacaoPage() {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.codigo}</TableCell>
                   <TableCell>{item.descricao}</TableCell>
+                  <TableCell>{item.tipoPlanoClassificacao || "N/A"}</TableCell>
                   <TableCell>{item.destinacaoFinal}</TableCell>
                   <TableCell>
                     <Badge variant={item.inativo ? 'destructive' : 'secondary'}>

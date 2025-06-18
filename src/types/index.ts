@@ -71,6 +71,7 @@ export interface Classificacao {
   id: string;
   codigo: string; 
   descricao: string; 
+  tipoPlanoClassificacao?: 'Administrativo' | 'Judicial';
   tipoPrazoFaseCorrente?: 'Anos' | 'Condição Textual';
   prazoGuardaFaseCorrenteAnos?: number;
   prazoGuardaFaseCorrenteCondicaoTextual?: string;
