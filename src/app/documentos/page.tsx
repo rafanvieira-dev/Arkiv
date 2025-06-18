@@ -31,24 +31,114 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox"; // Certifique-se que este Checkbox é o correto
 import { DatePicker } from "@/components/date-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const placeholderClassificacoesSimulado = [
-  { id: "CLA001", codigo: "020.1", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' },
-  { id: "CLA002", codigo: "030.5", inativo: true, prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: 'Eliminação' },
-  { id: "CLA003", codigo: "045.2", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente' },
+  { id: "CLA001", codigo: "020.1", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente', tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5 },
+  { id: "CLA002", codigo: "030.5", inativo: true, prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: 'Eliminação', tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização" },
+  { id: "CLA003", codigo: "045.2", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente', tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1 },
 ];
 
 const placeholderDocumentos: Documento[] = [
-  { id: "DOC001", identificador: "PRC-2023-001", status: "Arquivado", orgao: "TRF2", origem: "Tribunal de Justiça", tipoMeio: "Não digital", generoDocumental: "Textual", categoria: "Processo Judicial", tipoDocumento: "Ação Ordinária", dataDocumento: new Date("2023-01-15").toISOString(), classificacaoArquivisticaId: "CLA001", segredoJustica: "Não", grauSigilo: "Ostensivo", codigosCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizado: "Não", classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo, alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC002", identificador: "OFC-2023-045", status: "Emprestado", orgao: "SJRJ", origem: "Secretaria Municipal", tipoMeio: "Digital", generoDocumental: "Textual", categoria: "Documento", tipoDocumento: "Solicitação de Informações", dataDocumento: new Date("2023-03-20").toISOString(), classificacaoArquivisticaId: "CLA002", segredoJustica: "Não", grauSigilo: "Ostensivo", codigosCaixa: "CX002", dataCadastro: new Date().toISOString(), digitalizado: "Sim", classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo, alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", identificador: "MEM-2022-112", status: "Arquivado", orgao: "SJES", origem: "Câmara de Vereadores", tipoMeio: "Não digital", generoDocumental: "Textual", categoria: "Processo Administrativo", tipoDocumento: "Comunicação Interna", dataDocumento: new Date("2022-11-05").toISOString(), classificacaoArquivisticaId: "CLA003", segredoJustica: "Sim", grauSigilo: "Secreto", codigosCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizado: "Não", classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo, alteracaoDestinacaoFinal: "Não Alterar" },
+  { 
+    id: "DOC001", 
+    numeroDocumento: "PRC-2023-001", 
+    status: "Arquivado", 
+    orgao: "TRF2", 
+    origem: "Tribunal de Justiça", 
+    tipoMeio: "Não digital", 
+    generoDocumental: "Textual", 
+    categoria: "Processo Judicial", 
+    tipoDocumento: "Ação Ordinária", 
+    dataAbrangente: "01/2023 - 03/2023",
+    dataArquivamento: new Date("2023-01-15").toISOString(), 
+    quantidadeVolumes: 1,
+    quantidadeApensos: 0,
+    totalMidias: 0,
+    digitalizado: "Não", 
+    classificacaoArquivisticaId: "CLA001",
+    prazoArquivoCorrenteDisplay: "5 Anos",
+    prazoArquivoIntermediarioDisplay: "15 Anos",
+    destinacaoFinalDisplay: "Guarda Permanente",
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    segredoJustica: "Não", 
+    grauSigilo: "Ostensivo", 
+    codigosCaixa: "CX001", 
+    dataCadastro: new Date().toISOString(), 
+    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo,
+    anoEliminacaoPrevisto: "", // Será recalculado no useEffect
+    nomePartePrincipal: "Empresa Exemplo Ltda",
+    tipoPartePrincipal: "Autor",
+    codigoClassificacaoJudicialId: "CJ001",
+  },
+  { 
+    id: "DOC002", 
+    numeroDocumento: "OFC-2023-045", 
+    status: "Emprestado", 
+    orgao: "SJRJ", 
+    origem: "Secretaria Municipal", 
+    tipoMeio: "Digital", 
+    generoDocumental: "Textual", 
+    categoria: "Documento", 
+    tipoDocumento: "Solicitação de Informações", 
+    dataAbrangente: "20/03/2023",
+    dataArquivamento: new Date("2023-03-20").toISOString(), 
+    quantidadeVolumes: 1,
+    quantidadeApensos: 1,
+    numerosApensos: "AP001",
+    totalMidias: 1,
+    tipoMidiaDetalhe: "CD-R",
+    numeroMidiaDetalhe: "M001",
+    paginaMidiaDetalhe: "1-10",
+    digitalizado: "Sim", 
+    classificacaoArquivisticaId: "CLA002", 
+    prazoArquivoCorrenteDisplay: "Até a próxima atualização",
+    prazoArquivoIntermediarioDisplay: "3 Anos",
+    destinacaoFinalDisplay: "Eliminação",
+    alteracaoDestinacaoFinal: "Não Alterar",
+    anoEliminacaoPrevisto: "2027", // 2023 (arq) + 3 (interm) + 1
+    segredoJustica: "Não", 
+    grauSigilo: "Ostensivo", 
+    codigosCaixa: "CX002", 
+    dataCadastro: new Date().toISOString(), 
+    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
+    tipoBaixa: "Devolvido ao Arquivo",
+    dataBaixa: new Date("2023-04-10").toISOString(),
+    descricaoDocumento: "Ofício solicitando informações sobre o projeto X.",
+    codigoAtoM: "ATOM002",
+    documentosRelacionadosIds: "DOC001",
+    observacoesGerais: "Prioridade alta."
+  },
+  { 
+    id: "DOC003", 
+    numeroDocumento: "MEM-2022-112", 
+    status: "Arquivado", 
+    orgao: "SJES", 
+    origem: "Câmara de Vereadores", 
+    tipoMeio: "Não digital", 
+    generoDocumental: "Textual", 
+    categoria: "Processo Administrativo", 
+    tipoDocumento: "Comunicação Interna", 
+    dataAbrangente: "05/11/2022",
+    dataArquivamento: new Date("2022-11-05").toISOString(), 
+    digitalizado: "Não", 
+    classificacaoArquivisticaId: "CLA003", 
+    prazoArquivoCorrenteDisplay: "1 Ano",
+    prazoArquivoIntermediarioDisplay: "0 Anos",
+    destinacaoFinalDisplay: "Guarda Permanente",
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    segredoJustica: "Sim", 
+    grauSigilo: "Secreto", 
+    codigosCaixa: "CX001", 
+    dataCadastro: new Date().toISOString(), 
+    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo,
+    nomePartePrincipal: "João da Silva",
+    tipoPartePrincipal: "Interessado",
+  },
 ];
 
 const initialFormState: Partial<Documento> = {
-  // id will be handled separately (e.g. "AUTOMATICO" or actual UUID if editing)
   status: "Arquivado",
   orgao: "TRF2",
   origem: "",
@@ -59,10 +149,10 @@ const initialFormState: Partial<Documento> = {
   numeroDocumento: "",
   dataAbrangente: "",
   dataArquivamento: undefined,
-  quantidadeVolumes: 0,
-  quantidadeApensos: 0,
+  quantidadeVolumes: undefined,
+  quantidadeApensos: undefined,
   numerosApensos: "",
-  totalMidias: 0,
+  totalMidias: undefined,
   tipoMidiaDetalhe: undefined,
   outroTipoMidiaDetalhe: "",
   numeroMidiaDetalhe: "",
@@ -76,7 +166,7 @@ const initialFormState: Partial<Documento> = {
   prazoArquivoIntermediarioDisplay: "",
   destinacaoFinalDisplay: undefined,
   alteracaoDestinacaoFinal: "Não Alterar",
-  anoEliminacaoPrevisto: "", // Será calculado
+  anoEliminacaoPrevisto: "", 
   nomePartePrincipal: "",
   tipoPartePrincipal: "",
   outroTipoPartePrincipal: "",
@@ -96,27 +186,26 @@ export default function DocumentosPage() {
   const [formState, setFormState] = React.useState<Partial<Documento>>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
 
-  // States for "Outro" fields
   const [outroGeneroDocumental, setOutroGeneroDocumental] = React.useState("");
   const [outroTipoMidia, setOutroTipoMidia] = React.useState("");
   const [outroTipoParte, setOutroTipoParte] = React.useState("");
 
-
   React.useEffect(() => {
-    if (formState.dataArquivamento && formState.prazoArquivoIntermediarioDisplay && formState.destinacaoFinalDisplay === 'Eliminação') {
-      const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-      const prazoIntermediarioAnos = parseInt(formState.prazoArquivoIntermediarioDisplay, 10);
-      if (isValid(dataArquivamentoDate) && !isNaN(prazoIntermediarioAnos)) {
-        const anoArquivamento = getYear(dataArquivamentoDate);
-        const anoEliminacao = anoArquivamento + prazoIntermediarioAnos + 1;
-        setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: anoEliminacao.toString() }));
-      } else {
-        setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: "" }));
-      }
-    } else {
-      setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: "" }));
+    let anoEliminacao = "";
+    if (formState.dataArquivamento && formState.prazoArquivoIntermediarioDisplay && (formState.destinacaoFinalDisplay === 'Eliminação' || formState.alteracaoDestinacaoFinal !== 'Não Alterar')) {
+        const dataArquivamentoDate = parseISO(formState.dataArquivamento);
+        // Tenta extrair o número de anos do prazo intermediário. Ex: "15 Anos" -> 15
+        const prazoIntermediarioMatch = formState.prazoArquivoIntermediarioDisplay.match(/\d+/);
+        if (prazoIntermediarioMatch) {
+            const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
+            if (isValid(dataArquivamentoDate) && !isNaN(prazoIntermediarioAnos)) {
+                const anoArquivamento = getYear(dataArquivamentoDate);
+                anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
+            }
+        }
     }
-  }, [formState.dataArquivamento, formState.prazoArquivoIntermediarioDisplay, formState.destinacaoFinalDisplay]);
+    setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: anoEliminacao }));
+  }, [formState.dataArquivamento, formState.prazoArquivoIntermediarioDisplay, formState.destinacaoFinalDisplay, formState.alteracaoDestinacaoFinal]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -126,7 +215,10 @@ export default function DocumentosPage() {
   
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setFormState(prev => ({ ...prev, [id]: value === "" ? undefined : parseInt(value, 10) }));
+    const numValue = value === "" ? undefined : parseInt(value, 10);
+    if (value === "" || (numValue !== undefined && !isNaN(numValue) && numValue >= 0) ) {
+        setFormState(prev => ({ ...prev, [id]: numValue }));
+    }
   };
 
   const handleSelectChange = (id: keyof Partial<Documento>) => (value: string) => {
@@ -134,6 +226,32 @@ export default function DocumentosPage() {
     if (id === 'generoDocumental' && value !== 'Outro') setOutroGeneroDocumental("");
     if (id === 'tipoMidiaDetalhe' && value !== 'Outro') setOutroTipoMidia("");
     if (id === 'tipoPartePrincipal' && value !== 'Outro') setOutroTipoParte("");
+
+    // Lógica para buscar dados da classificação (simulada por enquanto)
+    if (id === 'classificacaoArquivisticaId' && value) {
+        const classificacaoSelecionada = placeholderClassificacoesSimulado.find(c => c.id === value || c.codigo === value);
+        if (classificacaoSelecionada) {
+            let prazoCorrente = "";
+            if (classificacaoSelecionada.tipoPrazoFaseCorrente === "Anos") {
+                prazoCorrente = `${classificacaoSelecionada.prazoGuardaFaseCorrenteAnos} Anos`;
+            } else if (classificacaoSelecionada.tipoPrazoFaseCorrente === "Condição Textual") {
+                prazoCorrente = classificacaoSelecionada.prazoGuardaFaseCorrenteCondicaoTextual || "";
+            }
+            setFormState(prev => ({
+                ...prev,
+                prazoArquivoCorrenteDisplay: prazoCorrente,
+                prazoArquivoIntermediarioDisplay: `${classificacaoSelecionada.prazoGuardaFaseIntermediariaAnos} Anos`,
+                destinacaoFinalDisplay: classificacaoSelecionada.destinacaoFinal,
+            }));
+        } else {
+             setFormState(prev => ({
+                ...prev,
+                prazoArquivoCorrenteDisplay: "Não encontrado",
+                prazoArquivoIntermediarioDisplay: "Não encontrado",
+                destinacaoFinalDisplay: undefined,
+            }));
+        }
+    }
   };
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
@@ -151,25 +269,46 @@ export default function DocumentosPage() {
   const handleSaveChanges = () => {
     const finalFormState = {
       ...formState,
+      id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay, // Simula geração de ID
+      dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
-      // dataCadastro should be set on actual save by the backend
     };
     console.log("Salvando documento:", finalFormState);
-    // Here you would typically generate a UUID if it's a new document and `documentIdToDisplay` is "(Automático após salvar)"
-    // For now, just log and close.
+    // Aqui você adicionaria a lógica para salvar no backend ou atualizar o estado da lista de documentos
     setIsDialogOpen(false);
-    // resetForm(); // Decide if form should reset after save or only on cancel/new
   };
 
   const handleOpenDialog = (doc?: Documento) => {
     if (doc) {
+      const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
+      let prazoCorr = doc.prazoArquivoCorrenteDisplay;
+      let prazoInter = doc.prazoArquivoIntermediarioDisplay;
+      let destFinal = doc.destinacaoFinalDisplay;
+
+      if (classificacao) {
+        if (classificacao.tipoPrazoFaseCorrente === "Anos") {
+            prazoCorr = `${classificacao.prazoGuardaFaseCorrenteAnos} Anos`;
+        } else if (classificacao.tipoPrazoFaseCorrente === "Condição Textual") {
+            prazoCorr = classificacao.prazoGuardaFaseCorrenteCondicaoTextual || "";
+        }
+        prazoInter = `${classificacao.prazoGuardaFaseIntermediariaAnos} Anos`;
+        destFinal = classificacao.destinacaoFinal;
+      }
+
+
       setFormState({
-        ...initialFormState, // Ensure all fields are present
+        ...initialFormState, 
         ...doc,
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
+        prazoArquivoCorrenteDisplay: prazoCorr,
+        prazoArquivoIntermediarioDisplay: prazoInter,
+        destinacaoFinalDisplay: destFinal,
+        quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
+        quantidadeApensos: doc.quantidadeApensos ?? undefined,
+        totalMidias: doc.totalMidias ?? undefined,
       });
       setDocumentIdToDisplay(doc.id);
       setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
@@ -188,7 +327,7 @@ export default function DocumentosPage() {
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
           setIsDialogOpen(isOpen);
           if (!isOpen) {
-            resetForm(); // Reset form if dialog is closed without saving
+            resetForm();
           }
         }}>
           <DialogTrigger asChild>
@@ -208,7 +347,7 @@ export default function DocumentosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
               
               <div className="space-y-2 lg:col-span-1">
-                <Label htmlFor="idDisplay">ID do Documento</Label>
+                <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
                 <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
 
@@ -294,7 +433,7 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024" />
+                <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" />
               </div>
               
               <div className="space-y-2">
@@ -313,15 +452,15 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
-                <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes ?? ""} onChange={handleNumericInputChange} placeholder="Ex: 2" />
+                <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
-                <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos ?? ""} onChange={handleNumericInputChange} placeholder="Ex: 1" />
+                <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" />
               </div>
 
-              { (formState.quantidadeApensos ?? 0) > 0 && (
+              { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
                 <div className="space-y-2">
                   <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
                   <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" />
@@ -330,10 +469,10 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="totalMidias">Total de Mídias</Label>
-                <Input id="totalMidias" type="number" value={formState.totalMidias ?? ""} onChange={handleNumericInputChange} placeholder="Ex: 1" />
+                <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" />
               </div>
               
-              {(formState.totalMidias ?? 0) > 0 && (
+              {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
@@ -397,25 +536,28 @@ export default function DocumentosPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="classificacaoArquivisticaId">Código de Classificação Arquivística</Label>
-                <Input id="classificacaoArquivisticaId" value={formState.classificacaoArquivisticaId || ""} onChange={handleInputChange} placeholder="Ex: 020.1 (ID da Classificação)" />
+                 <Select onValueChange={handleSelectChange('classificacaoArquivisticaId')} value={formState.classificacaoArquivisticaId}>
+                    <SelectTrigger id="classificacaoArquivisticaId"><SelectValue placeholder="Selecione ou digite o código" /></SelectTrigger>
+                    <SelectContent>
+                        {placeholderClassificacoesSimulado.filter(c => !c.inativo).map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.id}</SelectItem>
+                        ))}
+                        {/* Permitir input manual também, mas Select é melhor para FK */}
+                    </SelectContent>
+                </Select>
+                {/* <Input id="classificacaoArquivisticaId" value={formState.classificacaoArquivisticaId || ""} onChange={handleInputChange} placeholder="Ex: 020.1 ou ID da Classificação" /> */}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
-                <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} onChange={handleInputChange} placeholder="(Virá da Classificação)" />
+                <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
-                <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} onChange={handleInputChange} placeholder="(Virá da Classificação)" />
+                <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
-                 <Select onValueChange={handleSelectChange('destinacaoFinalDisplay')} value={formState.destinacaoFinalDisplay}>
-                  <SelectTrigger id="destinacaoFinalDisplay"><SelectValue placeholder="(Virá da Classificação)" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                  </SelectContent>
-                </Select>
+                 <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               
               <div className="space-y-2">
@@ -528,11 +670,43 @@ export default function DocumentosPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Identificador (Visual)</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Data Doc.</TableHead>
+                <TableHead>Nº Documento</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Órgão</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Tipo Meio</TableHead>
+                <TableHead>Gênero Doc.</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Tipo Doc.</TableHead>
+                <TableHead>Data Abrangente</TableHead>
+                <TableHead>Data Arq.</TableHead>
+                <TableHead>Qtd. Vol.</TableHead>
+                <TableHead>Qtd. Apen.</TableHead>
+                <TableHead>Nºs Apensos</TableHead>
+                <TableHead>Tot. Mídias</TableHead>
+                <TableHead>Tipo Mídia</TableHead>
+                <TableHead>Nº Mídia</TableHead>
+                <TableHead>Pág. Mídia</TableHead>
+                <TableHead>Digitalizado</TableHead>
+                <TableHead>Tipo Baixa</TableHead>
+                <TableHead>Data Baixa</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>ID Class. Arq.</TableHead>
+                <TableHead>Prazo Corr.</TableHead>
+                <TableHead>Prazo Interm.</TableHead>
+                <TableHead>Dest. Final (Class.)</TableHead>
+                <TableHead>Alt. Dest. Final</TableHead>
+                <TableHead>Ano Elim. Prev.</TableHead>
+                <TableHead>Parte Princ.</TableHead>
+                <TableHead>Tipo Parte</TableHead>
+                <TableHead>Segredo Justiça</TableHead>
+                <TableHead>Grau Sigilo</TableHead>
                 <TableHead>Caixa(s)</TableHead>
+                <TableHead>Cód. AtoM</TableHead>
+                <TableHead>Docs. Relac.</TableHead>
+                <TableHead>Obs. Gerais</TableHead>
+                <TableHead>ID Class. Jud.</TableHead>
+                <TableHead>Data Cad.</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -540,19 +714,49 @@ export default function DocumentosPage() {
               {placeholderDocumentos.map((doc) => (
                 <TableRow key={doc.id}>
                   <TableCell className="font-medium">
-                    {doc.numeroDocumento || doc.id} {/* Exibe numeroDocumento se houver, senão o ID */}
+                    {doc.numeroDocumento || doc.id}
                     {doc.classificacaoInativa && (
                       <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                         CÓDIGO CLASSIF. INATIVO, RECLASSIFICAR
                       </p>
                     )}
                   </TableCell>
-                  <TableCell>{doc.tipoDocumento}</TableCell>
-                  <TableCell>
-                    {doc.dataAbrangente ? doc.dataAbrangente : (doc.dataArquivamento ? format(parseISO(doc.dataArquivamento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A')}
-                  </TableCell>
                   <TableCell><Badge variant={doc.status === 'Arquivado' ? 'secondary' : doc.status === 'Emprestado' ? 'outline' : 'default' }>{doc.status}</Badge></TableCell>
-                  <TableCell>{doc.codigosCaixa}</TableCell>
+                  <TableCell>{doc.orgao || 'N/A'}</TableCell>
+                  <TableCell>{doc.origem || 'N/A'}</TableCell>
+                  <TableCell>{doc.tipoMeio || 'N/A'}</TableCell>
+                  <TableCell>{doc.generoDocumental || 'N/A'}</TableCell>
+                  <TableCell>{doc.categoria || 'N/A'}</TableCell>
+                  <TableCell>{doc.tipoDocumento || 'N/A'}</TableCell>
+                  <TableCell>{doc.dataAbrangente || 'N/A'}</TableCell>
+                  <TableCell>{doc.dataArquivamento ? format(parseISO(doc.dataArquivamento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
+                  <TableCell>{doc.quantidadeVolumes ?? 'N/A'}</TableCell>
+                  <TableCell>{doc.quantidadeApensos ?? 'N/A'}</TableCell>
+                  <TableCell>{doc.numerosApensos || 'N/A'}</TableCell>
+                  <TableCell>{doc.totalMidias ?? 'N/A'}</TableCell>
+                  <TableCell>{doc.tipoMidiaDetalhe || 'N/A'}</TableCell>
+                  <TableCell>{doc.numeroMidiaDetalhe || 'N/A'}</TableCell>
+                  <TableCell>{doc.paginaMidiaDetalhe || 'N/A'}</TableCell>
+                  <TableCell>{doc.digitalizado || 'N/A'}</TableCell>
+                  <TableCell>{doc.tipoBaixa || 'N/A'}</TableCell>
+                  <TableCell>{doc.dataBaixa ? format(parseISO(doc.dataBaixa), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
+                  <TableCell className="max-w-xs truncate">{doc.descricaoDocumento || 'N/A'}</TableCell>
+                  <TableCell>{doc.classificacaoArquivisticaId || 'N/A'}</TableCell>
+                  <TableCell>{doc.prazoArquivoCorrenteDisplay || 'N/A'}</TableCell>
+                  <TableCell>{doc.prazoArquivoIntermediarioDisplay || 'N/A'}</TableCell>
+                  <TableCell>{doc.destinacaoFinalDisplay || 'N/A'}</TableCell>
+                  <TableCell>{doc.alteracaoDestinacaoFinal || 'N/A'}</TableCell>
+                  <TableCell>{doc.anoEliminacaoPrevisto || 'N/A'}</TableCell>
+                  <TableCell>{doc.nomePartePrincipal || 'N/A'}</TableCell>
+                  <TableCell>{doc.tipoPartePrincipal || 'N/A'}</TableCell>
+                  <TableCell>{doc.segredoJustica || 'N/A'}</TableCell>
+                  <TableCell>{doc.grauSigilo || 'N/A'}</TableCell>
+                  <TableCell>{doc.codigosCaixa || 'N/A'}</TableCell>
+                  <TableCell>{doc.codigoAtoM || 'N/A'}</TableCell>
+                  <TableCell>{doc.documentosRelacionadosIds || 'N/A'}</TableCell>
+                  <TableCell className="max-w-xs truncate">{doc.observacoesGerais || 'N/A'}</TableCell>
+                  <TableCell>{doc.codigoClassificacaoJudicialId || 'N/A'}</TableCell>
+                  <TableCell>{doc.dataCadastro ? format(parseISO(doc.dataCadastro), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
                       <Edit className="h-4 w-4" />
@@ -570,3 +774,6 @@ export default function DocumentosPage() {
     </div>
   );
 }
+
+
+    
