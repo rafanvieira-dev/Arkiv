@@ -10,7 +10,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, CheckSquare, Square
+  CheckSquare, Square
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -415,8 +415,6 @@ export default function DocumentosPage() {
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
-  const SCROLL_AMOUNT = 200;
 
 
   React.useEffect(() => {
@@ -712,20 +710,6 @@ export default function DocumentosPage() {
       return <ArrowUp className="ml-2 h-4 w-4" />;
     }
     return <ArrowDown className="ml-2 h-4 w-4" />;
-  };
-
-  const handleHorizontalScroll = (direction: 'left' | 'right') => {
-    if (tableScrollRef.current) {
-      const viewport = tableScrollRef.current.children[0] as HTMLDivElement | undefined;
-      if (viewport) {
-        viewport.style.scrollBehavior = 'auto'; 
-        if (direction === 'left') {
-          viewport.scrollLeft -= SCROLL_AMOUNT;
-        } else {
-          viewport.scrollLeft += SCROLL_AMOUNT;
-        }
-      }
-    }
   };
 
 
@@ -1244,12 +1228,6 @@ export default function DocumentosPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => handleHorizontalScroll('left')} aria-label="Rolar para esquerda">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => handleHorizontalScroll('right')} aria-label="Rolar para direita">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -1282,7 +1260,7 @@ export default function DocumentosPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="w-full" ref={tableScrollRef}>
+          <ScrollArea className="w-full">
             <Table className="whitespace-nowrap">
               <TableHeader>
                 <TableRow>
