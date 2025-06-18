@@ -10,7 +10,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, Check, ChevronsUpDown
+  CheckSquare, Square, Check, ChevronsUpDown, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DatePicker } from "@/components/date-picker";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Accordion,
   AccordionContent,
@@ -142,7 +142,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
     classificacaoArquivisticaId: "CLA002", 
-    historicoClassificacoesArquivisticas: [],
+    historicoClassificacoesArquivisticas: ["030.5 - Correspondências Recebidas"],
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
@@ -186,7 +186,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA003", 
-    historicoClassificacoesArquivisticas: [],
+    historicoClassificacoesArquivisticas: ["045.2 - Relatórios Anuais"],
     prazoArquivoCorrenteDisplay: "1 Ano",
     prazoArquivoIntermediarioDisplay: "0 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
@@ -230,7 +230,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
     classificacaoArquivisticaId: "CLA002",
-    historicoClassificacoesArquivisticas: [], 
+    historicoClassificacoesArquivisticas: ["030.5 - Correspondências Recebidas"], 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos", 
     destinacaoFinalDisplay: "Eliminação",      
@@ -274,7 +274,7 @@ const placeholderDocumentos: Documento[] = [
     tipoBaixa: "",
     dataBaixa: undefined,
     classificacaoArquivisticaId: "CLA001", 
-    historicoClassificacoesArquivisticas: [],
+    historicoClassificacoesArquivisticas: ["020.1 - Processos Judiciais Cíveis"],
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos", 
     destinacaoFinalDisplay: "Guarda Permanente", 
@@ -493,7 +493,7 @@ export default function DocumentosPage() {
     if (id === 'tipoPartePrincipal' && value !== 'Outro') setOutroTipoParte("");
 
     if (id === 'classificacaoArquivisticaId' && value) {
-        const classificacaoSelecionada = placeholderClassificacoesSimulado.find(c => c.id === value || c.codigo === value);
+        const classificacaoSelecionada = placeholderClassificacoesSimulado.find(c => c.id === value);
         if (classificacaoSelecionada) {
             let prazoCorrente = "";
             if (classificacaoSelecionada.tipoPrazoFaseCorrente === "Anos") {
@@ -503,15 +503,17 @@ export default function DocumentosPage() {
             }
             setFormState(prev => ({
                 ...prev,
+                classificacaoArquivisticaId: classificacaoSelecionada.id,
                 prazoArquivoCorrenteDisplay: prazoCorrente,
                 prazoArquivoIntermediarioDisplay: `${classificacaoSelecionada.prazoGuardaFaseIntermediariaAnos} Anos`,
                 destinacaoFinalDisplay: classificacaoSelecionada.destinacaoFinal,
             }));
         } else {
-             setFormState(prev => ({
+             setFormState(prev => ({ // Should not happen if value is from CommandItem selection
                 ...prev,
-                prazoArquivoCorrenteDisplay: "Não encontrado",
-                prazoArquivoIntermediarioDisplay: "Não encontrado",
+                classificacaoArquivisticaId: "",
+                prazoArquivoCorrenteDisplay: "Não encontrado/Inválido",
+                prazoArquivoIntermediarioDisplay: "Não encontrado/Inválido",
                 destinacaoFinalDisplay: undefined,
             }));
         }
@@ -542,22 +544,32 @@ export default function DocumentosPage() {
         }
     }
 
-    const finalFormState = {
-      ...formState,
+    const finalFormState: Documento = {
+      ...initialFormState, // Ensure all fields are present
+      ...formState, // Spread current form state which includes new classificationId and derived fields
       id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
-      generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental,
+      generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental!,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
       historicoClassificacoesArquivisticas: updatedHistorico,
+      classificacaoInativa: currentClassification ? currentClassification.inativo : false,
+      // Ensure required fields from Documento that might be missing in Partial<Documento> have defaults
+      status: formState.status || 'Arquivado',
+      orgao: formState.orgao || 'TRF2',
+      tipoMeio: formState.tipoMeio || 'Não digital',
+      categoria: formState.categoria || 'Documento',
+      digitalizado: formState.digitalizado || 'Não',
+      alteracaoDestinacaoFinal: formState.alteracaoDestinacaoFinal || 'Não Alterar',
+      segredoJustica: formState.segredoJustica || 'Não',
+      grauSigilo: formState.grauSigilo || 'Ostensivo',
     };
-    console.log("Salvando documento:", finalFormState);
-
+    
     const docIndex = placeholderDocumentos.findIndex(doc => doc.id === finalFormState.id);
     if (docIndex > -1) {
-      placeholderDocumentos[docIndex] = finalFormState as Documento;
+      placeholderDocumentos[docIndex] = finalFormState;
     } else {
-      placeholderDocumentos.push(finalFormState as Documento);
+      placeholderDocumentos.push(finalFormState);
     }
     applyFiltersAndSorting();
 
@@ -566,24 +578,26 @@ export default function DocumentosPage() {
 
   const handleOpenDialog = (doc?: Documento) => {
     if (doc) {
-      const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
       let prazoCorr = doc.prazoArquivoCorrenteDisplay;
       let prazoInter = doc.prazoArquivoIntermediarioDisplay;
       let destFinal = doc.destinacaoFinalDisplay;
-
-      if (classificacao) {
-        if (classificacao.tipoPrazoFaseCorrente === "Anos") {
-            prazoCorr = `${classificacao.prazoGuardaFaseCorrenteAnos} Anos`;
-        } else if (classificacao.tipoPrazoFaseCorrente === "Condição Textual") {
-            prazoCorr = classificacao.prazoGuardaFaseCorrenteCondicaoTextual || "";
+      
+      const classificacaoDoc = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
+      if (classificacaoDoc) { // Recalculate based on the stored ID, not potentially stale display fields from doc
+        if (classificacaoDoc.tipoPrazoFaseCorrente === "Anos") {
+            prazoCorr = `${classificacaoDoc.prazoGuardaFaseCorrenteAnos} Anos`;
+        } else if (classificacaoDoc.tipoPrazoFaseCorrente === "Condição Textual") {
+            prazoCorr = classificacaoDoc.prazoGuardaFaseCorrenteCondicaoTextual || "";
         }
-        prazoInter = `${classificacao.prazoGuardaFaseIntermediariaAnos} Anos`;
-        destFinal = classificacao.destinacaoFinal;
+        prazoInter = `${classificacaoDoc.prazoGuardaFaseIntermediariaAnos} Anos`;
+        destFinal = classificacaoDoc.destinacaoFinal;
       }
+
 
       setFormState({
         ...initialFormState, 
         ...doc,
+        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", // Ensure it's set
         historicoClassificacoesArquivisticas: doc.historicoClassificacoesArquivisticas || [],
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
@@ -1053,7 +1067,7 @@ export default function DocumentosPage() {
                   value={formState.historicoClassificacoesArquivisticas?.join("\n") || ""}
                   readOnly
                   className="bg-muted/50 cursor-not-allowed min-h-[60px]"
-                  rows={3}
+                  rows={Math.max(3, formState.historicoClassificacoesArquivisticas?.length || 1)}
                 />
               </div>
 
@@ -1421,6 +1435,7 @@ export default function DocumentosPage() {
                 ))}
               </TableBody>
             </Table>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
            {displayedDocumentos.length === 0 && (
             <p className="text-center text-muted-foreground py-4">Nenhum documento encontrado para os filtros e ordenação aplicados.</p>
@@ -1433,6 +1448,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
