@@ -392,6 +392,23 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: false, enableSorting: true },
   { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'mensagens', 
+    header: 'Mensagens', 
+    accessorKey: 'mensagens', // Dummy accessor, content driven by cellFormatter
+    defaultVisible: true, 
+    enableSorting: false,
+    cellFormatter: (value, doc) => {
+      if (doc.classificacaoInativa) {
+        return (
+          <span className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
+            CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
+          </span>
+        );
+      }
+      return null; 
+    }
+  },
   { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
   { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
   { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: false, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
@@ -1295,16 +1312,8 @@ export default function DocumentosPage() {
                         </TableCell>
                       ) : null
                     )}
-                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3">
-                       <div className="flex flex-col items-end">
-                        {doc.classificacaoInativa && (
-                          <div className="w-full text-left mb-1">
-                            <p className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
-                              CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
-                            </p>
-                          </div>
-                        )}
-                        <div>
+                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                       <div className="flex items-center justify-end">
                           <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1312,7 +1321,6 @@ export default function DocumentosPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1330,4 +1338,5 @@ export default function DocumentosPage() {
     
 
     
+
 
