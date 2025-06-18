@@ -32,9 +32,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
 const placeholderClassificacoes: Classificacao[] = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tabelaTemporalidade: "TTD-01", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tabelaTemporalidade: "TTD-02", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tabelaTemporalidade: "TTD-01", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
+  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
 ];
 
 const opcoesCondicaoTextualFaseCorrente = [
@@ -78,7 +78,6 @@ const opcoesCondicaoTextualFaseCorrente = [
 const initialState = {
   codigo: "",
   descricao: "",
-  tabelaTemporalidade: "",
   tipoPrazoFaseCorrente: "",
   prazoGuardaFaseCorrenteAnos: "",
   prazoGuardaFaseCorrenteCondicaoTextual: "",
@@ -161,13 +160,7 @@ export default function ClassificacaoPage() {
                 </Label>
                 <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tabelaTemporalidade" className="text-right">
-                  Tab. Temp.
-                </Label>
-                <Input id="tabelaTemporalidade" value={formState.tabelaTemporalidade} onChange={handleInputChange} placeholder="Ex: TTD-01" className="col-span-3" />
-              </div>
-
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="tipoPrazoFaseCorrente" className="text-right">
                   Tipo Prazo Corrente

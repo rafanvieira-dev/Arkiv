@@ -31,7 +31,6 @@ export interface Classificacao {
   id: string;
   codigo: string; // Obrigatório
   descricao: string; // Obrigatório (assunto)
-  tabelaTemporalidade?: string;
   tipoPrazoFaseCorrente?: 'Anos' | 'Condição Textual';
   prazoGuardaFaseCorrenteAnos?: number;
   prazoGuardaFaseCorrenteCondicaoTextual?: string;
@@ -91,4 +90,3 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
-
