@@ -446,30 +446,29 @@ export default function DocumentosPage() {
       const destinacao = classification.destinacaoFinal;
 
       let anoEliminacao = "";
-      if (formState.dataArquivamento && prazoIntermediario &&
+      if (formState.dataArquivamento && isValid(parseISO(formState.dataArquivamento)) &&
           (destinacao === 'Eliminação' ||
            (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
           
           const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-          
           let prazoIntermediarioAnosNum = 0;
+
           if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
           } else {
-            const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
-            if (prazoIntermediarioMatch && prazoIntermediarioMatch[0]) {
-              const parsedAnos = parseInt(prazoIntermediarioMatch[0], 10);
-              if (!isNaN(parsedAnos)) {
-                prazoIntermediarioAnosNum = parsedAnos;
-              }
-            }
+             const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
+             if (prazoIntermediarioMatch && prazoIntermediarioMatch[0]) {
+               const parsedAnos = parseInt(prazoIntermediarioMatch[0], 10);
+               if (!isNaN(parsedAnos)) {
+                 prazoIntermediarioAnosNum = parsedAnos;
+               }
+             }
           }
           
-          if (isValid(dataArquivamentoDate)) {
-              const anoArquivamento = getYear(dataArquivamentoDate);
-              anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
-          }
+          const anoArquivamento = getYear(dataArquivamentoDate);
+          anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
       }
+
       setFormState(prev => ({
         ...prev,
         prazoArquivoCorrenteDisplay: prazoCorrente,
@@ -1025,26 +1024,39 @@ export default function DocumentosPage() {
                         <CommandGroup>
                           {placeholderClassificacoesSimulado
                             .filter((c) => !c.inativo)
-                            .map((classificacao) => (
-                              <CommandItem
-                                key={classificacao.id}
-                                value={classificacao.id}
-                                onSelect={(currentValue) => {
-                                  setFormState(prev => ({ ...prev, classificacaoArquivisticaId: currentValue === formState.classificacaoArquivisticaId ? "" : currentValue }));
-                                  setClassificacaoPopoverOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formState.classificacaoArquivisticaId === classificacao.id
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {classificacao.codigo} - {classificacao.descricao}
-                              </CommandItem>
-                            ))}
+                            .map((classificacao) => {
+                              const displayValue = `${classificacao.codigo} - ${classificacao.descricao}`;
+                              return (
+                                <CommandItem
+                                  key={classificacao.id}
+                                  value={displayValue}
+                                  onSelect={(currentDisplayValue) => {
+                                    const selectedClassification = placeholderClassificacoesSimulado.find(
+                                      (c) => `${c.codigo} - ${c.descricao}` === currentDisplayValue
+                                    );
+                                    if (selectedClassification) {
+                                      setFormState(prev => ({ 
+                                        ...prev, 
+                                        classificacaoArquivisticaId: selectedClassification.id === formState.classificacaoArquivisticaId 
+                                                                      ? "" 
+                                                                      : selectedClassification.id 
+                                      }));
+                                    }
+                                    setClassificacaoPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formState.classificacaoArquivisticaId === classificacao.id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {displayValue}
+                                </CommandItem>
+                              );
+                            })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -1420,6 +1432,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
