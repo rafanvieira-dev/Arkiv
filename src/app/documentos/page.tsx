@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -405,6 +406,9 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
 
 
 export default function DocumentosPage() {
+  const searchParams = useSearchParams();
+  const caixaIdFromUrl = searchParams.get('caixaId');
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento>>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
@@ -424,52 +428,41 @@ export default function DocumentosPage() {
   const [classificacaoPopoverOpen, setClassificacaoPopoverOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (formState.classificacaoArquivisticaId) {
-      const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId);
-      if (classification) {
-        let prazoCorrente = "";
-        if (classification.tipoPrazoFaseCorrente === "Anos") {
-          prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
-        } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
-          prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
-        }
-        const prazoIntermediario = `${classification.prazoGuardaFaseIntermediariaAnos} Anos`;
-        const destinacao = classification.destinacaoFinal;
-
-        setFormState(prev => ({
-          ...prev,
-          prazoArquivoCorrenteDisplay: prazoCorrente,
-          prazoArquivoIntermediarioDisplay: prazoIntermediario,
-          destinacaoFinalDisplay: destinacao,
-        }));
-
-        let anoEliminacao = "";
-        if (formState.dataArquivamento && prazoIntermediario && 
-            (destinacao === 'Eliminação' || 
-             (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
-            
-            const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-            const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
-            
-            if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
-                const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
-                if (!isNaN(prazoIntermediarioAnos)) {
-                    const anoArquivamento = getYear(dataArquivamentoDate);
-                    anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
-                }
-            }
-        }
-        setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: anoEliminacao }));
-
-      } else {
-         setFormState(prev => ({
-          ...prev,
-          prazoArquivoCorrenteDisplay: "",
-          prazoArquivoIntermediarioDisplay: "",
-          destinacaoFinalDisplay: undefined,
-          anoEliminacaoPrevisto: ""
-        }));
+    const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId);
+    if (classification) {
+      let prazoCorrente = "";
+      if (classification.tipoPrazoFaseCorrente === "Anos") {
+        prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
+      } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
+        prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
       }
+      const prazoIntermediario = `${classification.prazoGuardaFaseIntermediariaAnos} Anos`;
+      const destinacao = classification.destinacaoFinal;
+
+      let anoEliminacao = "";
+      if (formState.dataArquivamento && prazoIntermediario && 
+          (destinacao === 'Eliminação' || 
+           (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
+          
+          const dataArquivamentoDate = parseISO(formState.dataArquivamento);
+          const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
+          
+          if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
+              const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
+              if (!isNaN(prazoIntermediarioAnos)) {
+                  const anoArquivamento = getYear(dataArquivamentoDate);
+                  anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
+              }
+          }
+      }
+      setFormState(prev => ({
+        ...prev,
+        prazoArquivoCorrenteDisplay: prazoCorrente,
+        prazoArquivoIntermediarioDisplay: prazoIntermediario,
+        destinacaoFinalDisplay: destinacao,
+        anoEliminacaoPrevisto: anoEliminacao
+      }));
+
     } else {
        setFormState(prev => ({
         ...prev,
@@ -585,6 +578,15 @@ export default function DocumentosPage() {
     let newFilteredDocumentos = placeholderDocumentos.filter(doc => {
       let passesAll = true;
 
+      // Filter by caixaId from URL first
+      if (caixaIdFromUrl) {
+        if (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(caixaIdFromUrl)) {
+          passesAll = false;
+        }
+      }
+      if (!passesAll) return false; // Early exit if caixaId filter fails
+
+      // Then apply accordion filters
       if (filters.status && doc.status !== filters.status) passesAll = false;
       if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
       if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) passesAll = false;
@@ -617,7 +619,12 @@ export default function DocumentosPage() {
       }
       if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) passesAll = false;
       if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) passesAll = false;
-      if (filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
+      
+      // This check was changed to ensure it works even if filters.codigoCaixa is an empty string (which means no filter on this field)
+      // It also now checks against the specific caixaIdFromUrl if it's present
+      if (!caixaIdFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
+      
+
       if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) passesAll = false;
       if (filters.categoriaDocumento && doc.categoria !== filters.categoriaDocumento) passesAll = false;
       if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) passesAll = false; 
@@ -660,7 +667,7 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting]);
+  }, [filters, sorting, caixaIdFromUrl]);
 
   React.useEffect(() => {
     applyFiltersAndSorting();
@@ -1192,7 +1199,7 @@ export default function DocumentosPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
-                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." />
+                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." disabled={!!caixaIdFromUrl} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="filterGeneroDocumental">Gênero Documental</Label>
@@ -1293,7 +1300,9 @@ export default function DocumentosPage() {
 
       <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
+          <CardTitle className="font-headline text-primary">
+            {caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Lista de Itens do Acervo"}
+          </CardTitle>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1379,7 +1388,9 @@ export default function DocumentosPage() {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
            {displayedDocumentos.length === 0 && (
-            <p className="text-center text-muted-foreground py-4">Nenhum documento encontrado para os filtros e ordenação aplicados.</p>
+            <p className="text-center text-muted-foreground py-4">
+              {caixaIdFromUrl ? `Nenhum documento encontrado na caixa ${caixaIdFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados."}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -1389,6 +1400,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
