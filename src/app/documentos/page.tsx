@@ -7,7 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown } from "lucide-react";
+import { 
+  PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
+  ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
+  ChevronLeft, ChevronRight
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -410,6 +414,7 @@ export default function DocumentosPage() {
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
 
 
   React.useEffect(() => {
@@ -649,7 +654,7 @@ export default function DocumentosPage() {
   };
 
   const toggleColumnVisibility = (columnId: string) => {
-    setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+    setColumnVisibility(prev => ({ ...prev, [columnId as string]: !prev[columnId as string] }));
   };
 
   const handleSort = (columnId: string) => {
@@ -692,6 +697,22 @@ export default function DocumentosPage() {
       return <ArrowUp className="ml-2 h-4 w-4" />;
     }
     return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const SCROLL_AMOUNT = 200; // pixels
+
+  const handleHorizontalScroll = (direction: 'left' | 'right') => {
+    if (tableScrollRef.current) {
+      // The direct child of ScrollArea's Root is the Viewport
+      const viewport = tableScrollRef.current.children[0] as HTMLDivElement | undefined;
+      if (viewport) {
+        if (direction === 'left') {
+          viewport.scrollLeft -= SCROLL_AMOUNT;
+        } else {
+          viewport.scrollLeft += SCROLL_AMOUNT;
+        }
+      }
+    }
   };
 
 
@@ -1209,30 +1230,38 @@ export default function DocumentosPage() {
       <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <ColumnsIcon className="mr-2 h-4 w-4" />
-                Colunas
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-              <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {ALL_COLUMNS_CONFIG.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id as string}
-                  checked={columnVisibility[column.id as string]}
-                  onCheckedChange={() => toggleColumnVisibility(column.id as string)}
-                >
-                  {column.header}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => handleHorizontalScroll('left')} aria-label="Rolar para esquerda">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => handleHorizontalScroll('right')} aria-label="Rolar para direita">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <ColumnsIcon className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {ALL_COLUMNS_CONFIG.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    checked={columnVisibility[column.id as string]}
+                    onCheckedChange={() => toggleColumnVisibility(column.id as string)}
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="w-full whitespace-nowrap">
+          <ScrollArea className="w-full whitespace-nowrap" ref={tableScrollRef}>
             <Table>
               <TableHeader>
                 <TableRow>
