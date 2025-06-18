@@ -10,7 +10,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, CheckSquare, Square
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -39,6 +39,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -657,6 +658,19 @@ export default function DocumentosPage() {
     setColumnVisibility(prev => ({ ...prev, [columnId as string]: !prev[columnId as string] }));
   };
 
+  const handleSelectAllColumns = () => {
+    setColumnVisibility(
+      ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
+    );
+  };
+
+  const handleDeselectAllColumns = () => {
+     setColumnVisibility(
+      ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
+    );
+  };
+
+
   const handleSort = (columnId: string) => {
     const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
     if (!columnConfig || !columnConfig.enableSorting) return;
@@ -1246,6 +1260,14 @@ export default function DocumentosPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
                 <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Selecionar Todas
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
+                  <Square className="mr-2 h-4 w-4" />
+                  Limpar Todas
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {ALL_COLUMNS_CONFIG.map((column) => (
                   <DropdownMenuCheckboxItem
