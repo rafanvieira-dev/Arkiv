@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -46,7 +47,7 @@ export function SidebarNav() {
       <SidebarMenu>
         {navItems.map((item) => (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref legacyBehavior>
+            <Link href={item.href} passHref>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
@@ -57,10 +58,10 @@ export function SidebarNav() {
                     : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
-                <a>
+                <>
                   <item.icon aria-hidden="true" />
                   <span>{item.label}</span>
-                </a>
+                </>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -70,7 +71,7 @@ export function SidebarNav() {
         <SidebarMenu>
           {secondaryNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href || pathname.startsWith(item.href)}
@@ -81,10 +82,10 @@ export function SidebarNav() {
                       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                 >
-                  <a>
+                  <>
                     <item.icon aria-hidden="true" />
                     <span>{item.label}</span>
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
