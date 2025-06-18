@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
