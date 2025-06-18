@@ -345,7 +345,7 @@ const initialFiltersState = {
   prazoIntermediario: "",
 };
 
-const ALL_VALUES_SENTINEL = "ALL_VALUES_SENTINEL";
+const ALL_VALUES_SENTINEL = "ALL_VALUES"; // Changed from ALL_VALUES_SENTINEL to avoid conflict with potential future enums and ensure it's a valid, non-empty string.
 
 type ColumnConfig = {
   id: keyof Documento | string;
@@ -356,6 +356,7 @@ type ColumnConfig = {
   cellFormatter?: (value: any, doc: Documento) => React.ReactNode;
 };
 
+// Moved ALL_COLUMNS_CONFIG outside the component
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
   { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Emprestado' ? 'outline' : 'default' }>{value || 'N/A'}</Badge> },
@@ -717,7 +718,6 @@ export default function DocumentosPage() {
 
   const handleHorizontalScroll = (direction: 'left' | 'right') => {
     if (tableScrollRef.current) {
-      // The direct child of ScrollArea's Root is the Viewport
       const viewport = tableScrollRef.current.children[0] as HTMLDivElement | undefined;
       if (viewport) {
         if (direction === 'left') {
@@ -1283,8 +1283,8 @@ export default function DocumentosPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="w-full whitespace-nowrap" ref={tableScrollRef}>
-            <Table>
+          <ScrollArea className="w-full" ref={tableScrollRef}>
+            <Table className="whitespace-nowrap">
               <TableHeader>
                 <TableRow>
                   {ALL_COLUMNS_CONFIG.map((column) =>
