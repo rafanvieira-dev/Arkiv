@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, Search, RotateCcw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO, isValid, getYear } from 'date-fns';
+import { format, parseISO, isValid, getYear, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
@@ -33,6 +33,12 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/date-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const placeholderClassificacoesSimulado = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
@@ -58,6 +64,7 @@ const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 0,
     tipoMidiaDetalhe: undefined,
+    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "",
     paginaMidiaDetalhe: "",
     digitalizado: "Não", 
@@ -69,7 +76,7 @@ const placeholderDocumentos: Documento[] = [
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "", // Guarda Permanente
+    anoEliminacaoPrevisto: "", 
     nomePartePrincipal: "Empresa Exemplo Ltda",
     tipoPartePrincipal: "Autor",
     outroTipoPartePrincipal: "",
@@ -256,15 +263,28 @@ const initialFormState: Partial<Documento> = {
 const tiposParteOpcoes = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima", "Outro"];
 
 const initialFiltersState = {
+  status: "",
+  origemDocumento: "",
   numeroDocumento: "",
-  origem: "",
-  tipoDocumento: "",
+  descricao: "",
+  codClassificacao: "",
   destinacaoFinal: "",
-  anoDocumento: "",
-  anoLimiteDocumento: "",
+  anoProducao: "",
+  anoArquivamento: "",
+  anoElimPrevistoExato: "",
+  anoElimPrevistoAte: "",
+  codigoCaixa: "",
+  generoDocumental: "",
+  categoriaDocumento: "",
+  tipoDocumento: "",
+  pessoasReferidas: "",
+  codigoAtoM: "",
+  segredoJustica: "",
+  grauSigilo: "",
+  // Campos de filtro antigos que não estão na imagem, mas mantidos na lógica
+  anoLimiteDocumento: "", // Era 'Documentos Até o Ano (Arquivamento)'
   prazoCorrente: "",
   prazoIntermediario: "",
-  segredoJustica: "",
   digitalizado: "",
 };
 
@@ -281,6 +301,7 @@ export default function DocumentosPage() {
   
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>(placeholderDocumentos);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(true);
 
   React.useEffect(() => {
     let anoEliminacao = "";
@@ -421,57 +442,67 @@ export default function DocumentosPage() {
     setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
   };
 
+  const parseDataAbrangenteForYear = (dataAbrangente?: string): string | undefined => {
+    if (!dataAbrangente) return undefined;
+    const matchAno = dataAbrangente.match(/\d{4}/); // Pega o primeiro ano que encontrar
+    return matchAno ? matchAno[0] : undefined;
+  };
+  
   const applyFilters = () => {
     const newFilteredDocumentos = placeholderDocumentos.filter(doc => {
       let passesAll = true;
+
+      // Filtros da imagem
+      if (filters.status && doc.status !== filters.status) passesAll = false;
+      if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
+      if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) passesAll = false;
+      if (filters.descricao && doc.descricaoDocumento && !doc.descricaoDocumento.toLowerCase().includes(filters.descricao.toLowerCase())) passesAll = false;
+      
+      if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
+        const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
+        if (!classificacao || (classificacao.codigo && !classificacao.codigo.toLowerCase().includes(filters.codClassificacao.toLowerCase()))) {
+          passesAll = false;
+        }
+      } else if (filters.codClassificacao && !doc.classificacaoArquivisticaId) {
+        passesAll = false;
+      }
 
       if (filters.destinacaoFinal) {
         let effectiveDestination = doc.destinacaoFinalDisplay;
         if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
           effectiveDestination = "Guarda Permanente";
         }
-        if (effectiveDestination !== filters.destinacaoFinal) {
-          passesAll = false;
-        }
+        if (effectiveDestination !== filters.destinacaoFinal) passesAll = false;
       }
 
-      if (filters.anoDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+      if (filters.anoProducao) {
+        const anoProducaoDoc = parseDataAbrangenteForYear(doc.dataAbrangente);
+        if (!anoProducaoDoc || anoProducaoDoc !== filters.anoProducao) passesAll = false;
+      }
+      if (filters.anoArquivamento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
         const docYear = getYear(parseISO(doc.dataArquivamento)).toString();
-        if (docYear !== filters.anoDocumento) {
-          passesAll = false;
-        }
+        if (docYear !== filters.anoArquivamento) passesAll = false;
       }
+      if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) passesAll = false;
+      if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) passesAll = false;
+      if (filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
+      if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) passesAll = false;
+      if (filters.categoriaDocumento && doc.categoria !== filters.categoriaDocumento) passesAll = false;
+      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) passesAll = false; // Ajustado para text match
+      if (filters.pessoasReferidas && doc.nomePartePrincipal && !doc.nomePartePrincipal.toLowerCase().includes(filters.pessoasReferidas.toLowerCase())) passesAll = false;
+      if (filters.codigoAtoM && doc.codigoAtoM && !doc.codigoAtoM.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) passesAll = false;
+      if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) passesAll = false;
+      if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) passesAll = false;
 
+      // Filtros antigos mantidos na lógica (para não quebrar se ainda forem usados no estado)
       if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
         const docYear = getYear(parseISO(doc.dataArquivamento));
-        if (docYear > parseInt(filters.anoLimiteDocumento, 10)) {
-          passesAll = false;
-        }
+        if (docYear > parseInt(filters.anoLimiteDocumento, 10)) passesAll = false;
       }
+      if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) passesAll = false;
+      if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) passesAll = false;
+      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) passesAll = false;
 
-      if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) {
-        passesAll = false;
-      }
-
-      if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) {
-        passesAll = false;
-      }
-      
-      if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) {
-        passesAll = false;
-      }
-      if (filters.origem && doc.origem && !doc.origem.toLowerCase().includes(filters.origem.toLowerCase())) {
-        passesAll = false;
-      }
-      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) {
-        passesAll = false;
-      }
-      if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) {
-        passesAll = false;
-      }
-      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) {
-        passesAll = false;
-      }
 
       return passesAll;
     });
@@ -823,81 +854,182 @@ export default function DocumentosPage() {
         </Dialog>
       </PageHeader>
 
-      <Card className="mb-6 mt-6">
-        <CardHeader>
-          <CardTitle className="font-headline text-primary">Filtros do Acervo</CardTitle>
-          <CardDescription>Refine a lista de documentos abaixo.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
-            <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterOrigem">Origem</Label>
-            <Input id="filterOrigem" name="origem" value={filters.origem} onChange={handleFilterInputChange} placeholder="Contém..." />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterTipoDocumento">Tipo de Documento</Label>
-            <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
-            <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
-              <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_VALUES_SENTINEL}>Todas</SelectItem>
-                <SelectItem value="Eliminação">Eliminação</SelectItem>
-                <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterAnoDocumento">Ano do Documento (Arquivamento)</Label>
-            <Input id="filterAnoDocumento" name="anoDocumento" type="number" value={filters.anoDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2023" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arquivamento)</Label>
-            <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2014" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
-            <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
-            <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="filterSegredoJustica">Segredo de Justiça</Label>
-            <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
-              <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Todos" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
-                <SelectItem value="Sim">Sim</SelectItem>
-                <SelectItem value="Não">Não</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filterDigitalizado">Digitalizado</Label>
-            <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
-              <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
-                <SelectItem value="Sim">Sim</SelectItem>
-                <SelectItem value="Não">Não</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-          <Button onClick={applyFilters}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
-        </CardFooter>
-      </Card>
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros do Acervo</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de documentos aplicando um ou mais filtros abaixo. A importação CSV agora suporta atualização de documentos existentes se um 'ID Interno' válido for fornecido.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+              <div className="space-y-2">
+                <Label htmlFor="filterStatus">Status</Label>
+                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                    <SelectItem value="Arquivado">Arquivado</SelectItem>
+                    <SelectItem value="Eliminado">Eliminado</SelectItem>
+                    <SelectItem value="Emprestado">Emprestado</SelectItem>
+                    <SelectItem value="Desarquivado">Desarquivado</SelectItem>
+                    <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterOrigemDocumento">Origem do Documento</Label>
+                <Input id="filterOrigemDocumento" name="origemDocumento" value={filters.origemDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
+                <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDescricao">Descrição</Label>
+                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterCodClassificacao">Cód. Classificação</Label>
+                <Input id="filterCodClassificacao" name="codClassificacao" value={filters.codClassificacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
+                <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                  <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
+                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="filterAnoProducao">Ano de Produção</Label>
+                <Input id="filterAnoProducao" name="anoProducao" type="number" value={filters.anoProducao} onChange={handleFilterInputChange} placeholder="AAAA" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterAnoArquivamento">Ano de Arquivamento</Label>
+                <Input id="filterAnoArquivamento" name="anoArquivamento" type="number" value={filters.anoArquivamento} onChange={handleFilterInputChange} placeholder="AAAA" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterAnoElimPrevistoExato">Ano Elim. Previsto (Exato)</Label>
+                <Input id="filterAnoElimPrevistoExato" name="anoElimPrevistoExato" type="number" value={filters.anoElimPrevistoExato} onChange={handleFilterInputChange} placeholder="AAAA" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterAnoElimPrevistoAte">Ano Elim. Previsto (Até)</Label>
+                <Input id="filterAnoElimPrevistoAte" name="anoElimPrevistoAte" type="number" value={filters.anoElimPrevistoAte} onChange={handleFilterInputChange} placeholder="AAAA" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
+                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterGeneroDocumental">Gênero Documental</Label>
+                <Select onValueChange={handleFilterSelectChange('generoDocumental')} value={filters.generoDocumental}>
+                  <SelectTrigger id="filterGeneroDocumental"><SelectValue placeholder="Todos os gêneros" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os gêneros</SelectItem>
+                    <SelectItem value="Textual">Textual</SelectItem>
+                    <SelectItem value="Iconográfico">Iconográfico</SelectItem>
+                    <SelectItem value="Cartográfico">Cartográfico</SelectItem>
+                    <SelectItem value="Sonoro">Sonoro</SelectItem>
+                    <SelectItem value="Filmográfico">Filmográfico</SelectItem>
+                    <SelectItem value="Audiovisual">Audiovisual</SelectItem>
+                    {/* Adicionar outros se necessário */}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterCategoriaDocumento">Categoria Documento</Label>
+                <Select onValueChange={handleFilterSelectChange('categoriaDocumento')} value={filters.categoriaDocumento}>
+                  <SelectTrigger id="filterCategoriaDocumento"><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as categorias</SelectItem>
+                    <SelectItem value="Documento">Documento</SelectItem>
+                    <SelectItem value="Dossiê">Dossiê</SelectItem>
+                    <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                    <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterTipoDocumento">Tipo de Documento</Label>
+                 <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterPessoasReferidas">Pessoas Referidas</Label>
+                <Input id="filterPessoasReferidas" name="pessoasReferidas" value={filters.pessoasReferidas} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterCodigoAtoM">Código AtoM</Label>
+                <Input id="filterCodigoAtoM" name="codigoAtoM" value={filters.codigoAtoM} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterSegredoJustica">Segredo de Justiça</Label>
+                <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
+                  <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Ambos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Ambos</SelectItem>
+                    <SelectItem value="Sim">Sim</SelectItem>
+                    <SelectItem value="Não">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterGrauSigilo">Grau de Sigilo LAI</Label>
+                <Select onValueChange={handleFilterSelectChange('grauSigilo')} value={filters.grauSigilo}>
+                  <SelectTrigger id="filterGrauSigilo"><SelectValue placeholder="Todos os graus" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os graus</SelectItem>
+                    <SelectItem value="Ostensivo">Ostensivo</SelectItem>
+                    <SelectItem value="Reservado">Reservado</SelectItem>
+                    <SelectItem value="Secreto">Secreto</SelectItem>
+                    <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Campos de filtro que existiam antes e não estão na imagem, mas mantidos na lógica interna */}
+              {/* <div className="space-y-2">
+                <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arquivamento)</Label>
+                <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2014" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
+                <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
+                <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDigitalizado">Digitalizado</Label>
+                <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
+                  <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
+                    <SelectItem value="Sim">Sim</SelectItem>
+                    <SelectItem value="Não">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div> */}
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+              <Button onClick={applyFilters}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-      <Card className="mt-6">
+
+      <Card className="mt-0"> {/* Removido mt-6 para ficar junto ao accordion */}
         <CardHeader>
           <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
         </CardHeader>
@@ -976,7 +1108,7 @@ export default function DocumentosPage() {
                     <TableCell>{doc.digitalizado || 'N/A'}</TableCell>
                     <TableCell>{doc.tipoBaixa || 'N/A'}</TableCell>
                     <TableCell>{doc.dataBaixa && isValid(parseISO(doc.dataBaixa)) ? format(parseISO(doc.dataBaixa), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
-                    <TableCell className="max-w-xs truncate whitespace-normal">{doc.descricaoDocumento || 'N/A'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate whitespace-normal">{doc.descricaoDocumento || 'N/A'}</TableCell>
                     <TableCell>{doc.classificacaoArquivisticaId || 'N/A'}</TableCell>
                     <TableCell>{doc.prazoArquivoCorrenteDisplay || 'N/A'}</TableCell>
                     <TableCell>{doc.prazoArquivoIntermediarioDisplay || 'N/A'}</TableCell>
@@ -990,7 +1122,7 @@ export default function DocumentosPage() {
                     <TableCell>{doc.codigosCaixa || 'N/A'}</TableCell>
                     <TableCell>{doc.codigoAtoM || 'N/A'}</TableCell>
                     <TableCell>{doc.documentosRelacionadosIds || 'N/A'}</TableCell>
-                    <TableCell className="max-w-xs truncate whitespace-normal">{doc.observacoesGerais || 'N/A'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate whitespace-normal">{doc.observacoesGerais || 'N/A'}</TableCell>
                     <TableCell>{doc.codigoClassificacaoJudicialId || 'N/A'}</TableCell>
                     <TableCell>{doc.dataCadastro && isValid(parseISO(doc.dataCadastro)) ? format(parseISO(doc.dataCadastro), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</TableCell>
                     <TableCell className="text-right sticky right-0 bg-background z-10">
@@ -1014,3 +1146,6 @@ export default function DocumentosPage() {
     </div>
   );
 }
+
+
+    
