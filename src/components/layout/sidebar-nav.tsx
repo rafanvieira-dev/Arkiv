@@ -47,23 +47,21 @@ export function SidebarNav() {
       <SidebarMenu>
         {navItems.map((item) => (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
-                tooltip={item.label}
-                className={cn(
-                  (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
-                    : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )}
-              >
-                <>
-                  <item.icon aria-hidden="true" />
-                  <span>{item.label}</span>
-                </>
-              </SidebarMenuButton>
-            </Link>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+              tooltip={item.label}
+              className={cn(
+                (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              )}
+            >
+              <Link href={item.href}>
+                <item.icon aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
@@ -71,23 +69,21 @@ export function SidebarNav() {
         <SidebarMenu>
           {secondaryNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || pathname.startsWith(item.href)}
-                  tooltip={item.label}
-                  className={cn(
-                    (pathname === item.href || pathname.startsWith(item.href))
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
-                      : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                >
-                  <>
-                    <item.icon aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href || pathname.startsWith(item.href)}
+                tooltip={item.label}
+                className={cn(
+                  (pathname === item.href || pathname.startsWith(item.href))
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
+                    : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                )}
+              >
+                <Link href={item.href}>
+                  <item.icon aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -95,3 +91,4 @@ export function SidebarNav() {
     </>
   );
 }
+
