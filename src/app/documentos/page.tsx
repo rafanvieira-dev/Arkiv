@@ -10,7 +10,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, Check, ChevronsUpDown, ChevronLeft, ChevronRight
+  CheckSquare, Square, Check, ChevronsUpDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -491,33 +491,6 @@ export default function DocumentosPage() {
     if (id === 'generoDocumental' && value !== 'Outro') setOutroGeneroDocumental("");
     if (id === 'tipoMidiaDetalhe' && value !== 'Outro') setOutroTipoMidia("");
     if (id === 'tipoPartePrincipal' && value !== 'Outro') setOutroTipoParte("");
-
-    if (id === 'classificacaoArquivisticaId' && value) {
-        const classificacaoSelecionada = placeholderClassificacoesSimulado.find(c => c.id === value);
-        if (classificacaoSelecionada) {
-            let prazoCorrente = "";
-            if (classificacaoSelecionada.tipoPrazoFaseCorrente === "Anos") {
-                prazoCorrente = `${classificacaoSelecionada.prazoGuardaFaseCorrenteAnos} Anos`;
-            } else if (classificacaoSelecionada.tipoPrazoFaseCorrente === "Condição Textual") {
-                prazoCorrente = classificacaoSelecionada.prazoGuardaFaseCorrenteCondicaoTextual || "";
-            }
-            setFormState(prev => ({
-                ...prev,
-                classificacaoArquivisticaId: classificacaoSelecionada.id,
-                prazoArquivoCorrenteDisplay: prazoCorrente,
-                prazoArquivoIntermediarioDisplay: `${classificacaoSelecionada.prazoGuardaFaseIntermediariaAnos} Anos`,
-                destinacaoFinalDisplay: classificacaoSelecionada.destinacaoFinal,
-            }));
-        } else {
-             setFormState(prev => ({ // Should not happen if value is from CommandItem selection
-                ...prev,
-                classificacaoArquivisticaId: "",
-                prazoArquivoCorrenteDisplay: "Não encontrado/Inválido",
-                prazoArquivoIntermediarioDisplay: "Não encontrado/Inválido",
-                destinacaoFinalDisplay: undefined,
-            }));
-        }
-    }
   };
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
@@ -545,8 +518,8 @@ export default function DocumentosPage() {
     }
 
     const finalFormState: Documento = {
-      ...initialFormState, // Ensure all fields are present
-      ...formState, // Spread current form state which includes new classificationId and derived fields
+      ...initialFormState, 
+      ...formState, 
       id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental!,
@@ -554,7 +527,6 @@ export default function DocumentosPage() {
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
       historicoClassificacoesArquivisticas: updatedHistorico,
       classificacaoInativa: currentClassification ? currentClassification.inativo : false,
-      // Ensure required fields from Documento that might be missing in Partial<Documento> have defaults
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -583,7 +555,7 @@ export default function DocumentosPage() {
       let destFinal = doc.destinacaoFinalDisplay;
       
       const classificacaoDoc = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
-      if (classificacaoDoc) { // Recalculate based on the stored ID, not potentially stale display fields from doc
+      if (classificacaoDoc) { 
         if (classificacaoDoc.tipoPrazoFaseCorrente === "Anos") {
             prazoCorr = `${classificacaoDoc.prazoGuardaFaseCorrenteAnos} Anos`;
         } else if (classificacaoDoc.tipoPrazoFaseCorrente === "Condição Textual") {
@@ -597,7 +569,7 @@ export default function DocumentosPage() {
       setFormState({
         ...initialFormState, 
         ...doc,
-        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", // Ensure it's set
+        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
         historicoClassificacoesArquivisticas: doc.historicoClassificacoesArquivisticas || [],
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
@@ -1029,8 +1001,26 @@ export default function DocumentosPage() {
                               <CommandItem
                                 key={classificacao.id}
                                 value={classificacao.id}
-                                onSelect={(currentValue) => {
-                                  handleSelectChange('classificacaoArquivisticaId')(currentValue);
+                                onSelect={(selectedId) => {
+                                  const classification = placeholderClassificacoesSimulado.find(c => c.id === selectedId);
+                                  if (classification) {
+                                    let prazoCorrente = "";
+                                    if (classification.tipoPrazoFaseCorrente === "Anos") {
+                                      prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
+                                    } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
+                                      prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
+                                    }
+                                    const prazoIntermediario = `${classification.prazoGuardaFaseIntermediariaAnos} Anos`;
+                                    const destinacao = classification.destinacaoFinal;
+
+                                    setFormState(prev => ({
+                                      ...prev,
+                                      classificacaoArquivisticaId: selectedId,
+                                      prazoArquivoCorrenteDisplay: prazoCorrente,
+                                      prazoArquivoIntermediarioDisplay: prazoIntermediario,
+                                      destinacaoFinalDisplay: destinacao,
+                                    }));
+                                  }
                                   setClassificacaoPopoverOpen(false);
                                 }}
                               >
@@ -1448,6 +1438,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
