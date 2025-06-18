@@ -221,7 +221,7 @@ const placeholderDocumentos: Documento[] = [
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX-TEMP-001", 
     codigoAtoM: "",
-    documentosRelacionadosIds: "DOC005", // Example
+    documentosRelacionadosIds: "DOC005", 
     observacoesGerais: "Documento eliminado conforme edital.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
@@ -407,7 +407,7 @@ export default function DocumentosPage() {
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(true);
 
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
-    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id]: col.defaultVisible }), {})
+    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -1221,8 +1221,8 @@ export default function DocumentosPage() {
               <DropdownMenuSeparator />
               {ALL_COLUMNS_CONFIG.map((column) => (
                 <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={columnVisibility[column.id]}
+                  key={column.id as string}
+                  checked={columnVisibility[column.id as string]}
                   onCheckedChange={() => toggleColumnVisibility(column.id as string)}
                 >
                   {column.header}
@@ -1237,8 +1237,8 @@ export default function DocumentosPage() {
               <TableHeader>
                 <TableRow>
                   {ALL_COLUMNS_CONFIG.map((column) =>
-                    columnVisibility[column.id] ? (
-                      <TableHead key={column.id}>
+                    columnVisibility[column.id as string] ? (
+                      <TableHead key={column.id as string}>
                         {column.enableSorting ? (
                           <Button
                             variant="ghost"
@@ -1261,8 +1261,8 @@ export default function DocumentosPage() {
                 {displayedDocumentos.map((doc) => (
                   <TableRow key={doc.id}>
                     {ALL_COLUMNS_CONFIG.map((column) =>
-                      columnVisibility[column.id] ? (
-                        <TableCell key={`${doc.id}-${column.id}`} className="py-2 px-3">
+                      columnVisibility[column.id as string] ? (
+                        <TableCell key={`${doc.id}-${column.id as string}`} className="py-2 px-3">
                            {getCellValue(doc, column)}
                         </TableCell>
                       ) : null
@@ -1299,3 +1299,4 @@ export default function DocumentosPage() {
     </div>
   );
 }
+
