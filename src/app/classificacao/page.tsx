@@ -157,20 +157,8 @@ export default function ClassificacaoPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigo" className="text-right">
-                  Código*
-                </Label>
-                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricao" className="text-right">
-                  Assunto*
-                </Label>
-                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
-              </div>
-               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="tipoPlanoClassificacao" className="text-right">
-                  Tipo de Plano
+                  Tipo de Plano*
                 </Label>
                 <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
                   <SelectTrigger id="tipoPlanoClassificacao" className="col-span-3">
@@ -181,6 +169,18 @@ export default function ClassificacaoPage() {
                     <SelectItem value="Judicial">Judicial</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="codigo" className="text-right">
+                  Código*
+                </Label>
+                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="descricao" className="text-right">
+                  Assunto*
+                </Label>
+                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
               </div>
               
               <div className="grid grid-cols-4 items-center gap-4">
