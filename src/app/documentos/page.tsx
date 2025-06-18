@@ -3,13 +3,13 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Documento } from "@/types";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO,isValid, getYear } from 'date-fns';
+import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
@@ -35,9 +35,9 @@ import { DatePicker } from "@/components/date-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const placeholderClassificacoesSimulado = [
-  { id: "CLA001", codigo: "020.1", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente', tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5 },
-  { id: "CLA002", codigo: "030.5", inativo: true, prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: 'Eliminação', tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização" },
-  { id: "CLA003", codigo: "045.2", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente', tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1 },
+  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", inativo: true, prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: 'Eliminação' as const, tipoPrazoFaseCorrente: "Condição Textual" as const, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização" },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 1 },
 ];
 
 const placeholderDocumentos: Documento[] = [
@@ -65,9 +65,9 @@ const placeholderDocumentos: Documento[] = [
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX001", 
-    dataCadastro: new Date().toISOString(), 
+    dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo,
-    anoEliminacaoPrevisto: "", // Será recalculado no useEffect
+    anoEliminacaoPrevisto: "2039", 
     nomePartePrincipal: "Empresa Exemplo Ltda",
     tipoPartePrincipal: "Autor",
     codigoClassificacaoJudicialId: "CJ001",
@@ -97,11 +97,11 @@ const placeholderDocumentos: Documento[] = [
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
     alteracaoDestinacaoFinal: "Não Alterar",
-    anoEliminacaoPrevisto: "2027", // 2023 (arq) + 3 (interm) + 1
+    anoEliminacaoPrevisto: "2027", 
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX002", 
-    dataCadastro: new Date().toISOString(), 
+    dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
@@ -131,10 +131,37 @@ const placeholderDocumentos: Documento[] = [
     segredoJustica: "Sim", 
     grauSigilo: "Secreto", 
     codigosCaixa: "CX001", 
-    dataCadastro: new Date().toISOString(), 
+    dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo,
     nomePartePrincipal: "João da Silva",
     tipoPartePrincipal: "Interessado",
+    anoEliminacaoPrevisto: "", // Guarda Permanente não tem ano de eliminação
+  },
+   { 
+    id: "DOC004", 
+    numeroDocumento: "REQ-2014-001", 
+    status: "Eliminado", 
+    orgao: "TRF2", 
+    origem: "Advocacia Geral", 
+    tipoMeio: "Não digital", 
+    generoDocumental: "Textual", 
+    categoria: "Documento", 
+    tipoDocumento: "Requerimento", 
+    dataAbrangente: "10/06/2014",
+    dataArquivamento: new Date("2014-06-15").toISOString(), 
+    quantidadeVolumes: 1,
+    digitalizado: "Não", 
+    classificacaoArquivisticaId: "CLA002", // Classif. Inativa e de Eliminação
+    prazoArquivoCorrenteDisplay: "Até a próxima atualização",
+    prazoArquivoIntermediarioDisplay: "3 Anos", // Prazo para filtro
+    destinacaoFinalDisplay: "Eliminação",      // Destinação para filtro
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    segredoJustica: "Não", 
+    grauSigilo: "Ostensivo", 
+    codigosCaixa: "CX-TEMP-001", 
+    dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
+    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
+    anoEliminacaoPrevisto: "2018", 
   },
 ];
 
@@ -181,6 +208,19 @@ const initialFormState: Partial<Documento> = {
 
 const tiposParteOpcoes = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima", "Outro"];
 
+const initialFiltersState = {
+  numeroDocumento: "",
+  origem: "",
+  tipoDocumento: "",
+  destinacaoFinal: "",
+  anoDocumento: "",
+  anoLimiteDocumento: "",
+  prazoCorrente: "",
+  prazoIntermediario: "",
+  segredoJustica: "",
+  digitalizado: "",
+};
+
 export default function DocumentosPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento>>(initialFormState);
@@ -189,16 +229,22 @@ export default function DocumentosPage() {
   const [outroGeneroDocumental, setOutroGeneroDocumental] = React.useState("");
   const [outroTipoMidia, setOutroTipoMidia] = React.useState("");
   const [outroTipoParte, setOutroTipoParte] = React.useState("");
+  
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>(placeholderDocumentos);
 
   React.useEffect(() => {
     let anoEliminacao = "";
-    if (formState.dataArquivamento && formState.prazoArquivoIntermediarioDisplay && (formState.destinacaoFinalDisplay === 'Eliminação' || formState.alteracaoDestinacaoFinal !== 'Não Alterar')) {
+    if (formState.dataArquivamento && formState.prazoArquivoIntermediarioDisplay && 
+        (formState.destinacaoFinalDisplay === 'Eliminação' || 
+         (formState.destinacaoFinalDisplay !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
+        
         const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-        // Tenta extrair o número de anos do prazo intermediário. Ex: "15 Anos" -> 15
         const prazoIntermediarioMatch = formState.prazoArquivoIntermediarioDisplay.match(/\d+/);
-        if (prazoIntermediarioMatch) {
+        
+        if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
             const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
-            if (isValid(dataArquivamentoDate) && !isNaN(prazoIntermediarioAnos)) {
+            if (!isNaN(prazoIntermediarioAnos)) {
                 const anoArquivamento = getYear(dataArquivamentoDate);
                 anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
             }
@@ -227,7 +273,6 @@ export default function DocumentosPage() {
     if (id === 'tipoMidiaDetalhe' && value !== 'Outro') setOutroTipoMidia("");
     if (id === 'tipoPartePrincipal' && value !== 'Outro') setOutroTipoParte("");
 
-    // Lógica para buscar dados da classificação (simulada por enquanto)
     if (id === 'classificacaoArquivisticaId' && value) {
         const classificacaoSelecionada = placeholderClassificacoesSimulado.find(c => c.id === value || c.codigo === value);
         if (classificacaoSelecionada) {
@@ -269,14 +314,13 @@ export default function DocumentosPage() {
   const handleSaveChanges = () => {
     const finalFormState = {
       ...formState,
-      id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay, // Simula geração de ID
+      id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
     };
     console.log("Salvando documento:", finalFormState);
-    // Aqui você adicionaria a lógica para salvar no backend ou atualizar o estado da lista de documentos
     setIsDialogOpen(false);
   };
 
@@ -296,7 +340,6 @@ export default function DocumentosPage() {
         prazoInter = `${classificacao.prazoGuardaFaseIntermediariaAnos} Anos`;
         destFinal = classificacao.destinacaoFinal;
       }
-
 
       setFormState({
         ...initialFormState, 
@@ -318,6 +361,77 @@ export default function DocumentosPage() {
       resetForm();
     }
     setIsDialogOpen(true);
+  };
+
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const applyFilters = () => {
+    const newFilteredDocumentos = placeholderDocumentos.filter(doc => {
+      let passesAll = true;
+
+      if (filters.destinacaoFinal) {
+        let effectiveDestination = doc.destinacaoFinalDisplay;
+        if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+          effectiveDestination = "Guarda Permanente";
+        }
+        if (effectiveDestination !== filters.destinacaoFinal) {
+          passesAll = false;
+        }
+      }
+
+      if (filters.anoDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+        const docYear = getYear(parseISO(doc.dataArquivamento)).toString();
+        if (docYear !== filters.anoDocumento) {
+          passesAll = false;
+        }
+      }
+
+      if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+        const docYear = getYear(parseISO(doc.dataArquivamento));
+        if (docYear > parseInt(filters.anoLimiteDocumento, 10)) {
+          passesAll = false;
+        }
+      }
+
+      if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) {
+        passesAll = false;
+      }
+
+      if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) {
+        passesAll = false;
+      }
+      
+      if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) {
+        passesAll = false;
+      }
+      if (filters.origem && doc.origem && !doc.origem.toLowerCase().includes(filters.origem.toLowerCase())) {
+        passesAll = false;
+      }
+      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) {
+        passesAll = false;
+      }
+      if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) {
+        passesAll = false;
+      }
+      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) {
+        passesAll = false;
+      }
+
+      return passesAll;
+    });
+    setDisplayedDocumentos(newFilteredDocumentos);
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+    setDisplayedDocumentos(placeholderDocumentos);
   };
 
 
@@ -540,12 +654,10 @@ export default function DocumentosPage() {
                     <SelectTrigger id="classificacaoArquivisticaId"><SelectValue placeholder="Selecione ou digite o código" /></SelectTrigger>
                     <SelectContent>
                         {placeholderClassificacoesSimulado.filter(c => !c.inativo).map(c => (
-                            <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.id}</SelectItem>
+                            <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.descricao}</SelectItem>
                         ))}
-                        {/* Permitir input manual também, mas Select é melhor para FK */}
                     </SelectContent>
                 </Select>
-                {/* <Input id="classificacaoArquivisticaId" value={formState.classificacaoArquivisticaId || ""} onChange={handleInputChange} placeholder="Ex: 020.1 ou ID da Classificação" /> */}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
@@ -662,118 +774,195 @@ export default function DocumentosPage() {
         </Dialog>
       </PageHeader>
 
+      <Card className="mb-6 mt-6">
+        <CardHeader>
+          <CardTitle className="font-headline text-primary">Filtros do Acervo</CardTitle>
+          <CardDescription>Refine a lista de documentos abaixo.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
+            <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterOrigem">Origem</Label>
+            <Input id="filterOrigem" name="origem" value={filters.origem} onChange={handleFilterInputChange} placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterTipoDocumento">Tipo de Documento</Label>
+            <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
+            <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+              <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="Eliminação">Eliminação</SelectItem>
+                <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterAnoDocumento">Ano do Documento (Arquivamento)</Label>
+            <Input id="filterAnoDocumento" name="anoDocumento" type="number" value={filters.anoDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2023" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arquivamento)</Label>
+            <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="Ex: 2014" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
+            <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
+            <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="filterSegredoJustica">Segredo de Justiça</Label>
+            <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
+              <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Todos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+                <SelectItem value="Não">Não</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filterDigitalizado">Digitalizado</Label>
+            <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
+              <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+                <SelectItem value="Não">Não</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+          <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+          <Button onClick={applyFilters}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
+        </CardFooter>
+      </Card>
+
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nº Documento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Órgão</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Tipo Meio</TableHead>
-                <TableHead>Gênero Doc.</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Tipo Doc.</TableHead>
-                <TableHead>Data Abrangente</TableHead>
-                <TableHead>Data Arq.</TableHead>
-                <TableHead>Qtd. Vol.</TableHead>
-                <TableHead>Qtd. Apen.</TableHead>
-                <TableHead>Nºs Apensos</TableHead>
-                <TableHead>Tot. Mídias</TableHead>
-                <TableHead>Tipo Mídia</TableHead>
-                <TableHead>Nº Mídia</TableHead>
-                <TableHead>Pág. Mídia</TableHead>
-                <TableHead>Digitalizado</TableHead>
-                <TableHead>Tipo Baixa</TableHead>
-                <TableHead>Data Baixa</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>ID Class. Arq.</TableHead>
-                <TableHead>Prazo Corr.</TableHead>
-                <TableHead>Prazo Interm.</TableHead>
-                <TableHead>Dest. Final (Class.)</TableHead>
-                <TableHead>Alt. Dest. Final</TableHead>
-                <TableHead>Ano Elim. Prev.</TableHead>
-                <TableHead>Parte Princ.</TableHead>
-                <TableHead>Tipo Parte</TableHead>
-                <TableHead>Segredo Justiça</TableHead>
-                <TableHead>Grau Sigilo</TableHead>
-                <TableHead>Caixa(s)</TableHead>
-                <TableHead>Cód. AtoM</TableHead>
-                <TableHead>Docs. Relac.</TableHead>
-                <TableHead>Obs. Gerais</TableHead>
-                <TableHead>ID Class. Jud.</TableHead>
-                <TableHead>Data Cad.</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {placeholderDocumentos.map((doc) => (
-                <TableRow key={doc.id}>
-                  <TableCell className="font-medium">
-                    {doc.numeroDocumento || doc.id}
-                    {doc.classificacaoInativa && (
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                        CÓDIGO CLASSIF. INATIVO, RECLASSIFICAR
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell><Badge variant={doc.status === 'Arquivado' ? 'secondary' : doc.status === 'Emprestado' ? 'outline' : 'default' }>{doc.status}</Badge></TableCell>
-                  <TableCell>{doc.orgao || 'N/A'}</TableCell>
-                  <TableCell>{doc.origem || 'N/A'}</TableCell>
-                  <TableCell>{doc.tipoMeio || 'N/A'}</TableCell>
-                  <TableCell>{doc.generoDocumental || 'N/A'}</TableCell>
-                  <TableCell>{doc.categoria || 'N/A'}</TableCell>
-                  <TableCell>{doc.tipoDocumento || 'N/A'}</TableCell>
-                  <TableCell>{doc.dataAbrangente || 'N/A'}</TableCell>
-                  <TableCell>{doc.dataArquivamento ? format(parseISO(doc.dataArquivamento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
-                  <TableCell>{doc.quantidadeVolumes ?? 'N/A'}</TableCell>
-                  <TableCell>{doc.quantidadeApensos ?? 'N/A'}</TableCell>
-                  <TableCell>{doc.numerosApensos || 'N/A'}</TableCell>
-                  <TableCell>{doc.totalMidias ?? 'N/A'}</TableCell>
-                  <TableCell>{doc.tipoMidiaDetalhe || 'N/A'}</TableCell>
-                  <TableCell>{doc.numeroMidiaDetalhe || 'N/A'}</TableCell>
-                  <TableCell>{doc.paginaMidiaDetalhe || 'N/A'}</TableCell>
-                  <TableCell>{doc.digitalizado || 'N/A'}</TableCell>
-                  <TableCell>{doc.tipoBaixa || 'N/A'}</TableCell>
-                  <TableCell>{doc.dataBaixa ? format(parseISO(doc.dataBaixa), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
-                  <TableCell className="max-w-xs truncate">{doc.descricaoDocumento || 'N/A'}</TableCell>
-                  <TableCell>{doc.classificacaoArquivisticaId || 'N/A'}</TableCell>
-                  <TableCell>{doc.prazoArquivoCorrenteDisplay || 'N/A'}</TableCell>
-                  <TableCell>{doc.prazoArquivoIntermediarioDisplay || 'N/A'}</TableCell>
-                  <TableCell>{doc.destinacaoFinalDisplay || 'N/A'}</TableCell>
-                  <TableCell>{doc.alteracaoDestinacaoFinal || 'N/A'}</TableCell>
-                  <TableCell>{doc.anoEliminacaoPrevisto || 'N/A'}</TableCell>
-                  <TableCell>{doc.nomePartePrincipal || 'N/A'}</TableCell>
-                  <TableCell>{doc.tipoPartePrincipal || 'N/A'}</TableCell>
-                  <TableCell>{doc.segredoJustica || 'N/A'}</TableCell>
-                  <TableCell>{doc.grauSigilo || 'N/A'}</TableCell>
-                  <TableCell>{doc.codigosCaixa || 'N/A'}</TableCell>
-                  <TableCell>{doc.codigoAtoM || 'N/A'}</TableCell>
-                  <TableCell>{doc.documentosRelacionadosIds || 'N/A'}</TableCell>
-                  <TableCell className="max-w-xs truncate">{doc.observacoesGerais || 'N/A'}</TableCell>
-                  <TableCell>{doc.codigoClassificacaoJudicialId || 'N/A'}</TableCell>
-                  <TableCell>{doc.dataCadastro ? format(parseISO(doc.dataCadastro), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nº Documento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Órgão</TableHead>
+                  <TableHead>Origem</TableHead>
+                  <TableHead>Tipo Meio</TableHead>
+                  <TableHead>Gênero Doc.</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Tipo Doc.</TableHead>
+                  <TableHead>Data Abrangente</TableHead>
+                  <TableHead>Data Arq.</TableHead>
+                  <TableHead>Qtd. Vol.</TableHead>
+                  <TableHead>Qtd. Apen.</TableHead>
+                  <TableHead>Nºs Apensos</TableHead>
+                  <TableHead>Tot. Mídias</TableHead>
+                  <TableHead>Tipo Mídia</TableHead>
+                  <TableHead>Nº Mídia</TableHead>
+                  <TableHead>Pág. Mídia</TableHead>
+                  <TableHead>Digitalizado</TableHead>
+                  <TableHead>Tipo Baixa</TableHead>
+                  <TableHead>Data Baixa</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>ID Class. Arq.</TableHead>
+                  <TableHead>Prazo Corr.</TableHead>
+                  <TableHead>Prazo Interm.</TableHead>
+                  <TableHead>Dest. Final (Class.)</TableHead>
+                  <TableHead>Alt. Dest. Final</TableHead>
+                  <TableHead>Ano Elim. Prev.</TableHead>
+                  <TableHead>Parte Princ.</TableHead>
+                  <TableHead>Tipo Parte</TableHead>
+                  <TableHead>Segredo Justiça</TableHead>
+                  <TableHead>Grau Sigilo</TableHead>
+                  <TableHead>Caixa(s)</TableHead>
+                  <TableHead>Cód. AtoM</TableHead>
+                  <TableHead>Docs. Relac.</TableHead>
+                  <TableHead>Obs. Gerais</TableHead>
+                  <TableHead>ID Class. Jud.</TableHead>
+                  <TableHead>Data Cad.</TableHead>
+                  <TableHead className="text-right sticky right-0 bg-background z-10">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {displayedDocumentos.map((doc) => (
+                  <TableRow key={doc.id}>
+                    <TableCell className="font-medium">
+                      {doc.numeroDocumento || doc.id}
+                      {doc.classificacaoInativa && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 whitespace-normal">
+                          CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell><Badge variant={doc.status === 'Arquivado' ? 'secondary' : doc.status === 'Emprestado' ? 'outline' : 'default' }>{doc.status || 'N/A'}</Badge></TableCell>
+                    <TableCell>{doc.orgao || 'N/A'}</TableCell>
+                    <TableCell>{doc.origem || 'N/A'}</TableCell>
+                    <TableCell>{doc.tipoMeio || 'N/A'}</TableCell>
+                    <TableCell>{doc.generoDocumental || 'N/A'}</TableCell>
+                    <TableCell>{doc.categoria || 'N/A'}</TableCell>
+                    <TableCell>{doc.tipoDocumento || 'N/A'}</TableCell>
+                    <TableCell>{doc.dataAbrangente || 'N/A'}</TableCell>
+                    <TableCell>{doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento)) ? format(parseISO(doc.dataArquivamento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
+                    <TableCell>{doc.quantidadeVolumes ?? 'N/A'}</TableCell>
+                    <TableCell>{doc.quantidadeApensos ?? 'N/A'}</TableCell>
+                    <TableCell>{doc.numerosApensos || 'N/A'}</TableCell>
+                    <TableCell>{doc.totalMidias ?? 'N/A'}</TableCell>
+                    <TableCell>{doc.tipoMidiaDetalhe || 'N/A'}</TableCell>
+                    <TableCell>{doc.numeroMidiaDetalhe || 'N/A'}</TableCell>
+                    <TableCell>{doc.paginaMidiaDetalhe || 'N/A'}</TableCell>
+                    <TableCell>{doc.digitalizado || 'N/A'}</TableCell>
+                    <TableCell>{doc.tipoBaixa || 'N/A'}</TableCell>
+                    <TableCell>{doc.dataBaixa && isValid(parseISO(doc.dataBaixa)) ? format(parseISO(doc.dataBaixa), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}</TableCell>
+                    <TableCell className="max-w-xs truncate whitespace-normal">{doc.descricaoDocumento || 'N/A'}</TableCell>
+                    <TableCell>{doc.classificacaoArquivisticaId || 'N/A'}</TableCell>
+                    <TableCell>{doc.prazoArquivoCorrenteDisplay || 'N/A'}</TableCell>
+                    <TableCell>{doc.prazoArquivoIntermediarioDisplay || 'N/A'}</TableCell>
+                    <TableCell>{doc.destinacaoFinalDisplay || 'N/A'}</TableCell>
+                    <TableCell>{doc.alteracaoDestinacaoFinal || 'N/A'}</TableCell>
+                    <TableCell>{doc.anoEliminacaoPrevisto || 'N/A'}</TableCell>
+                    <TableCell>{doc.nomePartePrincipal || 'N/A'}</TableCell>
+                    <TableCell>{doc.tipoPartePrincipal || 'N/A'}</TableCell>
+                    <TableCell>{doc.segredoJustica || 'N/A'}</TableCell>
+                    <TableCell>{doc.grauSigilo || 'N/A'}</TableCell>
+                    <TableCell>{doc.codigosCaixa || 'N/A'}</TableCell>
+                    <TableCell>{doc.codigoAtoM || 'N/A'}</TableCell>
+                    <TableCell>{doc.documentosRelacionadosIds || 'N/A'}</TableCell>
+                    <TableCell className="max-w-xs truncate whitespace-normal">{doc.observacoesGerais || 'N/A'}</TableCell>
+                    <TableCell>{doc.codigoClassificacaoJudicialId || 'N/A'}</TableCell>
+                    <TableCell>{doc.dataCadastro && isValid(parseISO(doc.dataCadastro)) ? format(parseISO(doc.dataCadastro), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</TableCell>
+                    <TableCell className="text-right sticky right-0 bg-background z-10">
+                      <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+           {displayedDocumentos.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhum documento encontrado para os filtros aplicados.</p>
+          )}
         </CardContent>
       </Card>
     </div>
   );
-}
-
 
     
