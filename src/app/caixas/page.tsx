@@ -2,12 +2,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Caixa } from "@/types";
-import { PlusCircle, Edit, Trash2, PackageOpen, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -39,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 
 const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
@@ -70,7 +71,20 @@ type ColumnConfigCaixas = {
 };
 
 const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
-  { id: 'codigoCaixa', header: 'Código', accessorKey: 'codigoCaixa', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'codigoCaixa', 
+    header: 'Código', 
+    accessorKey: 'codigoCaixa', 
+    defaultVisible: true, 
+    enableSorting: true,
+    cellFormatter: (value, caixa) => (
+      <Link href={`/documentos?caixaId=${caixa.id}`} passHref>
+        <span className="text-primary hover:underline cursor-pointer font-medium">
+          {value}
+        </span>
+      </Link>
+    )
+  },
   { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
   { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
@@ -84,6 +98,7 @@ export default function CaixasPage() {
   const [selectedTipoCaixa, setSelectedTipoCaixa] = React.useState<string>("");
   const [outroTipoCaixa, setOutroTipoCaixa] = React.useState<string>("");
   const [isEditing, setIsEditing] = React.useState(false);
+  const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
   const [placeholderCaixas, setPlaceholderCaixas] = React.useState<Caixa[]>(placeholderCaixasInitial);
 
@@ -98,11 +113,13 @@ export default function CaixasPage() {
     setSelectedTipoCaixa("");
     setOutroTipoCaixa("");
     setIsEditing(false);
+    setEditingCaixaId(null);
   };
 
   const handleOpenDialog = (caixa?: Caixa) => {
     if (caixa) {
       setIsEditing(true);
+      setEditingCaixaId(caixa.id);
       setFormStateCaixa(caixa);
       if (tiposCaixaPadrao.includes(caixa.tipo)) {
         setSelectedTipoCaixa(caixa.tipo);
@@ -131,17 +148,17 @@ export default function CaixasPage() {
     const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
     
     const caixaDataToSave: Caixa = {
-      ...initialFormStateCaixa, // ensure all fields are present
+      ...initialFormStateCaixa, 
       ...formStateCaixa,
       tipo: tipoFinal,
-      id: isEditing && formStateCaixa.id ? formStateCaixa.id : `CX${Date.now()}`,
+      id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`, // Use editingCaixaId if editing
       status: formStateCaixa.status || 'Aberta',
       situacao: formStateCaixa.situacao || 'Incompleta',
-    };
+    } as Caixa; // Cast to Caixa to ensure all fields are there
 
     let updatedCaixas;
-    if (isEditing) {
-      updatedCaixas = placeholderCaixas.map(c => c.id === caixaDataToSave.id ? caixaDataToSave : c);
+    if (isEditing && editingCaixaId) {
+      updatedCaixas = placeholderCaixas.map(c => c.id === editingCaixaId ? caixaDataToSave : c);
     } else {
       updatedCaixas = [...placeholderCaixas, caixaDataToSave];
     }
@@ -229,6 +246,7 @@ export default function CaixasPage() {
 
 
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -272,6 +290,8 @@ export default function CaixasPage() {
                   if (value !== "Outro") {
                     setFormStateCaixa(prev => ({ ...prev, tipo: value }));
                     setOutroTipoCaixa("");
+                  } else {
+                     setFormStateCaixa(prev => ({ ...prev, tipo: "" })); // Clear tipo if "Outro" is selected, user must specify
                   }
                 }} value={selectedTipoCaixa}>
                   <SelectTrigger id="tipo" className="col-span-3">
@@ -422,16 +442,6 @@ export default function CaixasPage() {
                       <div className="flex items-center justify-end">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Ver Documentos da Caixa">
-                              <PackageOpen className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Ver Documentos da Caixa</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" aria-label="Editar Caixa" onClick={() => handleOpenDialog(item)}>
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -464,6 +474,6 @@ export default function CaixasPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
-
