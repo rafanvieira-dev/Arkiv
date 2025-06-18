@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Caixa } from "@/types";
-import { PlusCircle, Edit, Trash2, PackageOpen } from "lucide-react";
+import { PlusCircle, Edit, Trash2, PackageOpen, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -29,13 +29,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
 
 const placeholderCaixas: Caixa[] = [
-  { id: "CX001", codigoCaixa: "CX-A-001", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
-  { id: "CX002", codigoCaixa: "CX-B-015", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
-  { id: "CX003", codigoCaixa: "PST-X-007", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
+  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
+  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
+  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
+];
+
+type ColumnConfigCaixas = {
+  id: keyof Caixa | string;
+  header: string;
+  accessorKey: keyof Caixa | string;
+  defaultVisible: boolean;
+  enableSorting: boolean;
+  cellFormatter?: (value: any, doc: Caixa) => React.ReactNode;
+};
+
+const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
+  { id: 'codigoCaixa', header: 'Código', accessorKey: 'codigoCaixa', defaultVisible: true, enableSorting: true },
+  { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
+  { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
+  { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
 ];
 
 export default function CaixasPage() {
@@ -43,16 +71,97 @@ export default function CaixasPage() {
   const [selectedTipoCaixa, setSelectedTipoCaixa] = React.useState<string>("");
   const [outroTipoCaixa, setOutroTipoCaixa] = React.useState<string>("");
 
+  const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
+    ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+  );
+  const [sortingCaixas, setSortingCaixas] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>(placeholderCaixas);
+
   const handleSaveChanges = () => {
-    // Lógica para salvar os dados da nova caixa será implementada aqui
-    // Exemplo de como obter o tipo final:
     const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
     console.log("Salvando nova caixa com tipo:", tipoFinal);
+    // Lógica para salvar nova caixa (será implementada futuramente)
     // Adicionar aqui a lógica para coletar todos os campos do formulário
-    setIsDialogOpen(false); 
+    setIsDialogOpen(false);
     setSelectedTipoCaixa("");
     setOutroTipoCaixa("");
   };
+
+  const getSortableValueCaixas = (caixa: Caixa, columnId: string): any => {
+    const column = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
+    if (!column) return null;
+    const value = caixa[column.accessorKey as keyof Caixa];
+    return value;
+  };
+  
+  React.useEffect(() => {
+    let sortedCaixas = [...placeholderCaixas];
+    if (sortingCaixas) {
+      sortedCaixas.sort((a, b) => {
+        const valA = getSortableValueCaixas(a, sortingCaixas.id);
+        const valB = getSortableValueCaixas(b, sortingCaixas.id);
+
+        if (valA === null || valA === undefined) return sortingCaixas.direction === 'asc' ? 1 : -1;
+        if (valB === null || valB === undefined) return sortingCaixas.direction === 'asc' ? -1 : 1;
+        
+        const strA = String(valA).toLowerCase();
+        const strB = String(valB).toLowerCase();
+        if (strA < strB) return sortingCaixas.direction === 'asc' ? -1 : 1;
+        if (strA > strB) return sortingCaixas.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    setDisplayedCaixas(sortedCaixas);
+  }, [sortingCaixas]);
+
+
+  const handleSortCaixas = (columnId: string) => {
+    const columnConfig = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
+    if (!columnConfig || !columnConfig.enableSorting) return;
+
+    setSortingCaixas(prev => {
+      if (prev?.id === columnId) {
+        if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
+        return null; 
+      }
+      return { id: columnId, direction: 'asc' };
+    });
+  };
+
+  const renderSortIconCaixas = (columnId: string) => {
+    if (!sortingCaixas || sortingCaixas.id !== columnId) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    if (sortingCaixas.direction === 'asc') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const toggleColumnVisibilityCaixas = (columnId: string) => {
+    setColumnVisibilityCaixas(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
+
+  const handleSelectAllColumnsCaixas = () => {
+    setColumnVisibilityCaixas(
+      ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
+    );
+  };
+
+  const handleDeselectAllColumnsCaixas = () => {
+     setColumnVisibilityCaixas(
+      ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
+    );
+  };
+
+  const getCellValueCaixas = (caixa: Caixa, column: ColumnConfigCaixas) => {
+    const value = caixa[column.accessorKey as keyof Caixa];
+    if (column.cellFormatter) {
+      return column.cellFormatter(value, caixa);
+    }
+    return value === undefined || value === null ? 'N/A' : String(value);
+  };
+
 
   return (
     <div className="container mx-auto py-2">
@@ -166,54 +275,98 @@ export default function CaixasPage() {
       </PageHeader>
 
       <Card className="mt-6">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
+           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <ColumnsIcon className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleSelectAllColumnsCaixas} className="cursor-pointer">
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Selecionar Todas
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDeselectAllColumnsCaixas} className="cursor-pointer">
+                  <Square className="mr-2 h-4 w-4" />
+                  Limpar Todas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {ALL_COLUMNS_CONFIG_CAIXAS.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    checked={columnVisibilityCaixas[column.id as string]}
+                    onCheckedChange={() => toggleColumnVisibilityCaixas(column.id as string)}
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead>Qtd. Docs</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {placeholderCaixas.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.codigoCaixa}</TableCell>
-                  <TableCell>{item.tipo}</TableCell>
-                  <TableCell>{item.localizacao}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.status === 'Fechada' ? 'default' : 'secondary'}>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                     <Badge variant={item.situacao === 'Completa' ? 'secondary' : 'outline'}>
-                        {item.situacao}
-                      </Badge>
-                  </TableCell>
-                  <TableCell>{item.documentoIds?.length || 0}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Ver Documentos">
-                      <PackageOpen className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" aria-label="Editar">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <ScrollArea className="w-full">
+            <Table className="min-w-full whitespace-nowrap">
+              <TableHeader>
+                <TableRow>
+                  {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
+                    columnVisibilityCaixas[column.id as string] ? (
+                      <TableHead key={column.id as string} className="py-2 px-3">
+                        {column.enableSorting ? (
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSortCaixas(column.id as string)}
+                            className="px-1 py-1 h-auto -ml-2"
+                          >
+                            {column.header}
+                            {renderSortIconCaixas(column.id as string)}
+                          </Button>
+                        ) : (
+                          column.header
+                        )}
+                      </TableHead>
+                    ) : null
+                  )}
+                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {displayedCaixas.map((item) => (
+                  <TableRow key={item.id}>
+                    {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
+                      columnVisibilityCaixas[column.id as string] ? (
+                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                           {getCellValueCaixas(item, column)}
+                        </TableCell>
+                      ) : null
+                    )}
+                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                      <div className="flex items-center justify-end">
+                        <Button variant="ghost" size="icon" aria-label="Ver Documentos">
+                          <PackageOpen className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" aria-label="Editar">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+          {displayedCaixas.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma caixa encontrada.</p>
+          )}
         </CardContent>
       </Card>
     </div>
