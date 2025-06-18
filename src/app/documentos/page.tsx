@@ -55,22 +55,33 @@ const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2023-01-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
+    numerosApensos: "",
     totalMidias: 0,
+    tipoMidiaDetalhe: undefined,
+    numeroMidiaDetalhe: "",
+    paginaMidiaDetalhe: "",
     digitalizado: "Não", 
+    tipoBaixa: "",
+    dataBaixa: undefined,
+    descricaoDocumento: "Processo referente à disputa contratual X.",
     classificacaoArquivisticaId: "CLA001",
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "", // Guarda Permanente
+    nomePartePrincipal: "Empresa Exemplo Ltda",
+    tipoPartePrincipal: "Autor",
+    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX001", 
+    codigoAtoM: "ATOM001",
+    documentosRelacionadosIds: "",
+    observacoesGerais: "Nenhuma observação.",
+    codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo,
-    anoEliminacaoPrevisto: "2039", 
-    nomePartePrincipal: "Empresa Exemplo Ltda",
-    tipoPartePrincipal: "Autor",
-    codigoClassificacaoJudicialId: "CJ001",
   },
   { 
     id: "DOC002", 
@@ -89,26 +100,31 @@ const placeholderDocumentos: Documento[] = [
     numerosApensos: "AP001",
     totalMidias: 1,
     tipoMidiaDetalhe: "CD-R",
+    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "M001",
     paginaMidiaDetalhe: "1-10",
     digitalizado: "Sim", 
+    tipoBaixa: "Devolvido ao Arquivo",
+    dataBaixa: new Date("2023-04-10").toISOString(),
+    descricaoDocumento: "Ofício solicitando informações sobre o projeto X.",
     classificacaoArquivisticaId: "CLA002", 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
     alteracaoDestinacaoFinal: "Não Alterar",
     anoEliminacaoPrevisto: "2027", 
+    nomePartePrincipal: "Maria Santos",
+    tipoPartePrincipal: "Requerente",
+    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX002", 
-    dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
-    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
-    tipoBaixa: "Devolvido ao Arquivo",
-    dataBaixa: new Date("2023-04-10").toISOString(),
-    descricaoDocumento: "Ofício solicitando informações sobre o projeto X.",
     codigoAtoM: "ATOM002",
     documentosRelacionadosIds: "DOC001",
-    observacoesGerais: "Prioridade alta."
+    observacoesGerais: "Prioridade alta.",
+    codigoClassificacaoJudicialId: "",
+    dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
+    classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
   },
   { 
     id: "DOC003", 
@@ -122,20 +138,35 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Comunicação Interna", 
     dataAbrangente: "05/11/2022",
     dataArquivamento: new Date("2022-11-05").toISOString(), 
+    quantidadeVolumes: 2,
+    quantidadeApensos: 0,
+    numerosApensos: "",
+    totalMidias: 0,
+    tipoMidiaDetalhe: undefined,
+    numeroMidiaDetalhe: "",
+    paginaMidiaDetalhe: "",
     digitalizado: "Não", 
+    tipoBaixa: "",
+    dataBaixa: undefined,
+    descricaoDocumento: "Memorando sobre nova política interna.",
     classificacaoArquivisticaId: "CLA003", 
     prazoArquivoCorrenteDisplay: "1 Ano",
     prazoArquivoIntermediarioDisplay: "0 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "", 
+    nomePartePrincipal: "João da Silva",
+    tipoPartePrincipal: "Interessado",
+    outroTipoPartePrincipal: "",
     segredoJustica: "Sim", 
     grauSigilo: "Secreto", 
     codigosCaixa: "CX001", 
+    codigoAtoM: "ATOM003",
+    documentosRelacionadosIds: "",
+    observacoesGerais: "Documento de acesso restrito.",
+    codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo,
-    nomePartePrincipal: "João da Silva",
-    tipoPartePrincipal: "Interessado",
-    anoEliminacaoPrevisto: "", // Guarda Permanente não tem ano de eliminação
   },
    { 
     id: "DOC004", 
@@ -150,18 +181,34 @@ const placeholderDocumentos: Documento[] = [
     dataAbrangente: "10/06/2014",
     dataArquivamento: new Date("2014-06-15").toISOString(), 
     quantidadeVolumes: 1,
+    quantidadeApensos: 0,
+    numerosApensos: "",
+    totalMidias: 0,
+    tipoMidiaDetalhe: undefined,
+    numeroMidiaDetalhe: "",
+    paginaMidiaDetalhe: "",
     digitalizado: "Não", 
-    classificacaoArquivisticaId: "CLA002", // Classif. Inativa e de Eliminação
+    tipoBaixa: "Eliminação Concluída",
+    dataBaixa: new Date("2018-12-01").toISOString(),
+    descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.",
+    classificacaoArquivisticaId: "CLA002", 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
-    prazoArquivoIntermediarioDisplay: "3 Anos", // Prazo para filtro
-    destinacaoFinalDisplay: "Eliminação",      // Destinação para filtro
+    prazoArquivoIntermediarioDisplay: "3 Anos", 
+    destinacaoFinalDisplay: "Eliminação",      
     alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "2018", 
+    nomePartePrincipal: "Empresa XYZ",
+    tipoPartePrincipal: "Requerente",
+    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX-TEMP-001", 
+    codigoAtoM: "",
+    documentosRelacionadosIds: "",
+    observacoesGerais: "Documento eliminado conforme edital.",
+    codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
     classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo,
-    anoEliminacaoPrevisto: "2018", 
   },
 ];
 
@@ -220,6 +267,8 @@ const initialFiltersState = {
   segredoJustica: "",
   digitalizado: "",
 };
+
+const ALL_VALUES_SENTINEL = "ALL_VALUES_SENTINEL";
 
 export default function DocumentosPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -369,7 +418,7 @@ export default function DocumentosPage() {
   };
 
   const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
   };
 
   const applyFilters = () => {
@@ -797,7 +846,7 @@ export default function DocumentosPage() {
             <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
               <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value={ALL_VALUES_SENTINEL}>Todas</SelectItem>
                 <SelectItem value="Eliminação">Eliminação</SelectItem>
                 <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
               </SelectContent>
@@ -824,7 +873,7 @@ export default function DocumentosPage() {
             <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
               <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Todos" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
                 <SelectItem value="Sim">Sim</SelectItem>
                 <SelectItem value="Não">Não</SelectItem>
               </SelectContent>
@@ -835,7 +884,7 @@ export default function DocumentosPage() {
             <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
               <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
                 <SelectItem value="Sim">Sim</SelectItem>
                 <SelectItem value="Não">Não</SelectItem>
               </SelectContent>
@@ -964,5 +1013,4 @@ export default function DocumentosPage() {
       </Card>
     </div>
   );
-
-    
+}
