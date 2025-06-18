@@ -36,7 +36,6 @@ function AppHeader() {
 
   useEffect(() => {
     setMounted(true);
-    // Check local storage or system preference for dark mode
     const isDark = localStorage.getItem('theme') === 'dark' || 
                    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     setDarkMode(isDark);
@@ -57,7 +56,7 @@ function AppHeader() {
   };
 
   if (!mounted) {
-    return <div className="h-16" />; // Placeholder to prevent layout shift
+    return <div className="h-16" />; 
   }
   
   return (
@@ -107,7 +106,6 @@ function AppHeader() {
 
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
-  // Retrieve sidebar state from cookie or default to true
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   React.useEffect(() => {
@@ -122,10 +120,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   
   const handleSidebarOpenChange = (open: boolean) => {
     setSidebarOpen(open);
+    document.cookie = `sidebar_state=${open}; path=/; max-age=${60 * 60 * 24 * 7}`; // Ensure cookie is also set here
   };
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
+    <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
       <Sidebar side="left" variant="sidebar" collapsible="icon" className="border-r">
         <SidebarHeader className="p-4 flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
@@ -134,7 +133,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               ArquivoCentral
             </span>
           </div>
-          {/* Removed group-data-[collapsible=icon]:hidden from the div below to make trigger always visible */}
           <div> 
              <SidebarTrigger className="text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent" />
           </div>
