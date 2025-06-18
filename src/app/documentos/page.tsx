@@ -10,7 +10,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square
+  CheckSquare, Square, Check, ChevronsUpDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -52,6 +52,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
 
 const placeholderClassificacoesSimulado = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
@@ -71,6 +82,9 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Ação Ordinária", 
     numeroDocumento: "PRC-2023-001", 
     dataAbrangente: "01/2023 - 03/2023",
+    descricaoDocumento: "Processo referente à disputa contratual X. Este é um exemplo de descrição um pouco mais longa para testar o comportamento da célula na tabela.",
+    nomePartePrincipal: "Empresa Exemplo Ltda",
+    documentosRelacionadosIds: "DOC002,DOC003",
     dataArquivamento: new Date("2023-01-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
@@ -83,21 +97,18 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Não", 
     tipoBaixa: "",
     dataBaixa: undefined,
-    descricaoDocumento: "Processo referente à disputa contratual X. Este é um exemplo de descrição um pouco mais longa para testar o comportamento da célula na tabela.",
     classificacaoArquivisticaId: "CLA001",
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2039", 
-    nomePartePrincipal: "Empresa Exemplo Ltda",
     tipoPartePrincipal: "Autor",
     outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX001", 
     codigoAtoM: "ATOM001",
-    documentosRelacionadosIds: "DOC002,DOC003",
     observacoesGerais: "Nenhuma observação específica para este documento de exemplo.",
     codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
@@ -114,6 +125,9 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Solicitação de Informações", 
     numeroDocumento: "OFC-2023-045", 
     dataAbrangente: "20/03/2023",
+    descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.",
+    nomePartePrincipal: "Maria Santos",
+    documentosRelacionadosIds: "DOC001",
     dataArquivamento: new Date("2023-03-20").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 1,
@@ -126,21 +140,18 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Sim", 
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
-    descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.",
     classificacaoArquivisticaId: "CLA002", 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos",
     destinacaoFinalDisplay: "Eliminação",
     alteracaoDestinacaoFinal: "Não Alterar",
     anoEliminacaoPrevisto: "2027", 
-    nomePartePrincipal: "Maria Santos",
     tipoPartePrincipal: "Requerente",
     outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX002", 
     codigoAtoM: "ATOM002",
-    documentosRelacionadosIds: "DOC001",
     observacoesGerais: "Prioridade alta.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
@@ -157,6 +168,9 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Comunicação Interna", 
     numeroDocumento: "MEM-2022-112", 
     dataAbrangente: "05/11/2022",
+    descricaoDocumento: "Memorando sobre nova política interna.",
+    nomePartePrincipal: "João da Silva",
+    documentosRelacionadosIds: "",
     dataArquivamento: new Date("2022-11-05").toISOString(), 
     quantidadeVolumes: 2,
     quantidadeApensos: 0,
@@ -169,21 +183,18 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Sim", 
     tipoBaixa: "",
     dataBaixa: undefined,
-    descricaoDocumento: "Memorando sobre nova política interna.",
     classificacaoArquivisticaId: "CLA003", 
     prazoArquivoCorrenteDisplay: "1 Ano",
     prazoArquivoIntermediarioDisplay: "0 Anos",
     destinacaoFinalDisplay: "Guarda Permanente",
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "", 
-    nomePartePrincipal: "João da Silva",
     tipoPartePrincipal: "Interessado",
     outroTipoPartePrincipal: "",
     segredoJustica: "Sim", 
     grauSigilo: "Secreto", 
     codigosCaixa: "CX001, CX003", 
     codigoAtoM: "ATOM003",
-    documentosRelacionadosIds: "",
     observacoesGerais: "Documento de acesso restrito.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
@@ -200,6 +211,9 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Requerimento", 
     numeroDocumento: "REQ-2014-001", 
     dataAbrangente: "10/06/2014",
+    descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.",
+    nomePartePrincipal: "Empresa XYZ",
+    documentosRelacionadosIds: "DOC005", 
     dataArquivamento: new Date("2014-06-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
@@ -212,21 +226,18 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Não", 
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
-    descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.",
     classificacaoArquivisticaId: "CLA002", 
     prazoArquivoCorrenteDisplay: "Até a próxima atualização",
     prazoArquivoIntermediarioDisplay: "3 Anos", 
     destinacaoFinalDisplay: "Eliminação",      
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2018", 
-    nomePartePrincipal: "Empresa XYZ",
     tipoPartePrincipal: "Requerente",
     outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX-TEMP-001", 
     codigoAtoM: "",
-    documentosRelacionadosIds: "DOC005", 
     observacoesGerais: "Documento eliminado conforme edital.",
     codigoClassificacaoJudicialId: "",
     dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
@@ -243,6 +254,9 @@ const placeholderDocumentos: Documento[] = [
     tipoDocumento: "Petição", 
     numeroDocumento: "PET-2010-555", 
     dataAbrangente: "15/08/2010",
+    descricaoDocumento: "Petição inicial do processo, aguardando prazo para eliminação.",
+    nomePartePrincipal: "Consumidor Teste",
+    documentosRelacionadosIds: "",
     dataArquivamento: new Date("2010-08-20").toISOString(), 
     quantidadeVolumes: 0,
     quantidadeApensos: 0,
@@ -255,21 +269,18 @@ const placeholderDocumentos: Documento[] = [
     digitalizado: "Sim", 
     tipoBaixa: "",
     dataBaixa: undefined,
-    descricaoDocumento: "Petição inicial do processo, aguardando prazo para eliminação.",
     classificacaoArquivisticaId: "CLA001", 
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos", 
     destinacaoFinalDisplay: "Guarda Permanente", 
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2026", 
-    nomePartePrincipal: "Consumidor Teste",
     tipoPartePrincipal: "Autor",
     outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Reservado", 
     codigosCaixa: "CX-DIG-010", 
     codigoAtoM: "ATOM005",
-    documentosRelacionadosIds: "",
     observacoesGerais: "Documento sujeito à análise da CPAD.",
     codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
@@ -393,13 +404,15 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: false, enableSorting: true },
   { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
+  { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
+  { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
   { 
     id: 'mensagens', 
     header: 'Mensagens', 
     accessorKey: 'mensagens', 
     defaultVisible: true, 
     enableSorting: false,
-    cellFormatter: (value, doc) => {
+    cellFormatter: (_value, doc) => {
       if (doc.classificacaoInativa) {
         return (
           <span className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
@@ -410,8 +423,6 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
       return null; 
     }
   },
-  { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
-  { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
 ];
 
 
@@ -432,6 +443,7 @@ export default function DocumentosPage() {
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+  const [classificacaoPopoverOpen, setClassificacaoPopoverOpen] = React.useState(false);
 
 
   React.useEffect(() => {
@@ -638,8 +650,8 @@ export default function DocumentosPage() {
 
     if (sorting) {
       newFilteredDocumentos.sort((a, b) => {
-        const valA = getSortableValue(a, sorting.id);
-        const valB = getSortableValue(b, sorting.id);
+        const valA = getSortableValue(a, sorting.id as string);
+        const valB = getSortableValue(b, sorting.id as string);
 
         if (valA === null || valA === undefined) return sorting.direction === 'asc' ? 1 : -1;
         if (valB === null || valB === undefined) return sorting.direction === 'asc' ? -1 : 1;
@@ -728,6 +740,10 @@ export default function DocumentosPage() {
     }
     return <ArrowDown className="ml-2 h-4 w-4" />;
   };
+
+  const selectedClassificationDisplay = formState.classificacaoArquivisticaId
+    ? placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo)
+    : null;
 
 
   return (
@@ -944,15 +960,55 @@ export default function DocumentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="classificacaoArquivisticaId">Código de Classificação Arquivística</Label>
-                 <Select onValueChange={handleSelectChange('classificacaoArquivisticaId')} value={formState.classificacaoArquivisticaId}>
-                    <SelectTrigger id="classificacaoArquivisticaId"><SelectValue placeholder="Selecione ou digite o código" /></SelectTrigger>
-                    <SelectContent>
-                        {placeholderClassificacoesSimulado.filter(c => !c.inativo).map(c => (
-                            <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.descricao}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <Label htmlFor="classificacaoArquivisticaIdCombobox">Código de Classificação Arquivística</Label>
+                <Popover open={classificacaoPopoverOpen} onOpenChange={setClassificacaoPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={classificacaoPopoverOpen}
+                      className="w-full justify-between"
+                      id="classificacaoArquivisticaIdCombobox"
+                    >
+                      {selectedClassificationDisplay
+                        ? `${selectedClassificationDisplay.codigo} - ${selectedClassificationDisplay.descricao}`
+                        : "Selecione ou digite o código"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar classificação..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhuma classificação encontrada.</CommandEmpty>
+                        <CommandGroup>
+                          {placeholderClassificacoesSimulado
+                            .filter((c) => !c.inativo)
+                            .map((classificacao) => (
+                              <CommandItem
+                                key={classificacao.id}
+                                value={classificacao.id}
+                                onSelect={(currentValue) => {
+                                  handleSelectChange('classificacaoArquivisticaId')(currentValue);
+                                  setClassificacaoPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formState.classificacaoArquivisticaId === classificacao.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {classificacao.codigo} - {classificacao.descricao}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
@@ -1338,6 +1394,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
