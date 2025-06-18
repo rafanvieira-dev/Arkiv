@@ -1031,15 +1031,15 @@ export default function DocumentosPage() {
                                   key={classificacao.id}
                                   value={displayValue}
                                   onSelect={(currentDisplayValue) => {
-                                    const selectedClassification = placeholderClassificacoesSimulado.find(
+                                    const selected = placeholderClassificacoesSimulado.find(
                                       (c) => `${c.codigo} - ${c.descricao}` === currentDisplayValue
                                     );
-                                    if (selectedClassification) {
+                                    if (selected) {
                                       setFormState(prev => ({ 
                                         ...prev, 
-                                        classificacaoArquivisticaId: selectedClassification.id === formState.classificacaoArquivisticaId 
+                                        classificacaoArquivisticaId: selected.id === prev.classificacaoArquivisticaId 
                                                                       ? "" 
-                                                                      : selectedClassification.id 
+                                                                      : selected.id 
                                       }));
                                     }
                                     setClassificacaoPopoverOpen(false);
@@ -1432,6 +1432,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
