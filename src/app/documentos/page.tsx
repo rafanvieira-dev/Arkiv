@@ -433,28 +433,41 @@ export default function DocumentosPage() {
     const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
     if (classification) {
       let prazoCorrente = "";
-      if (classification.tipoPrazoFaseCorrente === "Anos") {
+      if (classification.tipoPrazoFaseCorrente === "Anos" && typeof classification.prazoGuardaFaseCorrenteAnos === 'number') {
         prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
       } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
         prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
       }
-      const prazoIntermediario = `${classification.prazoGuardaFaseIntermediariaAnos} Anos`;
+      
+      const prazoIntermediario = typeof classification.prazoGuardaFaseIntermediariaAnos === 'number' 
+        ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` 
+        : "";
+      
       const destinacao = classification.destinacaoFinal;
 
       let anoEliminacao = "";
-      if (formState.dataArquivamento && prazoIntermediario && 
-          (destinacao === 'Eliminação' || 
+      if (formState.dataArquivamento && prazoIntermediario &&
+          (destinacao === 'Eliminação' ||
            (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
           
           const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-          const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
           
-          if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
-              const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
-              if (!isNaN(prazoIntermediarioAnos)) {
-                  const anoArquivamento = getYear(dataArquivamentoDate);
-                  anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
+          let prazoIntermediarioAnosNum = 0;
+          if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
+            prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
+          } else {
+            const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
+            if (prazoIntermediarioMatch && prazoIntermediarioMatch[0]) {
+              const parsedAnos = parseInt(prazoIntermediarioMatch[0], 10);
+              if (!isNaN(parsedAnos)) {
+                prazoIntermediarioAnosNum = parsedAnos;
               }
+            }
+          }
+          
+          if (isValid(dataArquivamentoDate)) {
+              const anoArquivamento = getYear(dataArquivamentoDate);
+              anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
           }
       }
       setFormState(prev => ({
@@ -465,7 +478,7 @@ export default function DocumentosPage() {
         anoEliminacaoPrevisto: anoEliminacao
       }));
 
-    } else if (formState.classificacaoArquivisticaId === "" || !classification) { // Also clear if ID is cleared or no active classification found
+    } else if (formState.classificacaoArquivisticaId === "" || !classification) {
        setFormState(prev => ({
         ...prev,
         prazoArquivoCorrenteDisplay: "",
@@ -741,13 +754,10 @@ export default function DocumentosPage() {
     if (!sortConfig) {
       return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
     }
-    // Optional: Display sort order if multiple columns are sorted
-    // const sortOrder = sorting.findIndex(s => s.id === columnId) + 1;
-    // const displaySortOrder = sorting.length > 1 ? ` (${sortOrder})` : "";
     if (sortConfig.direction === 'asc') {
-      return <ArrowUp className="ml-2 h-4 w-4" />; // {displaySortOrder}
+      return <ArrowUp className="ml-2 h-4 w-4" />; 
     }
-    return <ArrowDown className="ml-2 h-4 w-4" />; // {displaySortOrder}
+    return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
 
   const selectedClassificationDisplay = formState.classificacaoArquivisticaId
@@ -1410,6 +1420,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
