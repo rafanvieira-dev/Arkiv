@@ -24,12 +24,12 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/documentos', label: 'Documentos', icon: FileText },
+  { href: '/caixas', label: 'Caixas', icon: Archive },
   { href: '/classificacao', label: 'Classificação', icon: ListFilter },
   { href: '/classes-judiciais', label: 'Classes Judiciais', icon: Gavel },
+  { href: '/documentos', label: 'Documentos', icon: FileText },
   { href: '/listagens-eliminacao', label: 'Listagens de Eliminação', icon: Trash2 },
   { href: '/solicitacoes', label: 'Solicitações', icon: Send },
-  { href: '/caixas', label: 'Caixas', icon: Archive },
   { href: '/busca-avancada', label: 'Busca Avançada', icon: Search },
 ];
 
@@ -91,4 +91,3 @@ export function SidebarNav() {
     </>
   );
 }
-
