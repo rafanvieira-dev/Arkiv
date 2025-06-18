@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,11 +30,22 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
-const placeholderClassificacoes: Classificacao[] = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPlanoClassificacao: "Judicial", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPlanoClassificacao: "Administrativo", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tipoPlanoClassificacao: "Administrativo", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
+const placeholderClassificacoesInitial: Classificacao[] = [
+  { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
+  { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", inativo: true },
+  { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
 ];
 
 const opcoesCondicaoTextualFaseCorrente = [
@@ -75,22 +86,80 @@ const opcoesCondicaoTextualFaseCorrente = [
   "Validade do Concurso",
 ];
 
-const initialState: Omit<Classificacao, 'id' | 'prazoGuardaFaseIntermediariaAnos' | 'destinacaoFinal' | 'inativo'> & { prazoGuardaFaseIntermediariaAnos: string, destinacaoFinal: string, inativo: boolean, tipoPlanoClassificacao: string } = {
+const initialFormState: Omit<Classificacao, 'id'> & { prazoGuardaFaseIntermediariaAnos: string } = {
   codigo: "",
   descricao: "",
-  tipoPlanoClassificacao: "",
-  tipoPrazoFaseCorrente: "",
+  tipoPlanoClassificacao: "Administrativo",
+  tipoPrazoFaseCorrente: "Anos",
   prazoGuardaFaseCorrenteAnos: undefined,
   prazoGuardaFaseCorrenteCondicaoTextual: "",
   prazoGuardaFaseIntermediariaAnos: "",
-  destinacaoFinal: "",
+  destinacaoFinal: "Eliminação",
   observacoes: "",
   inativo: false,
 };
 
+type ColumnConfigClassificacoes = {
+  id: keyof Classificacao | string;
+  header: string;
+  accessorKey: keyof Classificacao | string;
+  defaultVisible: boolean;
+  enableSorting: boolean;
+  cellFormatter?: (value: any, item: Classificacao) => React.ReactNode;
+};
+
+const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
+  { id: 'tipoPlanoClassificacao', header: 'Tipo de Plano', accessorKey: 'tipoPlanoClassificacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
+  { id: 'descricao', header: 'Assunto', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'tipoPrazoFaseCorrenteCombined', 
+    header: 'Tipo Prazo Corrente', 
+    accessorKey: 'tipoPrazoFaseCorrente', 
+    defaultVisible: true, 
+    enableSorting: true,
+    cellFormatter: (_, item) => {
+      if (item.tipoPrazoFaseCorrente === "Anos") {
+        return `${item.prazoGuardaFaseCorrenteAnos ?? 'N/A'} Anos`;
+      }
+      if (item.tipoPrazoFaseCorrente === "Condição Textual") {
+        return item.prazoGuardaFaseCorrenteCondicaoTextual || "N/A";
+      }
+      return "N/A";
+    }
+  },
+  { 
+    id: 'prazoGuardaFaseIntermediariaAnos', 
+    header: 'Prazo Intermediário', 
+    accessorKey: 'prazoGuardaFaseIntermediariaAnos', 
+    defaultVisible: true, 
+    enableSorting: true,
+    cellFormatter: (value) => `${value ?? 'N/A'} Anos`
+  },
+  { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
+  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { 
+    id: 'status', 
+    header: 'Status', 
+    accessorKey: 'inativo', 
+    defaultVisible: true, 
+    enableSorting: true,
+    cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
+  },
+];
+
+
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState(initialState);
+  const [formState, setFormState] = React.useState(initialFormState);
+  const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
+  const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
+  
+  const [columnVisibilityClassificacoes, setColumnVisibilityClassificacoes] = React.useState<Record<string, boolean>>(
+    ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+  );
+  const [sortingClassificacoes, setSortingClassificacoes] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -102,7 +171,7 @@ export default function ClassificacaoPage() {
      setFormState(prev => ({ ...prev, [id]: value === "" ? "" : value }));
   };
 
-  const handleSelectChange = (id: keyof typeof initialState) => (value: string) => {
+  const handleSelectChange = (id: keyof typeof initialFormState) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
      if (id === 'tipoPrazoFaseCorrente') {
       if (value === 'Anos') {
@@ -118,22 +187,115 @@ export default function ClassificacaoPage() {
   };
 
   const resetForm = () => {
-    setFormState(initialState);
+    setFormState(initialFormState);
   };
 
   const handleSaveChanges = () => {
-    console.log("Salvando nova classificação:", {
+    const novaClassificacao: Classificacao = {
+      id: `CLA${Date.now()}`,
       ...formState,
+      tipoPlanoClassificacao: formState.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'],
       prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' && formState.prazoGuardaFaseCorrenteAnos ? parseInt(String(formState.prazoGuardaFaseCorrenteAnos), 10) : undefined,
       prazoGuardaFaseIntermediariaAnos: parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) || 0,
       destinacaoFinal: formState.destinacaoFinal as Classificacao['destinacaoFinal'],
-      tipoPlanoClassificacao: formState.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'],
-    });
+    };
+    setPlaceholderClassificacoes(prev => [...prev, novaClassificacao]);
     setIsDialogOpen(false);
     resetForm();
   };
 
+  const getSortableValueClassificacoes = (item: Classificacao, columnId: string): any => {
+    const column = ALL_COLUMNS_CONFIG_CLASSIFICACOES.find(col => col.id === columnId);
+    if (!column) return null;
+
+    if (column.id === 'tipoPrazoFaseCorrenteCombined') {
+      if (item.tipoPrazoFaseCorrente === "Anos") return item.prazoGuardaFaseCorrenteAnos;
+      if (item.tipoPrazoFaseCorrente === "Condição Textual") return item.prazoGuardaFaseCorrenteCondicaoTextual;
+      return null;
+    }
+    if (column.id === 'status') return item.inativo;
+
+    return item[column.accessorKey as keyof Classificacao];
+  };
+
+  React.useEffect(() => {
+    let sortedClassificacoes = [...placeholderClassificacoes];
+    if (sortingClassificacoes) {
+      sortedClassificacoes.sort((a, b) => {
+        const valA = getSortableValueClassificacoes(a, sortingClassificacoes.id);
+        const valB = getSortableValueClassificacoes(b, sortingClassificacoes.id);
+
+        if (valA === null || valA === undefined) return sortingClassificacoes.direction === 'asc' ? 1 : -1;
+        if (valB === null || valB === undefined) return sortingClassificacoes.direction === 'asc' ? -1 : 1;
+        
+        if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+           return sortingClassificacoes.direction === 'asc' ? (valA === valB ? 0 : valA ? -1 : 1) : (valA === valB ? 0 : valA ? 1 : -1);
+        }
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortingClassificacoes.direction === 'asc' ? valA - valB : valB - valA;
+        }
+
+        const strA = String(valA).toLowerCase();
+        const strB = String(valB).toLowerCase();
+        if (strA < strB) return sortingClassificacoes.direction === 'asc' ? -1 : 1;
+        if (strA > strB) return sortingClassificacoes.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    setDisplayedClassificacoes(sortedClassificacoes);
+  }, [sortingClassificacoes, placeholderClassificacoes]);
+
+
+  const handleSortClassificacoes = (columnId: string) => {
+    const columnConfig = ALL_COLUMNS_CONFIG_CLASSIFICACOES.find(col => col.id === columnId);
+    if (!columnConfig || !columnConfig.enableSorting) return;
+
+    setSortingClassificacoes(prev => {
+      if (prev?.id === columnId) {
+        if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
+        return null;
+      }
+      return { id: columnId, direction: 'asc' };
+    });
+  };
+
+  const renderSortIconClassificacoes = (columnId: string) => {
+    if (!sortingClassificacoes || sortingClassificacoes.id !== columnId) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    if (sortingClassificacoes.direction === 'asc') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const toggleColumnVisibilityClassificacoes = (columnId: string) => {
+    setColumnVisibilityClassificacoes(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
+
+  const handleSelectAllColumnsClassificacoes = () => {
+    setColumnVisibilityClassificacoes(
+      ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
+    );
+  };
+
+  const handleDeselectAllColumnsClassificacoes = () => {
+     setColumnVisibilityClassificacoes(
+      ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
+    );
+  };
+  
+  const getCellValueClassificacoes = (item: Classificacao, column: ColumnConfigClassificacoes) => {
+    const value = item[column.accessorKey as keyof Classificacao];
+    if (column.cellFormatter) {
+      return column.cellFormatter(value, item);
+    }
+    return value === undefined || value === null ? 'N/A' : String(value);
+  };
+
+
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -272,47 +434,110 @@ export default function ClassificacaoPage() {
       </PageHeader>
 
       <Card className="mt-6">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Classificações</CardTitle>
+           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <ColumnsIcon className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleSelectAllColumnsClassificacoes} className="cursor-pointer">
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Selecionar Todas
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDeselectAllColumnsClassificacoes} className="cursor-pointer">
+                  <Square className="mr-2 h-4 w-4" />
+                  Limpar Todas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    checked={columnVisibilityClassificacoes[column.id as string]}
+                    onCheckedChange={() => toggleColumnVisibilityClassificacoes(column.id as string)}
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Tipo Plano</TableHead>
-                <TableHead>Destinação Final</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {placeholderClassificacoes.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.codigo}</TableCell>
-                  <TableCell>{item.descricao}</TableCell>
-                  <TableCell>{item.tipoPlanoClassificacao || "N/A"}</TableCell>
-                  <TableCell>{item.destinacaoFinal}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.inativo ? 'destructive' : 'secondary'}>
-                      {item.inativo ? 'Inativo' : 'Ativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Editar">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+           <ScrollArea className="w-full">
+            <Table className="min-w-full whitespace-nowrap">
+              <TableHeader>
+                <TableRow>
+                  {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
+                    columnVisibilityClassificacoes[column.id as string] ? (
+                      <TableHead key={column.id as string} className="py-2 px-3">
+                        {column.enableSorting ? (
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSortClassificacoes(column.id as string)}
+                            className="px-1 py-1 h-auto -ml-2"
+                          >
+                            {column.header}
+                            {renderSortIconClassificacoes(column.id as string)}
+                          </Button>
+                        ) : (
+                          column.header
+                        )}
+                      </TableHead>
+                    ) : null
+                  )}
+                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {displayedClassificacoes.map((item) => (
+                  <TableRow key={item.id}>
+                    {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
+                      columnVisibilityClassificacoes[column.id as string] ? (
+                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                           {getCellValueClassificacoes(item, column)}
+                        </TableCell>
+                      ) : null
+                    )}
+                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                      <div className="flex items-center justify-end">
+                        <Tooltip>
+                           <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label="Editar Classificação" onClick={() => console.log('Edit', item.id)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                           </TooltipTrigger>
+                           <TooltipContent><p>Editar Classificação</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação" onClick={() => console.log('Delete', item.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Excluir Classificação</p></TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+          {displayedClassificacoes.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma classificação encontrada.</p>
+          )}
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
+
+    
