@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import type { ReactNode } from 'react';
@@ -133,7 +134,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               ArquivoCentral
             </span>
           </div>
-          <div className="group-data-[collapsible=icon]:hidden">
+          {/* Removed group-data-[collapsible=icon]:hidden from the div below to make trigger always visible */}
+          <div> 
              <SidebarTrigger className="text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent" />
           </div>
         </SidebarHeader>
