@@ -42,11 +42,12 @@ export interface Classificacao {
 
 export interface ClasseJudicial {
   id: string;
-  codigo: string;
-  descricao: string;
-  tabelaTemporalidade?: string;
-  prazoGuarda?: string;
+  codigo: string; // Obrigatório
+  descricao: string; // Nome da Classe Judicial (Obrigatório)
+  prazoGuardaAnos?: number; // Pode ser 0
+  destinacaoFinal: 'Não se Aplica' | 'Vide Guia de Aplicação' | 'Eliminação' | 'Guarda Permanente'; // Obrigatório
   observacoes?: string;
+  inativo: boolean; // Default false
 }
 
 export interface ListagemEliminacao {
@@ -90,3 +91,4 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+
