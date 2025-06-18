@@ -11,7 +11,7 @@ import type { Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, Check, ChevronsUpDown
+  CheckSquare, Square
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
@@ -53,16 +53,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 
 const placeholderClassificacoesSimulado = [
@@ -284,7 +274,7 @@ const placeholderDocumentos: Documento[] = [
   },
 ];
 
-const initialFormState: Partial<Documento> = {
+const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
   status: "Arquivado",
   orgao: "TRF2",
   origem: "",
@@ -307,7 +297,9 @@ const initialFormState: Partial<Documento> = {
   tipoBaixa: "",
   dataBaixa: undefined,
   descricaoDocumento: "",
+  codigoClassificacaoArquivisticaInput: "",
   classificacaoArquivisticaId: "",
+  assuntoClassificacaoDisplay: "",
   prazoArquivoCorrenteDisplay: "",
   prazoArquivoIntermediarioDisplay: "",
   destinacaoFinalDisplay: undefined,
@@ -411,7 +403,7 @@ export default function DocumentosPage() {
   const caixaIdFromUrl = searchParams.get('caixaId');
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<Partial<Documento>>(initialFormState);
+  const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
 
   const [outroGeneroDocumental, setOutroGeneroDocumental] = React.useState("");
@@ -426,8 +418,6 @@ export default function DocumentosPage() {
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
-  const [classificacaoPopoverOpen, setClassificacaoPopoverOpen] = React.useState(false);
-
 
   React.useEffect(() => {
     const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
@@ -455,9 +445,7 @@ export default function DocumentosPage() {
 
           if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
-          } 
-          // No need for an else here if the type is strictly number.
-          // If it could be a string like "X Anos", parsing would be needed, but type says number.
+          }
           
           const anoArquivamento = getYear(dataArquivamentoDate);
           anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
@@ -465,15 +453,17 @@ export default function DocumentosPage() {
 
       setFormState(prev => ({
         ...prev,
+        assuntoClassificacaoDisplay: classification.descricao,
         prazoArquivoCorrenteDisplay: prazoCorrente,
         prazoArquivoIntermediarioDisplay: prazoIntermediario,
         destinacaoFinalDisplay: destinacao,
         anoEliminacaoPrevisto: anoEliminacao
       }));
 
-    } else if (formState.classificacaoArquivisticaId === "" || !classification) {
+    } else { // Handles if classificationId is cleared or no valid classification is found
        setFormState(prev => ({
         ...prev,
+        assuntoClassificacaoDisplay: "",
         prazoArquivoCorrenteDisplay: "",
         prazoArquivoIntermediarioDisplay: "",
         destinacaoFinalDisplay: undefined,
@@ -505,6 +495,34 @@ export default function DocumentosPage() {
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
+  };
+
+  const handleCodigoClassificacaoBlur = () => {
+    const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
+    if (codigoInput) {
+      const foundClassification = placeholderClassificacoesSimulado.find(
+        c => c.codigo === codigoInput && !c.inativo
+      );
+      if (foundClassification) {
+        setFormState(prev => ({
+          ...prev,
+          classificacaoArquivisticaId: foundClassification.id,
+          assuntoClassificacaoDisplay: foundClassification.descricao,
+        }));
+      } else {
+        setFormState(prev => ({
+          ...prev,
+          classificacaoArquivisticaId: "",
+          assuntoClassificacaoDisplay: "Código não encontrado ou inativo.",
+        }));
+      }
+    } else {
+      setFormState(prev => ({
+        ...prev,
+        classificacaoArquivisticaId: "",
+        assuntoClassificacaoDisplay: "",
+      }));
+    }
   };
   
   const resetForm = () => {
@@ -547,9 +565,12 @@ export default function DocumentosPage() {
 
   const handleOpenDialog = (doc?: Documento) => {
     if (doc) {
+      const existingClassification = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId && !c.inativo);
       setFormState({
         ...initialFormState, 
         ...doc,
+        codigoClassificacaoArquivisticaInput: existingClassification ? existingClassification.codigo : "",
+        assuntoClassificacaoDisplay: existingClassification ? existingClassification.descricao : "",
         classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
@@ -752,11 +773,6 @@ export default function DocumentosPage() {
     }
     return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
-
-  const selectedClassificationDisplay = formState.classificacaoArquivisticaId
-    ? placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo)
-    : null;
-
 
   return (
     <div className="container mx-auto py-2">
@@ -994,61 +1010,18 @@ export default function DocumentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="classificacaoArquivisticaIdCombobox">Código de Classificação Arquivística</Label>
-                <Popover open={classificacaoPopoverOpen} onOpenChange={setClassificacaoPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={classificacaoPopoverOpen}
-                      className="w-full justify-between"
-                      id="classificacaoArquivisticaIdCombobox"
-                    >
-                      {selectedClassificationDisplay
-                        ? `${selectedClassificationDisplay.codigo} - ${selectedClassificationDisplay.descricao}`
-                        : "Selecione ou digite o código"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <CommandInput placeholder="Buscar classificação..." />
-                      <CommandList>
-                        <CommandEmpty>Nenhuma classificação encontrada.</CommandEmpty>
-                        <CommandGroup>
-                          {placeholderClassificacoesSimulado
-                            .filter((c) => !c.inativo)
-                            .map((classificacao) => (
-                                <CommandItem
-                                  key={classificacao.id}
-                                  value={classificacao.id} 
-                                  onSelect={(selectedId) => {
-                                    setFormState(prev => ({ 
-                                      ...prev, 
-                                      classificacaoArquivisticaId: selectedId === prev.classificacaoArquivisticaId 
-                                                                    ? "" 
-                                                                    : selectedId 
-                                    }));
-                                    setClassificacaoPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formState.classificacaoArquivisticaId === classificacao.id
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {`${classificacao.codigo} - ${classificacao.descricao}`}
-                                </CommandItem>
-                              )
-                            )}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística</Label>
+                <Input 
+                  id="codigoClassificacaoArquivisticaInput" 
+                  value={formState.codigoClassificacaoArquivisticaInput || ""} 
+                  onChange={handleInputChange}
+                  onBlur={handleCodigoClassificacaoBlur}
+                  placeholder="Digite o código (ex: 020.1)"
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
+                <Input id="assuntoClassificacaoDisplay" value={formState.assuntoClassificacaoDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
@@ -1058,13 +1031,10 @@ export default function DocumentosPage() {
                 <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
                 <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
-              
-
               <div className="space-y-2">
                 <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
                  <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final*</Label>
                 <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal}>
@@ -1419,6 +1389,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
