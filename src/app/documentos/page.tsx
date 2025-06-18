@@ -367,6 +367,9 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'tipoDocumento', header: 'Tipo Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
   { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
   { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
+  { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
+  { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: false, enableSorting: true },
+  { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: false, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
   { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
   { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: false, enableSorting: true },
   { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: false, enableSorting: true },
@@ -378,9 +381,8 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true },
   { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: false, enableSorting: true },
   { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
-  { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
   { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: false, enableSorting: true },
-  { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: false, enableSorting: true, cellFormatter: (value, doc) => {
+  { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: false, enableSorting: true, cellFormatter: (value) => {
       const classif = placeholderClassificacoesSimulado.find(c => c.id === value);
       return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
     } 
@@ -389,13 +391,12 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: false, enableSorting: true },
   { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: false, enableSorting: true },
   { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: false, enableSorting: true },
-  { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: false, enableSorting: true },
   { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
   { 
     id: 'mensagens', 
     header: 'Mensagens', 
-    accessorKey: 'mensagens', // Dummy accessor, content driven by cellFormatter
+    accessorKey: 'mensagens', 
     defaultVisible: true, 
     enableSorting: false,
     cellFormatter: (value, doc) => {
@@ -411,7 +412,6 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   },
   { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
   { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
-  { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: false, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
 ];
 
 
@@ -1338,5 +1338,6 @@ export default function DocumentosPage() {
     
 
     
+
 
 
