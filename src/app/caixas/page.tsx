@@ -71,17 +71,17 @@ type ColumnConfigCaixas = {
 };
 
 const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
-  { 
-    id: 'codigoCaixa', 
-    header: 'Código', 
-    accessorKey: 'codigoCaixa', 
-    defaultVisible: true, 
+  {
+    id: 'codigoCaixa',
+    header: 'Código',
+    accessorKey: 'codigoCaixa',
+    defaultVisible: true,
     enableSorting: true,
     cellFormatter: (value, caixa) => (
-      <Link href={`/documentos?caixaId=${caixa.id}`} passHref>
-        <span className="text-primary hover:underline cursor-pointer font-medium">
+      <Link href={`/documentos?caixaId=${caixa.id}`} passHref legacyBehavior>
+        <a target="_blank" rel="noopener noreferrer" className="text-primary hover:underline cursor-pointer font-medium">
           {value}
-        </span>
+        </a>
       </Link>
     )
   },
@@ -133,7 +133,7 @@ export default function CaixasPage() {
     }
     setIsDialogOpen(true);
   };
-  
+
   const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormStateCaixa(prev => ({ ...prev, [id]: value }));
@@ -146,9 +146,9 @@ export default function CaixasPage() {
 
   const handleSaveChanges = () => {
     const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
-    
+
     const caixaDataToSave: Caixa = {
-      ...initialFormStateCaixa, 
+      ...initialFormStateCaixa,
       ...formStateCaixa,
       tipo: tipoFinal,
       id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`, // Use editingCaixaId if editing
@@ -163,11 +163,11 @@ export default function CaixasPage() {
       updatedCaixas = [...placeholderCaixas, caixaDataToSave];
     }
     setPlaceholderCaixas(updatedCaixas);
-    
+
     setIsDialogOpen(false);
     // resetFormAndDialogState() is called by onOpenChange of Dialog
   };
-  
+
 
   const getSortableValueCaixas = (caixa: Caixa, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
@@ -175,7 +175,7 @@ export default function CaixasPage() {
     const value = caixa[column.accessorKey as keyof Caixa];
     return value;
   };
-  
+
   React.useEffect(() => {
     let sortedCaixas = [...placeholderCaixas];
     if (sortingCaixas) {
@@ -185,7 +185,7 @@ export default function CaixasPage() {
 
         if (valA === null || valA === undefined) return sortingCaixas.direction === 'asc' ? 1 : -1;
         if (valB === null || valB === undefined) return sortingCaixas.direction === 'asc' ? -1 : 1;
-        
+
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
         if (strA < strB) return sortingCaixas.direction === 'asc' ? -1 : 1;
@@ -204,7 +204,7 @@ export default function CaixasPage() {
     setSortingCaixas(prev => {
       if (prev?.id === columnId) {
         if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
-        return null; 
+        return null;
       }
       return { id: columnId, direction: 'asc' };
     });
