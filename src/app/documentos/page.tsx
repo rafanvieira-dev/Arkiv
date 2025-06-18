@@ -254,9 +254,9 @@ const placeholderDocumentos: Documento[] = [
     classificacaoArquivisticaId: "CLA001", 
     prazoArquivoCorrenteDisplay: "5 Anos",
     prazoArquivoIntermediarioDisplay: "15 Anos", 
-    destinacaoFinalDisplay: "Guarda Permanente", // Original, mas status indica possível alteração
-    alteracaoDestinacaoFinal: "Não Alterar", // Exemplo, poderia ser mudado para Eliminação via CPAD
-    anoEliminacaoPrevisto: "2026", // (2010 + 15 + 1)
+    destinacaoFinalDisplay: "Guarda Permanente", 
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "2026", 
     nomePartePrincipal: "Consumidor Teste",
     tipoPartePrincipal: "Autor",
     outroTipoPartePrincipal: "",
@@ -500,14 +500,7 @@ export default function DocumentosPage() {
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
     };
     console.log("Salvando documento:", finalFormState);
-    // Add to placeholderDocumentos for demonstration (in real app, this would be an API call)
-    // const existingIndex = placeholderDocumentos.findIndex(doc => doc.id === finalFormState.id);
-    // if (existingIndex > -1) {
-    //   placeholderDocumentos[existingIndex] = finalFormState as Documento;
-    // } else {
-    //   placeholderDocumentos.push(finalFormState as Documento);
-    // }
-    // applyFilters(); // Re-apply filters and sorting
+
     setIsDialogOpen(false);
   };
 
@@ -635,7 +628,7 @@ export default function DocumentosPage() {
         if (valA instanceof Date && valB instanceof Date) {
           return sorting.direction === 'asc' ? valA.getTime() - valB.getTime() : valB.getTime() - valA.getTime();
         }
-        // Fallback to string comparison
+
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
         if (strA < strB) return sorting.direction === 'asc' ? -1 : 1;
@@ -653,7 +646,6 @@ export default function DocumentosPage() {
 
   const clearFilters = () => {
     setFilters(initialFiltersState);
-    // applyFiltersAndSorting will be called by the useEffect due to filters changing
   };
 
   const toggleColumnVisibility = (columnId: string) => {
@@ -667,7 +659,7 @@ export default function DocumentosPage() {
     setSorting(prev => {
       if (prev?.id === columnId) {
         if (prev.direction === 'asc') return { id: columnId, direction: 'desc' };
-        return null; // Third click removes sort
+        return null; 
       }
       return { id: columnId, direction: 'asc' };
     });
@@ -1271,22 +1263,28 @@ export default function DocumentosPage() {
                     {ALL_COLUMNS_CONFIG.map((column) =>
                       columnVisibility[column.id] ? (
                         <TableCell key={`${doc.id}-${column.id}`} className="py-2 px-3">
-                           {column.id === 'id' && doc.classificacaoInativa && (
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1 whitespace-normal">
-                              CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
-                            </p>
-                          )}
-                          {getCellValue(doc, column)}
+                           {getCellValue(doc, column)}
                         </TableCell>
                       ) : null
                     )}
-                    <TableCell className="text-right sticky right-0 bg-background z-10 py-2 px-3">
-                      <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3">
+                      <div className="flex flex-col items-end">
+                        {doc.classificacaoInativa && (
+                          <div className="w-full text-left mb-1">
+                            <p className="text-xs text-red-600 dark:text-red-400 whitespace-normal">
+                              CÓDIGO CLASSIF. ARQUIVÍSTICA INATIVO, RECLASSIFICAR
+                            </p>
+                          </div>
+                        )}
+                        <div>
+                          <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1301,6 +1299,3 @@ export default function DocumentosPage() {
     </div>
   );
 }
-
-
-    
