@@ -11,7 +11,7 @@ import {
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
   ChevronLeft, ChevronRight, CheckSquare, Square
-} from "lucide-react"; // Ensured ArrowUp and ArrowDown are imported
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -1349,4 +1349,6 @@ export default function DocumentosPage() {
     </div>
   );
 }
+    
+
     
