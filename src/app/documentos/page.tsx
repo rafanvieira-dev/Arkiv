@@ -281,11 +281,11 @@ const initialFiltersState = {
   codigoAtoM: "",
   segredoJustica: "",
   grauSigilo: "",
+  digitalizado: "", 
   // Campos de filtro antigos que não estão na imagem, mas mantidos na lógica
   anoLimiteDocumento: "", // Era 'Documentos Até o Ano (Arquivamento)'
   prazoCorrente: "",
   prazoIntermediario: "",
-  digitalizado: "",
 };
 
 const ALL_VALUES_SENTINEL = "ALL_VALUES_SENTINEL";
@@ -488,7 +488,7 @@ export default function DocumentosPage() {
       if (filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
       if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) passesAll = false;
       if (filters.categoriaDocumento && doc.categoria !== filters.categoriaDocumento) passesAll = false;
-      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) passesAll = false; // Ajustado para text match
+      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) passesAll = false; 
       if (filters.pessoasReferidas && doc.nomePartePrincipal && !doc.nomePartePrincipal.toLowerCase().includes(filters.pessoasReferidas.toLowerCase())) passesAll = false;
       if (filters.codigoAtoM && doc.codigoAtoM && !doc.codigoAtoM.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) passesAll = false;
       if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) passesAll = false;
@@ -994,6 +994,17 @@ export default function DocumentosPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDigitalizado">Digitalizado</Label>
+                <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
+                  <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
+                    <SelectItem value="Sim">Sim</SelectItem>
+                    <SelectItem value="Não">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               {/* Campos de filtro que existiam antes e não estão na imagem, mas mantidos na lógica interna */}
               {/* <div className="space-y-2">
@@ -1007,17 +1018,6 @@ export default function DocumentosPage() {
               <div className="space-y-2">
                 <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
                 <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDigitalizado">Digitalizado</Label>
-                <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
-                  <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
               </div> */}
             </CardContent>
             <CardFooter className="flex justify-end gap-2 px-6 pb-6">
@@ -1147,5 +1147,7 @@ export default function DocumentosPage() {
   );
 }
 
+
+    
 
     
