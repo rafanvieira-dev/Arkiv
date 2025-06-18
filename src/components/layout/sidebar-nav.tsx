@@ -27,7 +27,7 @@ const navItems = [
   { href: '/caixas', label: 'Caixas', icon: Archive },
   { href: '/classificacao', label: 'Classificação', icon: ListFilter },
   { href: '/classes-judiciais', label: 'Classes Judiciais', icon: Gavel },
-  { href: '/documentos', label: 'Documentos', icon: FileText },
+  { href: '/documentos', label: 'Acervo', icon: FileText },
   { href: '/listagens-eliminacao', label: 'Listagens de Eliminação', icon: Trash2 },
   { href: '/solicitacoes', label: 'Solicitações', icon: Send },
   { href: '/busca-avancada', label: 'Busca Avançada', icon: Search },
@@ -57,7 +57,7 @@ export function SidebarNav() {
                   : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
-              <Link href={item.href}>
+              <Link href={item.href} className="flex items-center gap-2">
                 <item.icon aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
@@ -79,7 +79,7 @@ export function SidebarNav() {
                     : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
-                <Link href={item.href}>
+                <Link href={item.href} className="flex items-center gap-2">
                   <item.icon aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>

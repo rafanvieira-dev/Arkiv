@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
@@ -35,7 +36,7 @@ function StatCard({ title, value, icon: Icon, link, linkText }: StatCardProps) {
 
 export default function DashboardPage() {
   const stats = [
-    { title: "Total de Documentos", value: "1,234", icon: FileText, link: "/documentos", linkText: "Ver Documentos" },
+    { title: "Total no Acervo", value: "1,234", icon: FileText, link: "/documentos", linkText: "Ver Acervo" },
     { title: "Caixas Arquivadas", value: "56", icon: Archive, link: "/caixas", linkText: "Ver Caixas" },
     { title: "Solicitações Pendentes", value: "8", icon: Send, link: "/solicitacoes", linkText: "Ver Solicitações" },
     { title: "Classificações", value: "120", icon: ListFilter, link: "/classificacao", linkText: "Ver Classificações"},
@@ -57,7 +58,7 @@ export default function DashboardPage() {
             <CardTitle className="font-headline text-primary">Acesso Rápido</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
-            <Link href="/documentos" passHref><Button variant="outline" className="w-full justify-start"><FileText className="mr-2 h-4 w-4" />Cadastrar Documento</Button></Link>
+            <Link href="/documentos" passHref><Button variant="outline" className="w-full justify-start"><FileText className="mr-2 h-4 w-4" />Adicionar ao Acervo</Button></Link>
             <Link href="/solicitacoes" passHref><Button variant="outline" className="w-full justify-start"><Send className="mr-2 h-4 w-4" />Nova Solicitação</Button></Link>
             <Link href="/caixas" passHref><Button variant="outline" className="w-full justify-start"><Archive className="mr-2 h-4 w-4" />Gerenciar Caixas</Button></Link>
             <Link href="/busca-avancada" passHref><Button variant="outline" className="w-full justify-start"><Search className="mr-2 h-4 w-4" />Busca Avançada</Button></Link>

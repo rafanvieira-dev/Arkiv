@@ -26,16 +26,16 @@ const placeholderDocumentos: Documento[] = [
 export default function DocumentosPage() {
   return (
     <div className="container mx-auto py-2">
-      <PageHeader title="Gerenciamento de Documentos" description="Cadastre e gerencie as descrições dos documentos do acervo.">
+      <PageHeader title="Gerenciamento do Acervo" description="Cadastre e gerencie as descrições dos documentos do acervo.">
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Documento
+          Adicionar ao Acervo
         </Button>
       </PageHeader>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-primary">Lista de Documentos</CardTitle>
+          <CardTitle className="font-headline text-primary">Lista de Itens do Acervo</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -81,4 +81,3 @@ export default function DocumentosPage() {
     </div>
   );
 }
-
