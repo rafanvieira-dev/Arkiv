@@ -30,27 +30,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
+
 const placeholderCaixas: Caixa[] = [
-  { id: "CX001", codigoCaixa: "CX-A-001", tipo: "Caixa Arquivo", status: "Lacrada", localizacao: "Estante 1, Prateleira A", situacao: "Ativa", documentoIds: ["DOC001", "DOC003"] },
-  { id: "CX002", codigoCaixa: "CX-B-015", tipo: "Caixa Arquivo", status: "Fechada", localizacao: "Estante 2, Prateleira C", situacao: "Ativa", documentoIds: ["DOC002"] },
-  { id: "CX003", codigoCaixa: "PST-X-007", tipo: "Pasta", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Ativa" },
+  { id: "CX001", codigoCaixa: "CX-A-001", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
+  { id: "CX002", codigoCaixa: "CX-B-015", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
+  { id: "CX003", codigoCaixa: "PST-X-007", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
 ];
 
 export default function CaixasPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedTipoCaixa, setSelectedTipoCaixa] = React.useState<string>("");
+  const [outroTipoCaixa, setOutroTipoCaixa] = React.useState<string>("");
 
   const handleSaveChanges = () => {
     // Lógica para salvar os dados da nova caixa será implementada aqui
-    console.log("Salvando nova caixa...");
-    setIsDialogOpen(false); // Fecha o diálogo após salvar (ou tentar salvar)
+    // Exemplo de como obter o tipo final:
+    const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
+    console.log("Salvando nova caixa com tipo:", tipoFinal);
+    // Adicionar aqui a lógica para coletar todos os campos do formulário
+    setIsDialogOpen(false); 
+    setSelectedTipoCaixa("");
+    setOutroTipoCaixa("");
   };
 
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+          setIsDialogOpen(isOpen);
+          if (!isOpen) {
+            setSelectedTipoCaixa("");
+            setOutroTipoCaixa("");
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Caixa
             </Button>
@@ -79,18 +94,32 @@ export default function CaixasPage() {
                 <Label htmlFor="tipoCaixa" className="text-right">
                   Tipo*
                 </Label>
-                <Select>
+                <Select onValueChange={setSelectedTipoCaixa} value={selectedTipoCaixa}>
                   <SelectTrigger id="tipoCaixa" className="col-span-3">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Caixa Arquivo">Caixa Arquivo</SelectItem>
-                    <SelectItem value="Pasta">Pasta</SelectItem>
-                    <SelectItem value="Livro">Livro</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
+                    {tiposCaixaPadrao.map(tipo => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    ))}
+                    <SelectItem value="Outro">Outro (Especificar)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {selectedTipoCaixa === "Outro" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="outroTipoCaixa" className="text-right">
+                    Espec. Tipo*
+                  </Label>
+                  <Input
+                    id="outroTipoCaixa"
+                    placeholder="Digite o novo tipo"
+                    className="col-span-3"
+                    value={outroTipoCaixa}
+                    onChange={(e) => setOutroTipoCaixa(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="localizacaoCaixa" className="text-right">
                   Localização
@@ -108,7 +137,6 @@ export default function CaixasPage() {
                   <SelectContent>
                     <SelectItem value="Aberta">Aberta</SelectItem>
                     <SelectItem value="Fechada">Fechada</SelectItem>
-                    <SelectItem value="Lacrada">Lacrada</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -116,13 +144,13 @@ export default function CaixasPage() {
                 <Label htmlFor="situacaoCaixa" className="text-right">
                   Situação*
                 </Label>
-                <Select defaultValue="Ativa">
+                <Select defaultValue="Incompleta">
                   <SelectTrigger id="situacaoCaixa" className="col-span-3">
                     <SelectValue placeholder="Selecione a situação" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ativa">Ativa</SelectItem>
-                    <SelectItem value="Inativa">Inativa</SelectItem>
+                    <SelectItem value="Completa">Completa</SelectItem>
+                    <SelectItem value="Incompleta">Incompleta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -149,7 +177,8 @@ export default function CaixasPage() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Localização</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Documentos</TableHead>
+                <TableHead>Situação</TableHead>
+                <TableHead>Qtd. Docs</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -159,7 +188,16 @@ export default function CaixasPage() {
                   <TableCell className="font-medium">{item.codigoCaixa}</TableCell>
                   <TableCell>{item.tipo}</TableCell>
                   <TableCell>{item.localizacao}</TableCell>
-                  <TableCell><Badge variant={item.status === 'Lacrada' ? 'default' : 'secondary'}>{item.status}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant={item.status === 'Fechada' ? 'default' : 'secondary'}>
+                      {item.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                     <Badge variant={item.situacao === 'Completa' ? 'secondary' : 'outline'}>
+                        {item.situacao}
+                      </Badge>
+                  </TableCell>
                   <TableCell>{item.documentoIds?.length || 0}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" aria-label="Ver Documentos">
@@ -181,4 +219,3 @@ export default function CaixasPage() {
     </div>
   );
 }
-

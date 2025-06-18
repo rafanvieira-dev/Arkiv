@@ -73,10 +73,12 @@ export interface Caixa {
   id: string;
   codigoCaixa: string;
   descricao?: string;
-  tipo: 'Caixa Arquivo' | 'Pasta' | 'Livro' | string;
-  status: 'Aberta' | 'Fechada' | 'Lacrada';
+  // Opções principais: “JUD”, “DOC”, “ADM”, “ADM/SIGA”, “JUD/APOLO”, “JUD/HÍBRIDO”
+  // Permitir string para tipos personalizados.
+  tipo: string; 
+  status: 'Aberta' | 'Fechada'; // Alterado de 'Aberta' | 'Fechada' | 'Lacrada'
   localizacao?: string;
-  situacao: 'Ativa' | 'Inativa';
+  situacao: 'Completa' | 'Incompleta'; // Alterado de 'Ativa' | 'Inativa'
   documentoIds?: string[]; // Array of Documento IDs
 }
 
