@@ -426,7 +426,7 @@ export default function DocumentosPage() {
   
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>(placeholderDocumentos);
-  const [isFiltersOpen, setIsFiltersOpen] = React.useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
@@ -1338,6 +1338,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
