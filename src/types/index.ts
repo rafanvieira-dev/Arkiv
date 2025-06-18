@@ -23,17 +23,22 @@ export interface Documento {
   documentosRelacionadosIds?: string[]; // Array of Documento IDs
   observacoes?: string;
   dataCadastro: string; // ISO Date string
+  // For placeholder purposes to demonstrate inactive classification warning
+  classificacaoInativa?: boolean; 
 }
 
 export interface Classificacao {
   id: string;
-  codigo: string;
-  descricao: string;
+  codigo: string; // Obrigatório
+  descricao: string; // Obrigatório (assunto)
   tabelaTemporalidade?: string;
-  prazoGuardaFaseCorrente?: string;
-  prazoGuardaFaseIntermediaria?: string;
-  destinacaoFinal: 'Eliminação' | 'Guarda Permanente' | string;
+  tipoPrazoFaseCorrente?: 'Anos' | 'Condição Textual';
+  prazoGuardaFaseCorrenteAnos?: number;
+  prazoGuardaFaseCorrenteCondicaoTextual?: string;
+  prazoGuardaFaseIntermediariaAnos: number; // Obrigatório, pode ser 0
+  destinacaoFinal: 'Eliminação' | 'Guarda Permanente'; // Obrigatório
   observacoes?: string;
+  inativo: boolean; // Default false
 }
 
 export interface ClasseJudicial {
@@ -73,13 +78,11 @@ export interface Caixa {
   id: string;
   codigoCaixa: string;
   descricao?: string;
-  // Opções principais: “JUD”, “DOC”, “ADM”, “ADM/SIGA”, “JUD/APOLO”, “JUD/HÍBRIDO”
-  // Permitir string para tipos personalizados.
   tipo: string; 
-  status: 'Aberta' | 'Fechada'; // Alterado de 'Aberta' | 'Fechada' | 'Lacrada'
+  status: 'Aberta' | 'Fechada';
   localizacao?: string;
-  situacao: 'Completa' | 'Incompleta'; // Alterado de 'Ativa' | 'Inativa'
-  documentoIds?: string[]; // Array of Documento IDs
+  situacao: 'Completa' | 'Incompleta';
+  documentoIds?: string[];
 }
 
 // For tables and lists
@@ -88,3 +91,4 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+

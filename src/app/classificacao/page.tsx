@@ -28,30 +28,103 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 const placeholderClassificacoes: Classificacao[] = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tabelaTemporalidade: "TTD-01", prazoGuardaFaseCorrente: "5 anos", prazoGuardaFaseIntermediaria: "15 anos", destinacaoFinal: "Guarda Permanente" },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tabelaTemporalidade: "TTD-02", prazoGuardaFaseCorrente: "2 anos", prazoGuardaFaseIntermediaria: "3 anos", destinacaoFinal: "Eliminação" },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tabelaTemporalidade: "TTD-01", prazoGuardaFaseCorrente: "1 ano", prazoGuardaFaseIntermediaria: "Permanente", destinacaoFinal: "Guarda Permanente" },
+  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tabelaTemporalidade: "TTD-01", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", inativo: false },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", tabelaTemporalidade: "TTD-02", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", inativo: true },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", tabelaTemporalidade: "TTD-01", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
 ];
 
-const destinacaoFinalPadrao = ["Eliminação", "Guarda Permanente"];
+const opcoesCondicaoTextualFaseCorrente = [
+  "3 anos após o encerramento",
+  "Após aprovação das contas pelo TCU",
+  "Até a aposentadoria ou o desligamento",
+  "Até a atualização",
+  "Até a conclusão da apuração",
+  "Até a devolução do bem",
+  "Até a homologação do Concurso",
+  "Até a informatização ou alienação",
+  "Até a posse",
+  "Até a próxima atualização",
+  "Até a publicação",
+  "Até a quitação da dívida",
+  "Até devolução",
+  "Até devolução dos autos",
+  "Até o desfazimento do bem",
+  "Até o desligamento do estagiário",
+  "Até o desligamento do servidor ou, em caso de haver pensionista(s), 5 anos após o falecimento do último beneficiário",
+  "Até o encerramento",
+  "Até o encerramento do processo de execução penal",
+  "Até o vitaliciamento",
+  "Até vigência",
+  "Até vigência do contrato ou julgamento TCU",
+  "Durante a vigência",
+  "Durante o prazo da licitação",
+  "Eliminação no momento do recebimento",
+  "Enquanto durar a ocupação",
+  "Enquanto durar o período de prova",
+  "Enquanto durar sessão de julgamento",
+  "Enquanto o bem estiver alienado",
+  "Enquanto vigente",
+  "Enquanto vigora",
+  "Imediatamente após a produção",
+  "Prazo da licença",
+  "Prazo do processo",
+  "Validade do Concurso",
+];
+
+const initialState = {
+  codigo: "",
+  descricao: "",
+  tabelaTemporalidade: "",
+  tipoPrazoFaseCorrente: "",
+  prazoGuardaFaseCorrenteAnos: "",
+  prazoGuardaFaseCorrenteCondicaoTextual: "",
+  prazoGuardaFaseIntermediariaAnos: "",
+  destinacaoFinal: "",
+  observacoes: "",
+  inativo: false,
+};
 
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [selectedDestinacao, setSelectedDestinacao] = React.useState<string>("");
-  const [outraDestinacao, setOutraDestinacao] = React.useState<string>("");
+  const [formState, setFormState] = React.useState(initialState);
 
-  const handleSaveChanges = () => {
-    // Lógica para salvar os dados da nova classificação será implementada aqui
-    const destinacaoFinal = selectedDestinacao === "Outro" ? outraDestinacao : selectedDestinacao;
-    console.log("Salvando nova classificação com destinação:", destinacaoFinal);
-    // Adicionar aqui a lógica para coletar todos os campos do formulário
-    setIsDialogOpen(false);
-    setSelectedDestinacao("");
-    setOutraDestinacao("");
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormState(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleSelectChange = (id: keyof typeof initialState) => (value: string) => {
+    setFormState(prev => ({ ...prev, [id]: value }));
+     if (id === 'tipoPrazoFaseCorrente') {
+      if (value === 'Anos') {
+        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteCondicaoTextual: "" }));
+      } else if (value === 'Condição Textual') {
+        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteAnos: "" }));
+      }
+    }
+  };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormState(prev => ({ ...prev, inativo: checked }));
+  };
+
+  const resetForm = () => {
+    setFormState(initialState);
+  };
+
+  const handleSaveChanges = () => {
+    console.log("Salvando nova classificação:", {
+      ...formState,
+      prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' ? parseInt(formState.prazoGuardaFaseCorrenteAnos, 10) || 0 : undefined,
+      prazoGuardaFaseIntermediariaAnos: parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) || 0,
+    });
+    setIsDialogOpen(false);
+    resetForm();
+  };
 
   return (
     <div className="container mx-auto py-2">
@@ -59,89 +132,118 @@ export default function ClassificacaoPage() {
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
           setIsDialogOpen(isOpen);
           if (!isOpen) {
-            setSelectedDestinacao("");
-            setOutraDestinacao("");
+            resetForm();
           }
         }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Classificação
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[625px]">
             <DialogHeader>
               <DialogTitle className="font-headline text-primary">Nova Classificação</DialogTitle>
               <DialogDescription>
-                Preencha as informações abaixo para cadastrar uma nova classificação. Campos marcados com * são obrigatórios.
+                Preencha as informações abaixo. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigoClassificacao" className="text-right">
+                <Label htmlFor="codigo" className="text-right">
                   Código*
                 </Label>
-                <Input id="codigoClassificacao" placeholder="Ex: 020.1" className="col-span-3" />
+                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricaoClassificacao" className="text-right">
-                  Descrição*
+                <Label htmlFor="descricao" className="text-right">
+                  Assunto*
                 </Label>
-                <Input id="descricaoClassificacao" placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
+                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="tabelaTemporalidade" className="text-right">
                   Tab. Temp.
                 </Label>
-                <Input id="tabelaTemporalidade" placeholder="Ex: TTD-01" className="col-span-3" />
+                <Input id="tabelaTemporalidade" value={formState.tabelaTemporalidade} onChange={handleInputChange} placeholder="Ex: TTD-01" className="col-span-3" />
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="prazoCorrente" className="text-right">
-                  P. Corrente
+                <Label htmlFor="tipoPrazoFaseCorrente" className="text-right">
+                  Tipo Prazo Corrente
                 </Label>
-                <Input id="prazoCorrente" placeholder="Ex: 5 anos" className="col-span-3" />
+                <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
+                  <SelectTrigger id="tipoPrazoFaseCorrente" className="col-span-3">
+                    <SelectValue placeholder="Selecione o tipo de prazo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Anos">Anos</SelectItem>
+                    <SelectItem value="Condição Textual">Condição Textual</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {formState.tipoPrazoFaseCorrente === "Anos" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="prazoGuardaFaseCorrenteAnos" className="text-right">
+                    Prazo Corrente (Anos)
+                  </Label>
+                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos} onChange={handleInputChange} placeholder="Nº de anos (ex: 5)" className="col-span-3" />
+                </div>
+              )}
+
+              {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual" className="text-right">
+                    Prazo Corrente (Condição)
+                  </Label>
+                  <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
+                    <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual" className="col-span-3">
+                      <SelectValue placeholder="Selecione a condição textual" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesCondicaoTextualFaseCorrente.map(opcao => (
+                        <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="prazoIntermediaria" className="text-right">
-                  P. Intermed.
+                <Label htmlFor="prazoGuardaFaseIntermediariaAnos" className="text-right">
+                  Prazo Intermed. (Anos)*
                 </Label>
-                <Input id="prazoIntermediaria" placeholder="Ex: 15 anos" className="col-span-3" />
+                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" className="col-span-3" />
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="destinacaoFinal" className="text-right">
-                  Destinação*
+                  Destinação Final*
                 </Label>
-                <Select onValueChange={setSelectedDestinacao} value={selectedDestinacao}>
+                <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
                   <SelectTrigger id="destinacaoFinal" className="col-span-3">
                     <SelectValue placeholder="Selecione a destinação" />
                   </SelectTrigger>
                   <SelectContent>
-                    {destinacaoFinalPadrao.map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                    <SelectItem value="Outro">Outro (Especificar)</SelectItem>
+                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {selectedDestinacao === "Outro" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="outraDestinacao" className="text-right">
-                    Espec. Dest.*
-                  </Label>
-                  <Input
-                    id="outraDestinacao"
-                    placeholder="Digite a nova destinação"
-                    className="col-span-3"
-                    value={outraDestinacao}
-                    onChange={(e) => setOutraDestinacao(e.target.value)}
-                  />
-                </div>
-              )}
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observacoesClassificacao" className="text-right">
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="observacoes" className="text-right">
                   Observações
                 </Label>
-                <Textarea id="observacoesClassificacao" placeholder="Detalhes adicionais sobre a classificação" className="col-span-3" />
+                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" className="col-span-3" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="inativo" className="text-right">
+                  Inativo
+                </Label>
+                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} className="col-span-3 justify-self-start" />
               </div>
             </div>
             <DialogFooter>
@@ -165,6 +267,7 @@ export default function ClassificacaoPage() {
                 <TableHead>Código</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Destinação Final</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -174,6 +277,11 @@ export default function ClassificacaoPage() {
                   <TableCell className="font-medium">{item.codigo}</TableCell>
                   <TableCell>{item.descricao}</TableCell>
                   <TableCell>{item.destinacaoFinal}</TableCell>
+                  <TableCell>
+                    <Badge variant={item.inativo ? 'destructive' : 'secondary'}>
+                      {item.inativo ? 'Inativo' : 'Ativo'}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" aria-label="Editar">
                       <Edit className="h-4 w-4" />

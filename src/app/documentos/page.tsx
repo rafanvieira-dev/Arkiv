@@ -1,17 +1,26 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento } from "@/types";
+import type { Documento } from "@/types"; // Assuming Classificacao type might be needed indirectly
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// Placeholder data for Classificacao to simulate checking 'inativo' status
+// In a real app, this would come from a data store or API
+const placeholderClassificacoesSimulado = [
+  { id: "CLA001", codigo: "020.1", inativo: false },
+  { id: "CLA002", codigo: "030.5", inativo: true }, // This classification is inactive
+  { id: "CLA003", codigo: "045.2", inativo: false },
+];
+
 const placeholderDocumentos: Documento[] = [
-  { id: "DOC001", identificador: "PRC-2023-001", status: "Arquivado", origem: "Tribunal de Justiça", tipoMeio: "Papel", generoDocumental: "Textual", categoria: "Processo Judicial", tipoDocumento: "Ação Ordinária", dataDocumento: new Date("2023-01-15").toISOString(), classificacaoArquivisticaId: "CLA001", segredoJustica: false, grauSigilo: "Público", codigoCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizacao: false },
-  { id: "DOC002", identificador: "OFC-2023-045", status: "Emprestado", origem: "Secretaria Municipal", tipoMeio: "Digital", generoDocumental: "Textual", categoria: "Ofício", tipoDocumento: "Solicitação de Informações", dataDocumento: new Date("2023-03-20").toISOString(), classificacaoArquivisticaId: "CLA002", segredoJustica: false, grauSigilo: "Público", codigoCaixa: "CX002", dataCadastro: new Date().toISOString(), digitalizacao: true },
-  { id: "DOC003", identificador: "MEM-2022-112", status: "Arquivado", origem: "Câmara de Vereadores", tipoMeio: "Papel", generoDocumental: "Textual", categoria: "Memorando", tipoDocumento: "Comunicação Interna", dataDocumento: new Date("2022-11-05").toISOString(), classificacaoArquivisticaId: "CLA003", segredoJustica: true, grauSigilo: "Secreto", codigoCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizacao: false },
+  { id: "DOC001", identificador: "PRC-2023-001", status: "Arquivado", origem: "Tribunal de Justiça", tipoMeio: "Papel", generoDocumental: "Textual", categoria: "Processo Judicial", tipoDocumento: "Ação Ordinária", dataDocumento: new Date("2023-01-15").toISOString(), classificacaoArquivisticaId: "CLA001", segredoJustica: false, grauSigilo: "Público", codigoCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizacao: false, classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA001")?.inativo },
+  { id: "DOC002", identificador: "OFC-2023-045", status: "Emprestado", origem: "Secretaria Municipal", tipoMeio: "Digital", generoDocumental: "Textual", categoria: "Ofício", tipoDocumento: "Solicitação de Informações", dataDocumento: new Date("2023-03-20").toISOString(), classificacaoArquivisticaId: "CLA002", segredoJustica: false, grauSigilo: "Público", codigoCaixa: "CX002", dataCadastro: new Date().toISOString(), digitalizacao: true, classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA002")?.inativo },
+  { id: "DOC003", identificador: "MEM-2022-112", status: "Arquivado", origem: "Câmara de Vereadores", tipoMeio: "Papel", generoDocumental: "Textual", categoria: "Memorando", tipoDocumento: "Comunicação Interna", dataDocumento: new Date("2022-11-05").toISOString(), classificacaoArquivisticaId: "CLA003", segredoJustica: true, grauSigilo: "Secreto", codigoCaixa: "CX001", dataCadastro: new Date().toISOString(), digitalizacao: false, classificacaoInativa: placeholderClassificacoesSimulado.find(c => c.id === "CLA003")?.inativo },
 ];
 
 export default function DocumentosPage() {
@@ -43,7 +52,14 @@ export default function DocumentosPage() {
             <TableBody>
               {placeholderDocumentos.map((doc) => (
                 <TableRow key={doc.id}>
-                  <TableCell className="font-medium">{doc.identificador}</TableCell>
+                  <TableCell className="font-medium">
+                    {doc.identificador}
+                    {doc.classificacaoInativa && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        CÓDIGO INATIVO, RECLASSIFICAR
+                      </p>
+                    )}
+                  </TableCell>
                   <TableCell>{doc.tipoDocumento}</TableCell>
                   <TableCell>{format(new Date(doc.dataDocumento), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                   <TableCell><Badge variant={doc.status === 'Arquivado' ? 'secondary' : doc.status === 'Emprestado' ? 'outline' : 'default' }>{doc.status}</Badge></TableCell>
@@ -65,3 +81,4 @@ export default function DocumentosPage() {
     </div>
   );
 }
+
