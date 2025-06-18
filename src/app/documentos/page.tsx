@@ -451,27 +451,6 @@ export default function DocumentosPage() {
   const [sorting, setSorting] = React.useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
   const [classificacaoPopoverOpen, setClassificacaoPopoverOpen] = React.useState(false);
 
-
-  React.useEffect(() => {
-    let anoEliminacao = "";
-    if (formState.dataArquivamento && formState.prazoArquivoIntermediarioDisplay && 
-        (formState.destinacaoFinalDisplay === 'Eliminação' || 
-         (formState.destinacaoFinalDisplay !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
-        
-        const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-        const prazoIntermediarioMatch = String(formState.prazoArquivoIntermediarioDisplay).match(/\d+/);
-        
-        if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
-            const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
-            if (!isNaN(prazoIntermediarioAnos)) {
-                const anoArquivamento = getYear(dataArquivamentoDate);
-                anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
-            }
-        }
-    }
-    setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: anoEliminacao }));
-  }, [formState.dataArquivamento, formState.prazoArquivoIntermediarioDisplay, formState.destinacaoFinalDisplay, formState.alteracaoDestinacaoFinal]);
-
   React.useEffect(() => {
     if (formState.classificacaoArquivisticaId) {
       const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId);
@@ -491,14 +470,53 @@ export default function DocumentosPage() {
           prazoArquivoIntermediarioDisplay: prazoIntermediario,
           destinacaoFinalDisplay: destinacao,
         }));
+
+        let anoEliminacao = "";
+        if (formState.dataArquivamento && prazoIntermediario && 
+            (destinacao === 'Eliminação' || 
+             (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
+            
+            const dataArquivamentoDate = parseISO(formState.dataArquivamento);
+            const prazoIntermediarioMatch = String(prazoIntermediario).match(/\d+/);
+            
+            if (prazoIntermediarioMatch && isValid(dataArquivamentoDate)) {
+                const prazoIntermediarioAnos = parseInt(prazoIntermediarioMatch[0], 10);
+                if (!isNaN(prazoIntermediarioAnos)) {
+                    const anoArquivamento = getYear(dataArquivamentoDate);
+                    anoEliminacao = (anoArquivamento + prazoIntermediarioAnos + 1).toString();
+                }
+            }
+        }
+        setFormState(prev => ({ ...prev, anoEliminacaoPrevisto: anoEliminacao }));
+
+      } else {
+         setFormState(prev => ({
+          ...prev,
+          prazoArquivoCorrenteDisplay: "",
+          prazoArquivoIntermediarioDisplay: "",
+          destinacaoFinalDisplay: undefined,
+          anoEliminacaoPrevisto: ""
+        }));
       }
+    } else {
+       setFormState(prev => ({
+        ...prev,
+        prazoArquivoCorrenteDisplay: "",
+        prazoArquivoIntermediarioDisplay: "",
+        destinacaoFinalDisplay: undefined,
+        anoEliminacaoPrevisto: ""
+      }));
     }
-  }, [formState.classificacaoArquivisticaId]);
+  }, [formState.classificacaoArquivisticaId, formState.dataArquivamento, formState.alteracaoDestinacaoFinal]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
-    setFormState(prev => ({ ...prev, [id]: value }));
+     if (id === 'historicoClassificacoes') {
+      setFormState(prev => ({ ...prev, historicoClassificacoesArquivisticas: value.split('\n') }));
+    } else {
+      setFormState(prev => ({ ...prev, [id]: value }));
+    }
   };
   
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -529,17 +547,6 @@ export default function DocumentosPage() {
   };
 
   const handleSaveChanges = () => {
-    const currentClassificationId = formState.classificacaoArquivisticaId;
-    const currentClassification = placeholderClassificacoesSimulado.find(c => c.id === currentClassificationId);
-    let updatedHistorico = [...(formState.historicoClassificacoesArquivisticas || [])];
-
-    if (currentClassification) {
-        const historyEntry = `${currentClassification.codigo} - ${currentClassification.descricao}`;
-        if (!updatedHistorico.length || updatedHistorico[updatedHistorico.length - 1] !== historyEntry) {
-            updatedHistorico.push(historyEntry);
-        }
-    }
-
     const finalFormState: Documento = {
       ...initialFormState, 
       ...formState, 
@@ -548,8 +555,8 @@ export default function DocumentosPage() {
       generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental!,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
       tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
-      historicoClassificacoesArquivisticas: updatedHistorico,
-      classificacaoInativa: currentClassification ? currentClassification.inativo : false,
+      historicoClassificacoesArquivisticas: formState.historicoClassificacoesArquivisticas || [],
+      classificacaoInativa: formState.classificacaoArquivisticaId ? (placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId)?.inativo || false) : false,
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -573,8 +580,6 @@ export default function DocumentosPage() {
 
   const handleOpenDialog = (doc?: Documento) => {
     if (doc) {
-      // If editing, `classificacaoArquivisticaId` is set.
-      // The useEffect will handle setting derived prazo/destinacao fields.
       setFormState({
         ...initialFormState, 
         ...doc,
@@ -582,10 +587,6 @@ export default function DocumentosPage() {
         historicoClassificacoesArquivisticas: doc.historicoClassificacoesArquivisticas || [],
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
-        // Let useEffect populate these based on classificacaoArquivisticaId
-        // prazoArquivoCorrenteDisplay: doc.prazoArquivoCorrenteDisplay, 
-        // prazoArquivoIntermediarioDisplay: doc.prazoArquivoIntermediarioDisplay,
-        // destinacaoFinalDisplay: doc.destinacaoFinalDisplay,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
         totalMidias: doc.totalMidias ?? undefined,
@@ -595,8 +596,7 @@ export default function DocumentosPage() {
       setOutroTipoMidia(doc.tipoMidiaDetalhe && !['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'].includes(doc.tipoMidiaDetalhe) ? doc.tipoMidiaDetalhe : "");
       setOutroTipoParte(doc.tipoPartePrincipal && !tiposParteOpcoes.slice(0,-1).includes(doc.tipoPartePrincipal) ? doc.tipoPartePrincipal : "");
     } else {
-      resetForm(); // This will set classificacaoArquivisticaId to "" or initialFormState's value.
-                  // The useEffect will not run to set derived fields until a classification is chosen.
+      resetForm(); 
     }
     setIsDialogOpen(true);
   };
@@ -1013,7 +1013,6 @@ export default function DocumentosPage() {
                                 key={classificacao.id}
                                 value={classificacao.id}
                                 onSelect={(selectedId) => {
-                                  console.log("Selected ID:", selectedId);
                                   setFormState(prev => ({
                                     ...prev,
                                     classificacaoArquivisticaId: selectedId,
@@ -1051,10 +1050,10 @@ export default function DocumentosPage() {
                 <Label htmlFor="historicoClassificacoes">Histórico de Classificações</Label>
                 <Textarea
                   id="historicoClassificacoes"
-                  value={formState.historicoClassificacoesArquivisticas?.join("\n") || ""}
-                  readOnly
-                  className="bg-muted/50 cursor-not-allowed min-h-[60px]"
-                  rows={Math.max(3, formState.historicoClassificacoesArquivisticas?.length || 1)}
+                  value={(formState.historicoClassificacoesArquivisticas || []).join("\n")}
+                  onChange={handleInputChange}
+                  className="min-h-[60px]"
+                  rows={Math.max(3, (formState.historicoClassificacoesArquivisticas || []).length || 1)}
                 />
               </div>
 
@@ -1435,6 +1434,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
