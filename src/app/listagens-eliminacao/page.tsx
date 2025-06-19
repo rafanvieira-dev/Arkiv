@@ -57,15 +57,12 @@ const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: stri
   observacoes: "",
 };
 
-// Simulação de dados de documentos para validação de status
-// Em uma aplicação real, estes dados viriam de uma fonte central (API, banco de dados, etc.)
 const simulatedDocumentData: Array<{ id: string; status: string }> = [
   { id: "DOC001", status: "Arquivado" },
   { id: "DOC002", status: "Emprestado" },
   { id: "DOC003", status: "Arquivado" },
-  { id: "DOC004", status: "Arquivado" }, // Alterado para Arquivado para permitir teste
+  { id: "DOC004", status: "Arquivado" },
   { id: "DOC005", status: "Aguardando prazo para eliminação" },
-  // Adicione mais documentos conforme necessário para testar
 ];
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
@@ -89,7 +86,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     cellFormatter: (value, item) => {
       if (item.documentoIds && item.documentoIds.length > 0) {
         return (
-          <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}`} passHref>
+          <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(item.numeroListagem)}`} passHref>
             <span className="text-primary hover:underline cursor-pointer font-medium">
               {value}
             </span>

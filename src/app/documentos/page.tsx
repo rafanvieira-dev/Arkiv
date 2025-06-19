@@ -404,6 +404,8 @@ export default function DocumentosPage() {
   const searchParams = useSearchParams();
   const caixaIdFromUrl = searchParams.get('caixaId');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
+  const numeroListagemFromQuery = searchParams.get('numeroListagem');
+
   const docIdsFromListagemForTitle = listagemDocIdsParam ? listagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
   const isFilteredByListagem = !!listagemDocIdsParam && docIdsFromListagemForTitle.length > 0;
 
@@ -727,8 +729,6 @@ export default function DocumentosPage() {
 
   const clearFilters = () => {
     setFilters(initialFiltersState);
-    // Note: This does not clear URL-based filters like listagemDocIds or caixaIdFromUrl
-    // To clear those, a router.push would be needed.
   };
 
   const toggleColumnVisibility = (columnId: string) => {
@@ -802,12 +802,26 @@ export default function DocumentosPage() {
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
 
+  let pageTitle = "Gerenciamento do Acervo";
+  let pageDescription = "Cadastre e gerencie as descrições dos documentos do acervo.";
+
+  if (isFilteredByListagem) {
+    pageTitle = numeroListagemFromQuery
+      ? `Documentos da Listagem de Eliminação nº ${numeroListagemFromQuery}`
+      : "Documentos da Listagem de Eliminação";
+    pageDescription = "Documentos incluídos na listagem de eliminação selecionada.";
+  } else if (caixaIdFromUrl) {
+    pageTitle = `Documentos na Caixa: ${caixaIdFromUrl}`;
+    pageDescription = `Documentos pertencentes à caixa ${caixaIdFromUrl}.`;
+  }
+
+
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader 
-        title={isFilteredByListagem ? "Documentos da Listagem de Eliminação" : caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Gerenciamento do Acervo"}
-        description={isFilteredByListagem ? "Documentos incluídos na listagem de eliminação selecionada." : caixaIdFromUrl ? `Documentos pertencentes à caixa ${caixaIdFromUrl}.` : "Cadastre e gerencie as descrições dos documentos do acervo."}
+        title={pageTitle}
+        description={pageDescription}
       >
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
           setIsDialogOpen(isOpen);
@@ -1323,7 +1337,7 @@ export default function DocumentosPage() {
       <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">
-            {isFilteredByListagem ? "Documentos da Listagem de Eliminação" : caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Lista de Itens do Acervo"}
+            {pageTitle}
           </CardTitle>
           <div className="flex items-center gap-2">
             <DropdownMenu>
@@ -1461,6 +1475,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
