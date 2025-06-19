@@ -191,7 +191,7 @@ export default function ListagensEliminacaoPage() {
       id: 'selection',
       header: (
         <Checkbox
-          checked={documentsForDialog.length > 0 && selectedDialogDocIds.length === documentsForDialog.length}
+          checked={documentsForDialog.length > 0 && selectedDialogDocIds.length === documentsForDialog.length && documentsForDialog.every(doc => selectedDialogDocIds.includes(doc.id))}
           onCheckedChange={(value) => {
             setSelectedDialogDocIds(value ? documentsForDialog.map(d => d.id) : []);
           }}
@@ -582,7 +582,7 @@ export default function ListagensEliminacaoPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <ScrollArea className="h-[300px] border-t">
+                    <ScrollArea className="h-[300px] w-full border-t">
                       <Table className="min-w-full whitespace-nowrap text-xs">
                         <TableHeader>
                           <TableRow>
@@ -623,6 +623,7 @@ export default function ListagensEliminacaoPage() {
                             )}
                         </TableBody>
                       </Table>
+                      <ScrollBar orientation="horizontal" />
                     </ScrollArea>
                   </CardContent>
                 </Card>
