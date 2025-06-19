@@ -86,18 +86,24 @@ const opcoesCondicaoTextualFaseCorrente = [
   "Validade do Concurso",
 ];
 
-const initialFormState: Omit<Classificacao, 'id'> & { prazoGuardaFaseIntermediariaAnos: string } = {
+type ClassificacaoFormState = Omit<Classificacao, 'id' | 'prazoGuardaFaseCorrenteAnos' | 'prazoGuardaFaseIntermediariaAnos'> & {
+  prazoGuardaFaseCorrenteAnos?: string; 
+  prazoGuardaFaseIntermediariaAnos: string; 
+};
+
+const initialFormState: ClassificacaoFormState = {
   codigo: "",
   descricao: "",
   tipoPlanoClassificacao: "Administrativo",
   tipoPrazoFaseCorrente: "Anos",
-  prazoGuardaFaseCorrenteAnos: undefined,
+  prazoGuardaFaseCorrenteAnos: "", 
   prazoGuardaFaseCorrenteCondicaoTextual: "",
-  prazoGuardaFaseIntermediariaAnos: "",
+  prazoGuardaFaseIntermediariaAnos: "", 
   destinacaoFinal: "Eliminação",
   observacoes: "",
   inativo: false,
 };
+
 
 type ColumnConfigClassificacoes = {
   id: keyof Classificacao | string;
@@ -152,15 +158,45 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState(initialFormState);
+  const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
   const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
   const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
   
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editingClassificacaoId, setEditingClassificacaoId] = React.useState<string | null>(null);
+
   const [columnVisibilityClassificacoes, setColumnVisibilityClassificacoes] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sortingClassificacoes, setSortingClassificacoes] = React.useState<SortConfig[]>([]);
 
+  const resetForm = () => {
+    setFormState(initialFormState);
+    setIsEditing(false);
+    setEditingClassificacaoId(null);
+  };
+
+  const handleOpenDialog = (classificacao?: Classificacao) => {
+    if (classificacao) {
+      setIsEditing(true);
+      setEditingClassificacaoId(classificacao.id);
+      setFormState({
+        codigo: classificacao.codigo,
+        descricao: classificacao.descricao,
+        tipoPlanoClassificacao: classificacao.tipoPlanoClassificacao || "Administrativo",
+        tipoPrazoFaseCorrente: classificacao.tipoPrazoFaseCorrente || "Anos",
+        prazoGuardaFaseCorrenteAnos: classificacao.prazoGuardaFaseCorrenteAnos !== undefined ? String(classificacao.prazoGuardaFaseCorrenteAnos) : "",
+        prazoGuardaFaseCorrenteCondicaoTextual: classificacao.prazoGuardaFaseCorrenteCondicaoTextual || "",
+        prazoGuardaFaseIntermediariaAnos: String(classificacao.prazoGuardaFaseIntermediariaAnos),
+        destinacaoFinal: classificacao.destinacaoFinal,
+        observacoes: classificacao.observacoes || "",
+        inativo: classificacao.inativo,
+      });
+    } else {
+      resetForm();
+    }
+    setIsDialogOpen(true);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -169,16 +205,16 @@ export default function ClassificacaoPage() {
 
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-     setFormState(prev => ({ ...prev, [id]: value === "" ? "" : value }));
+     setFormState(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSelectChange = (id: keyof typeof initialFormState) => (value: string) => {
+  const handleSelectChange = (id: keyof ClassificacaoFormState) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
      if (id === 'tipoPrazoFaseCorrente') {
       if (value === 'Anos') {
-        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteCondicaoTextual: "" }));
+        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteCondicaoTextual: "" , prazoGuardaFaseCorrenteAnos: prev.prazoGuardaFaseCorrenteAnos || "" }));
       } else if (value === 'Condição Textual') {
-        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteAnos: undefined }));
+        setFormState(prev => ({ ...prev, prazoGuardaFaseCorrenteAnos: "", prazoGuardaFaseCorrenteCondicaoTextual: prev.prazoGuardaFaseCorrenteCondicaoTextual || "" }));
       }
     }
   };
@@ -187,22 +223,33 @@ export default function ClassificacaoPage() {
     setFormState(prev => ({ ...prev, inativo: checked }));
   };
 
-  const resetForm = () => {
-    setFormState(initialFormState);
-  };
-
   const handleSaveChanges = () => {
-    const novaClassificacao: Classificacao = {
-      id: `CLA${Date.now()}`,
-      ...formState,
+    const classificacaoDataToSave: Classificacao = {
+      id: isEditing && editingClassificacaoId ? editingClassificacaoId : `CLA${Date.now()}`,
+      codigo: formState.codigo,
+      descricao: formState.descricao,
       tipoPlanoClassificacao: formState.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'],
-      prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' && formState.prazoGuardaFaseCorrenteAnos ? parseInt(String(formState.prazoGuardaFaseCorrenteAnos), 10) : undefined,
-      prazoGuardaFaseIntermediariaAnos: parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) || 0,
+      tipoPrazoFaseCorrente: formState.tipoPrazoFaseCorrente as Classificacao['tipoPrazoFaseCorrente'],
+      prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' && formState.prazoGuardaFaseCorrenteAnos && formState.prazoGuardaFaseCorrenteAnos.trim() !== "" ? parseInt(formState.prazoGuardaFaseCorrenteAnos, 10) : undefined,
+      prazoGuardaFaseCorrenteCondicaoTextual: formState.tipoPrazoFaseCorrente === 'Condição Textual' ? formState.prazoGuardaFaseCorrenteCondicaoTextual : undefined,
+      prazoGuardaFaseIntermediariaAnos: formState.prazoGuardaFaseIntermediariaAnos && formState.prazoGuardaFaseIntermediariaAnos.trim() !== "" ? parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) : 0,
       destinacaoFinal: formState.destinacaoFinal as Classificacao['destinacaoFinal'],
+      observacoes: formState.observacoes,
+      inativo: formState.inativo,
     };
-    setPlaceholderClassificacoes(prev => [...prev, novaClassificacao]);
+
+    let updatedClassificacoes;
+    if (isEditing && editingClassificacaoId) {
+      updatedClassificacoes = placeholderClassificacoes.map(c =>
+        c.id === editingClassificacaoId ? classificacaoDataToSave : c
+      );
+    } else {
+      updatedClassificacoes = [...placeholderClassificacoes, classificacaoDataToSave];
+    }
+    setPlaceholderClassificacoes(updatedClassificacoes);
+    
     setIsDialogOpen(false);
-    resetForm();
+    // resetForm is called by onOpenChange when dialog closes
   };
 
   const getSortableValueClassificacoes = (item: Classificacao, columnId: string): any => {
@@ -232,7 +279,7 @@ export default function ClassificacaoPage() {
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
           else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
-            comparisonResult = valA === valB ? 0 : valA ? -1 : 1; // true before false
+            comparisonResult = valA === valB ? 0 : valA ? -1 : 1; 
           } else if (typeof valA === 'number' && typeof valB === 'number') {
             comparisonResult = valA - valB;
           } else {
@@ -318,16 +365,16 @@ export default function ClassificacaoPage() {
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Classificação
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[625px]">
             <DialogHeader>
-              <DialogTitle className="font-headline text-primary">Nova Classificação</DialogTitle>
+              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
               <DialogDescription>
-                Preencha as informações abaixo. Campos com * são obrigatórios.
+                Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -521,7 +568,7 @@ export default function ClassificacaoPage() {
                       <div className="flex items-center justify-end">
                         <Tooltip>
                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Editar Classificação" onClick={() => console.log('Edit', item.id)}>
+                              <Button variant="ghost" size="icon" aria-label="Editar Classificação" onClick={() => handleOpenDialog(item)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                            </TooltipTrigger>
@@ -552,5 +599,4 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
-
     
