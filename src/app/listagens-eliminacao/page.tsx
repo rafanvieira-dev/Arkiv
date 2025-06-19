@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link"; // Added Link import
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,11 +37,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 
 const placeholderListagensInitial: ListagemEliminacao[] = [
   { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC003"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano." },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC004", "DOC005"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com docs específicos." },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC004"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com docs específicos." },
 ];
 
 const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: string } = {
@@ -55,6 +56,17 @@ const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: stri
   dataProducaoTermoEliminacao: undefined,
   observacoes: "",
 };
+
+// Simulação de dados de documentos para validação de status
+// Em uma aplicação real, estes dados viriam de uma fonte central (API, banco de dados, etc.)
+const simulatedDocumentData: Array<{ id: string; status: string }> = [
+  { id: "DOC001", status: "Arquivado" },
+  { id: "DOC002", status: "Emprestado" },
+  { id: "DOC003", status: "Arquivado" },
+  { id: "DOC004", status: "Arquivado" }, // Alterado para Arquivado para permitir teste
+  { id: "DOC005", status: "Aguardando prazo para eliminação" },
+  // Adicione mais documentos conforme necessário para testar
+];
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
@@ -126,6 +138,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
 
 
 export default function ListagensEliminacaoPage() {
+  const { toast } = useToast();
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>(placeholderListagensInitial);
   const [displayedListagens, setDisplayedListagens] = React.useState<ListagemEliminacao[]>(placeholderListagensInitial);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
@@ -183,6 +196,23 @@ export default function ListagensEliminacaoPage() {
   
   const handleSaveChanges = () => {
     const documentoIdsArray = formState.documentoIdsInput?.split(',').map(id => id.trim()).filter(id => id) || [];
+
+    const invalidDocIds: string[] = [];
+    documentoIdsArray.forEach(docId => {
+      const docData = simulatedDocumentData.find(d => d.id === docId);
+      if (!docData || docData.status !== "Arquivado") {
+        invalidDocIds.push(docId);
+      }
+    });
+
+    if (invalidDocIds.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro de Validação",
+        description: `Os seguintes documentos não podem ser incluídos pois não estão com status "Arquivado" ou não foram encontrados: ${invalidDocIds.join(', ')}.`,
+      });
+      return;
+    }
 
     const listagemDataToSave: ListagemEliminacao = {
       id: isEditing && editingListagemId ? editingListagemId : `LE${Date.now()}`,
@@ -277,7 +307,7 @@ export default function ListagensEliminacaoPage() {
     if (column.cellFormatter) {
       return column.cellFormatter(value, item);
     }
-    return value === undefined || value === null || value === '' ? "N/A" : String(value);
+    return value === undefined || value === null || (typeof value === 'string' && value.trim() === '') ? "N/A" : String(value);
   };
 
   const toggleColumnVisibilityListagens = (columnId: string) => {
