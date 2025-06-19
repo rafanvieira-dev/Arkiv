@@ -532,7 +532,7 @@ export default function ListagensEliminacaoPage() {
                   Preencha as informações da listagem e selecione os documentos a serem eliminados.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="numeroListagem">Nº Listagem*</Label>
                     <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
@@ -569,14 +569,14 @@ export default function ListagensEliminacaoPage() {
                       placeholder="Selecione a data"
                     />
                   </div>
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2">
                     <Label htmlFor="observacoes">Observações</Label>
                     <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
                   </div>
               </div>
 
               {!isDocumentTableVisible && (
-                <div className="mt-4 md:col-span-2 flex justify-center">
+                <div className="mt-4 flex justify-center">
                   <Button
                     type="button"
                     onClick={() => setIsDocumentTableVisible(true)}
@@ -589,7 +589,7 @@ export default function ListagensEliminacaoPage() {
               )}
 
               {isDocumentTableVisible && (
-                <div className="mt-4 md:col-span-2">
+                <div className="mt-4">
                   <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
                   <Card className="mt-2">
                     <CardHeader className="p-4">
