@@ -289,23 +289,17 @@ export default function CaixasPage() {
                 Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigoCaixa" className="text-right">
-                  Código*
-                </Label>
-                <Input id="codigoCaixa" placeholder="Ex: CX-A-001" className="col-span-3" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="codigoCaixa">Código*</Label>
+                <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricao" className="text-right">
-                  Descrição
-                </Label>
-                <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" className="col-span-3" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tipo" className="text-right">
-                  Tipo*
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="tipo">Tipo*</Label>
                 <Select onValueChange={(value) => {
                   setSelectedTipoCaixa(value);
                   if (value !== "Outro") {
@@ -315,7 +309,7 @@ export default function CaixasPage() {
                      setFormStateCaixa(prev => ({ ...prev, tipo: "" })); 
                   }
                 }} value={selectedTipoCaixa}>
-                  <SelectTrigger id="tipo" className="col-span-3">
+                  <SelectTrigger id="tipo">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -327,14 +321,11 @@ export default function CaixasPage() {
                 </Select>
               </div>
               {selectedTipoCaixa === "Outro" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="outroTipoCaixa" className="text-right">
-                    Espec. Tipo*
-                  </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="outroTipoCaixa">Espec. Tipo*</Label>
                   <Input
                     id="outroTipoCaixa"
                     placeholder="Digite o novo tipo"
-                    className="col-span-3"
                     value={outroTipoCaixa}
                     onChange={(e) => {
                       setOutroTipoCaixa(e.target.value);
@@ -343,18 +334,14 @@ export default function CaixasPage() {
                   />
                 </div>
               )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="localizacao" className="text-right">
-                  Localização
-                </Label>
-                <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" className="col-span-3" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
+              <div className="space-y-2">
+                <Label htmlFor="localizacao">Localização</Label>
+                <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status*
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status*</Label>
                 <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
-                  <SelectTrigger id="status" className="col-span-3">
+                  <SelectTrigger id="status">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -363,12 +350,10 @@ export default function CaixasPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="situacao" className="text-right">
-                  Situação*
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="situacao">Situação*</Label>
                 <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
-                  <SelectTrigger id="situacao" className="col-span-3">
+                  <SelectTrigger id="situacao">
                     <SelectValue placeholder="Selecione a situação" />
                   </SelectTrigger>
                   <SelectContent>

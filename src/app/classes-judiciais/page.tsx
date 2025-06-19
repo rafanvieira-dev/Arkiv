@@ -112,31 +112,23 @@ export default function ClassesJudiciaisPage() {
                 Preencha as informações abaixo. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigo" className="text-right">
-                  Código Judicial*
-                </Label>
-                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" className="col-span-3" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="space-y-2">
+                <Label htmlFor="codigo">Código Judicial*</Label>
+                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricao" className="text-right">
-                  Nome da Classe*
-                </Label>
-                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="descricao">Nome da Classe*</Label>
+                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="prazoGuardaAnos" className="text-right">
-                  Prazo Guarda (Anos)
-                </Label>
-                <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
+                <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="destinacaoFinal" className="text-right">
-                  Destinação Final*
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
                 <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
-                  <SelectTrigger id="destinacaoFinal" className="col-span-3">
+                  <SelectTrigger id="destinacaoFinal">
                     <SelectValue placeholder="Selecione a destinação" />
                   </SelectTrigger>
                   <SelectContent>
@@ -147,17 +139,13 @@ export default function ClassesJudiciaisPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observacoes" className="text-right">
-                  Observações
-                </Label>
-                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" className="col-span-3" />
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="observacoes">Observações</Label>
+                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="inativo" className="text-right">
-                  Inativo
-                </Label>
-                <UICheckbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} className="col-span-3 justify-self-start" />
+              <div className="space-y-2 md:col-span-2 flex items-center gap-2">
+                <UICheckbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
+                <Label htmlFor="inativo" className="mb-0">Inativo</Label>
               </div>
             </div>
             <DialogFooter>

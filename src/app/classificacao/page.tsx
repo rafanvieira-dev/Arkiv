@@ -453,13 +453,11 @@ export default function ClassificacaoPage() {
                 Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tipoPlanoClassificacao" className="text-right">
-                  Tipo de Plano*
-                </Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="space-y-2">
+                <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
                 <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
-                  <SelectTrigger id="tipoPlanoClassificacao" className="col-span-3">
+                  <SelectTrigger id="tipoPlanoClassificacao">
                     <SelectValue placeholder="Selecione o tipo de plano" />
                   </SelectTrigger>
                   <SelectContent>
@@ -468,25 +466,19 @@ export default function ClassificacaoPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigo" className="text-right">
-                  Código*
-                </Label>
-                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="codigo">Código*</Label>
+                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="descricao" className="text-right">
-                  Assunto*
-                </Label>
-                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="descricao">Assunto*</Label>
+                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tipoPrazoFaseCorrente" className="text-right">
-                  Tipo Prazo Corrente
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
                 <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
-                  <SelectTrigger id="tipoPrazoFaseCorrente" className="col-span-3">
+                  <SelectTrigger id="tipoPrazoFaseCorrente">
                     <SelectValue placeholder="Selecione o tipo de prazo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,21 +489,17 @@ export default function ClassificacaoPage() {
               </div>
 
               {formState.tipoPrazoFaseCorrente === "Anos" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="prazoGuardaFaseCorrenteAnos" className="text-right">
-                    Prazo Corrente (Anos)
-                  </Label>
-                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" className="col-span-3" />
+                <div className="space-y-2">
+                  <Label htmlFor="prazoGuardaFaseCorrenteAnos">Prazo Corrente (Anos)</Label>
+                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
                 </div>
               )}
 
               {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual" className="text-right">
-                    Prazo Corrente (Condição)
-                  </Label>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual">Prazo Corrente (Condição)</Label>
                   <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
-                    <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual" className="col-span-3">
+                    <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual">
                       <SelectValue placeholder="Selecione a condição textual" />
                     </SelectTrigger>
                     <SelectContent className="max-h-48 overflow-y-auto">
@@ -523,19 +511,15 @@ export default function ClassificacaoPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="prazoGuardaFaseIntermediariaAnos" className="text-right">
-                  Prazo Intermed. (Anos)*
-                </Label>
-                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)*</Label>
+                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="destinacaoFinal" className="text-right">
-                  Destinação Final*
-                </Label>
+              <div className="space-y-2">
+                <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
                 <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
-                  <SelectTrigger id="destinacaoFinal" className="col-span-3">
+                  <SelectTrigger id="destinacaoFinal">
                     <SelectValue placeholder="Selecione a destinação" />
                   </SelectTrigger>
                   <SelectContent>
@@ -545,18 +529,14 @@ export default function ClassificacaoPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="observacoes" className="text-right">
-                  Observações
-                </Label>
-                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" className="col-span-3" />
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="observacoes">Observações</Label>
+                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="inativo" className="text-right">
-                  Inativo
-                </Label>
-                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} className="col-span-3 justify-self-start" />
+              <div className="space-y-2 md:col-span-2 flex items-center gap-2">
+                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} />
+                <Label htmlFor="inativo" className="mb-0">Inativo</Label>
               </div>
             </div>
             <DialogFooter>
@@ -672,3 +652,4 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
+
