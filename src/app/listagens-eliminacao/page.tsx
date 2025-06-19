@@ -132,7 +132,7 @@ export default function ListagensEliminacaoPage() {
       case 'dataPublicacaoEdital': return item.dataPublicacaoEdital ? parseISO(item.dataPublicacaoEdital) : null;
       case 'numeroTermoEliminacao': return item.numeroTermoEliminacao;
       case 'dataProducaoTermoEliminacao': return item.dataProducaoTermoEliminacao ? parseISO(item.dataProducaoTermoEliminacao) : null;
-      case 'qtdDocumentos': return item.documentoIds.length;
+      case 'qtdDocumentos': return Array.isArray(item.documentoIds) ? item.documentoIds.length : 0;
       default: return null;
     }
   };
@@ -191,7 +191,7 @@ export default function ListagensEliminacaoPage() {
   const columns = [
     { id: 'numeroListagem', header: 'Nº Listagem', enableSorting: true },
     { id: 'dataProducaoListagem', header: 'Data Prod. Listagem', enableSorting: true, cellFormatter: (dateStr: string) => dateStr && isValid(parseISO(dateStr)) ? format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" },
-    { id: 'qtdDocumentos', header: 'Qtd. Docs', enableSorting: true, cellFormatter: (docIds: string[]) => docIds.length },
+    { id: 'qtdDocumentos', header: 'Qtd. Docs', enableSorting: true, cellFormatter: (_value: any, item: ListagemEliminacao) => Array.isArray(item.documentoIds) ? item.documentoIds.length : 0 },
     { id: 'numeroEditalCiencia', header: 'Nº Edital', enableSorting: true },
     { id: 'dataPublicacaoEdital', header: 'Data Pub. Edital', enableSorting: true, cellFormatter: (dateStr?: string) => dateStr && isValid(parseISO(dateStr)) ? format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" },
     { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', enableSorting: true },
@@ -361,3 +361,4 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
