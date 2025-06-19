@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao } from "@/types";
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,11 +27,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/date-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 const placeholderListagensInitial: ListagemEliminacao[] = [
-  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC003"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString() },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC00X", "DOC00Y"], dataProducaoListagem: new Date("2024-02-10").toISOString() },
+  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC003"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano." },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC00X", "DOC00Y"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "" },
 ];
 
 const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: string } = {
@@ -43,9 +52,59 @@ const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: stri
   dataProducaoListagem: new Date().toISOString(), // Default to current date for new listings
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
+  observacoes: "",
 };
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
+
+type ColumnConfigListagens = {
+  id: keyof ListagemEliminacao | string;
+  header: string;
+  accessorKey: keyof ListagemEliminacao | string;
+  defaultVisible: boolean;
+  enableSorting: boolean;
+  cellFormatter?: (value: any, item: ListagemEliminacao) => React.ReactNode;
+};
+
+const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
+  { id: 'numeroListagem', header: 'Nº Listagem', accessorKey: 'numeroListagem', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'dataProducaoListagem', 
+    header: 'Data Prod. Listagem', 
+    accessorKey: 'dataProducaoListagem', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" 
+  },
+  { 
+    id: 'qtdDocumentos', 
+    header: 'Qtd. Docs', 
+    accessorKey: 'documentoIds', // Accessor key points to the array
+    defaultVisible: true, 
+    enableSorting: true, // Sorting by length might be tricky, consider disabling or custom sort
+    cellFormatter: (_value, item) => Array.isArray(item.documentoIds) ? item.documentoIds.length : 0 
+  },
+  { id: 'numeroEditalCiencia', header: 'Nº Edital', accessorKey: 'numeroEditalCiencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { 
+    id: 'dataPublicacaoEdital', 
+    header: 'Data Pub. Edital', 
+    accessorKey: 'dataPublicacaoEdital', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" 
+  },
+  { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', accessorKey: 'numeroTermoEliminacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { 
+    id: 'dataProducaoTermoEliminacao', 
+    header: 'Data Prod. Termo', 
+    accessorKey: 'dataProducaoTermoEliminacao', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" 
+  },
+  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+];
+
 
 export default function ListagensEliminacaoPage() {
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>(placeholderListagensInitial);
@@ -56,6 +115,10 @@ export default function ListagensEliminacaoPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingListagemId, setEditingListagemId] = React.useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
+  
+  const [columnVisibilityListagens, setColumnVisibilityListagens] = React.useState<Record<string, boolean>>(
+    ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+  );
 
   const resetFormAndDialogState = () => {
     setFormState({...initialFormState, dataProducaoListagem: new Date().toISOString()});
@@ -111,6 +174,7 @@ export default function ListagensEliminacaoPage() {
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
       dataProducaoTermoEliminacao: formState.dataProducaoTermoEliminacao,
+      observacoes: formState.observacoes || "",
     };
 
     let updatedListagens;
@@ -125,16 +189,18 @@ export default function ListagensEliminacaoPage() {
   };
 
   const getSortableValue = (item: ListagemEliminacao, columnId: string): any => {
-    switch (columnId) {
-      case 'numeroListagem': return item.numeroListagem;
-      case 'dataProducaoListagem': return item.dataProducaoListagem ? parseISO(item.dataProducaoListagem) : null;
-      case 'numeroEditalCiencia': return item.numeroEditalCiencia;
-      case 'dataPublicacaoEdital': return item.dataPublicacaoEdital ? parseISO(item.dataPublicacaoEdital) : null;
-      case 'numeroTermoEliminacao': return item.numeroTermoEliminacao;
-      case 'dataProducaoTermoEliminacao': return item.dataProducaoTermoEliminacao ? parseISO(item.dataProducaoTermoEliminacao) : null;
-      case 'qtdDocumentos': return Array.isArray(item.documentoIds) ? item.documentoIds.length : 0;
-      default: return null;
+    const column = ALL_COLUMNS_CONFIG_LISTAGENS.find(col => col.id === columnId);
+    if (!column) return null;
+    
+    const value = item[column.accessorKey as keyof ListagemEliminacao];
+
+    if (column.accessorKey === 'documentoIds' && Array.isArray(value)) {
+        return value.length;
     }
+    if (['dataProducaoListagem', 'dataPublicacaoEdital', 'dataProducaoTermoEliminacao'].includes(column.accessorKey as string) && typeof value === 'string') {
+      return isValid(parseISO(value)) ? parseISO(value) : null;
+    }
+    return value;
   };
 
   React.useEffect(() => {
@@ -159,6 +225,9 @@ export default function ListagensEliminacaoPage() {
   }, [sorting, listagens]);
 
   const handleSort = (columnId: string) => {
+    const columnConfig = ALL_COLUMNS_CONFIG_LISTAGENS.find(col => col.id === columnId);
+    if (!columnConfig || !columnConfig.enableSorting) return;
+
     setSorting(prevSorting => {
       const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
       let newSorting = [...prevSorting];
@@ -180,23 +249,36 @@ export default function ListagensEliminacaoPage() {
   };
   
   const handleDelete = (listagemId: string) => {
-    // Placeholder for delete functionality
     console.log("Excluir listagem:", listagemId);
     // setListagens(prev => prev.filter(l => l.id !== listagemId));
   };
 
+  const getCellValueListagens = (item: ListagemEliminacao, column: ColumnConfigListagens) => {
+    const value = item[column.accessorKey as keyof ListagemEliminacao];
+    if (column.cellFormatter) {
+      return column.cellFormatter(value, item);
+    }
+    return value === undefined || value === null || value === '' ? "N/A" : String(value);
+  };
+
+  const toggleColumnVisibilityListagens = (columnId: string) => {
+    setColumnVisibilityListagens(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
+
+  const handleSelectAllColumnsListagens = () => {
+    setColumnVisibilityListagens(
+      ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
+    );
+  };
+
+  const handleDeselectAllColumnsListagens = () => {
+     setColumnVisibilityListagens(
+      ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
+    );
+  };
+
   const numDisplayed = displayedListagens.length;
   const numSelected = selectedRowIds.length;
-
-  const columns = [
-    { id: 'numeroListagem', header: 'Nº Listagem', enableSorting: true },
-    { id: 'dataProducaoListagem', header: 'Data Prod. Listagem', enableSorting: true, cellFormatter: (dateStr: string) => dateStr && isValid(parseISO(dateStr)) ? format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" },
-    { id: 'qtdDocumentos', header: 'Qtd. Docs', enableSorting: true, cellFormatter: (_value: any, item: ListagemEliminacao) => Array.isArray(item.documentoIds) ? item.documentoIds.length : 0 },
-    { id: 'numeroEditalCiencia', header: 'Nº Edital', enableSorting: true },
-    { id: 'dataPublicacaoEdital', header: 'Data Pub. Edital', enableSorting: true, cellFormatter: (dateStr?: string) => dateStr && isValid(parseISO(dateStr)) ? format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" },
-    { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', enableSorting: true },
-    { id: 'dataProducaoTermoEliminacao', header: 'Data Prod. Termo', enableSorting: true, cellFormatter: (dateStr?: string) => dateStr && isValid(parseISO(dateStr)) ? format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" },
-  ];
 
   return (
     <TooltipProvider>
@@ -264,6 +346,10 @@ export default function ListagensEliminacaoPage() {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="observacoes" className="text-right col-span-1 pt-2">Observações</Label>
+                <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} className="col-span-3" placeholder="Observações adicionais sobre a listagem" rows={3} />
+              </div>
             </div>
             </ScrollArea>
             <DialogFooter>
@@ -275,8 +361,39 @@ export default function ListagensEliminacaoPage() {
       </PageHeader>
 
       <Card className="mt-6">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Listagens Cadastradas</CardTitle>
+            <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <ColumnsIcon className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleSelectAllColumnsListagens} className="cursor-pointer">
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Selecionar Todas
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDeselectAllColumnsListagens} className="cursor-pointer">
+                  <Square className="mr-2 h-4 w-4" />
+                  Limpar Todas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    checked={columnVisibilityListagens[column.id as string]}
+                    onCheckedChange={() => toggleColumnVisibilityListagens(column.id as string)}
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="w-full">
@@ -290,16 +407,24 @@ export default function ListagensEliminacaoPage() {
                       aria-label="Selecionar todas as linhas"
                     />
                   </TableHead>
-                  {columns.map(col => (
-                    <TableHead key={col.id} className="py-2 px-3">
-                      {col.enableSorting ? (
-                        <Button variant="ghost" onClick={() => handleSort(col.id)} className="px-1 py-1 h-auto -ml-2">
-                          {col.header}
-                          {renderSortIcon(col.id)}
-                        </Button>
-                      ) : col.header}
-                    </TableHead>
-                  ))}
+                  {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
+                    columnVisibilityListagens[column.id as string] ? (
+                      <TableHead key={column.id as string} className="py-2 px-3">
+                        {column.enableSorting ? (
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort(column.id as string)}
+                            className="px-1 py-1 h-auto -ml-2"
+                          >
+                            {column.header}
+                            {renderSortIcon(column.id as string)}
+                          </Button>
+                        ) : (
+                          column.header
+                        )}
+                      </TableHead>
+                    ) : null
+                  )}
                   <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -313,11 +438,13 @@ export default function ListagensEliminacaoPage() {
                         aria-label={`Selecionar listagem ${item.numeroListagem}`}
                       />
                     </TableCell>
-                    {columns.map(col => (
-                      <TableCell key={`${item.id}-${col.id}`} className="py-2 px-3">
-                        {col.cellFormatter ? col.cellFormatter((item as any)[col.id], item) : (item as any)[col.id] || "N/A"}
-                      </TableCell>
-                    ))}
+                    {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
+                      columnVisibilityListagens[column.id as string] ? (
+                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                           {getCellValueListagens(item, column)}
+                        </TableCell>
+                      ) : null
+                    )}
                     <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
                        <div className="flex items-center justify-end">
                           <Tooltip>
@@ -361,4 +488,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-

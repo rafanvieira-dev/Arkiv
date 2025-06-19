@@ -100,6 +100,7 @@ export interface ListagemEliminacao {
   numeroTermoEliminacao?: string; // 3.5
   dataProducaoListagem: string; // Existing field: Date of listing production
   dataProducaoTermoEliminacao?: string; // 3.6 (ISO Date string) - Date of Termo production
+  observacoes?: string; // New field for observations
 }
 
 export interface Solicitacao {
@@ -132,3 +133,4 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+
