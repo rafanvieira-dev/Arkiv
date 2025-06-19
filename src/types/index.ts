@@ -93,12 +93,13 @@ export interface ClasseJudicial {
 
 export interface ListagemEliminacao {
   id: string;
-  numeroListagem: string;
-  documentoIds: string[]; 
-  numeroEditalCiencia?: string;
-  dataPublicacaoEdital?: string; 
-  dataProducaoListagem: string; 
-  numeroTermoEliminacao?: string;
+  numeroListagem: string; // 3.1
+  documentoIds: string[]; // 3.2 (parsed from comma-separated string)
+  numeroEditalCiencia?: string; // 3.3
+  dataPublicacaoEdital?: string; // 3.4 (ISO Date string)
+  numeroTermoEliminacao?: string; // 3.5
+  dataProducaoListagem: string; // Existing field: Date of listing production
+  dataProducaoTermoEliminacao?: string; // 3.6 (ISO Date string) - Date of Termo production
 }
 
 export interface Solicitacao {
