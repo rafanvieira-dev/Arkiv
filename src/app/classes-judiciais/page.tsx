@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial } from "@/types";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Checkbox as UICheckbox } from "@/components/ui/checkbox"; // Renamed to avoid conflict
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -42,8 +42,8 @@ const placeholderClassesJudiciais: ClasseJudicial[] = [
 const initialFormState: Omit<ClasseJudicial, 'id'> = {
   codigo: "",
   descricao: "",
-  prazoGuardaAnos: undefined, // Ou 0 se preferir um valor inicial
-  destinacaoFinal: "Não se Aplica", // Valor padrão
+  prazoGuardaAnos: undefined, 
+  destinacaoFinal: "Não se Aplica", 
   observacoes: "",
   inativo: false,
 };
@@ -51,6 +51,9 @@ const initialFormState: Omit<ClasseJudicial, 'id'> = {
 export default function ClassesJudiciaisPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState(initialFormState);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  // For this page, displayedItems is the same as placeholderClassesJudiciais as there's no filtering/sorting yet.
+  const displayedItems = placeholderClassesJudiciais; 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -66,7 +69,7 @@ export default function ClassesJudiciaisPage() {
     setFormState(prev => ({ ...prev, destinacaoFinal: value }));
   };
 
-  const handleCheckboxChange = (checked: boolean) => {
+  const handleFormCheckboxChange = (checked: boolean) => {
     setFormState(prev => ({ ...prev, inativo: checked }));
   };
 
@@ -75,12 +78,16 @@ export default function ClassesJudiciaisPage() {
   };
 
   const handleSaveChanges = () => {
-    // Lógica para salvar nova classe judicial (será implementada futuramente)
     console.log("Salvando nova classe judicial:", formState);
-    // Adicionar validações aqui antes de fechar
+    // Logic to add/update placeholderClassesJudiciais would go here
+    // For now, just closing and resetting form and selection
+    setSelectedRowIds([]);
     setIsDialogOpen(false);
     resetForm();
   };
+
+  const numDisplayed = displayedItems.length;
+  const numSelected = selectedRowIds.length;
 
   return (
     <TooltipProvider>
@@ -150,7 +157,7 @@ export default function ClassesJudiciaisPage() {
                 <Label htmlFor="inativo" className="text-right">
                   Inativo
                 </Label>
-                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} className="col-span-3 justify-self-start" />
+                <UICheckbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} className="col-span-3 justify-self-start" />
               </div>
             </div>
             <DialogFooter>
@@ -171,6 +178,23 @@ export default function ClassesJudiciaisPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <UICheckbox
+                    checked={
+                      numDisplayed > 0 && numSelected === numDisplayed
+                        ? true
+                        : numSelected > 0 ? 'indeterminate' : false
+                    }
+                    onCheckedChange={(value) => {
+                      if (value === true) {
+                        setSelectedRowIds(displayedItems.map(item => item.id));
+                      } else {
+                        setSelectedRowIds([]);
+                      }
+                    }}
+                    aria-label="Selecionar todas as linhas"
+                  />
+                </TableHead>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome da Classe</TableHead>
                 <TableHead>Destinação Final</TableHead>
@@ -179,8 +203,19 @@ export default function ClassesJudiciaisPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {placeholderClassesJudiciais.map((item) => (
-                <TableRow key={item.id}>
+              {displayedItems.map((item) => (
+                <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                  <TableCell>
+                    <UICheckbox
+                      checked={selectedRowIds.includes(item.id)}
+                      onCheckedChange={(value) => {
+                        setSelectedRowIds(prev =>
+                          value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                        );
+                      }}
+                      aria-label={`Selecionar classe judicial ${item.codigo}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{item.codigo}</TableCell>
                   <TableCell>{item.descricao}</TableCell>
                   <TableCell>{item.destinacaoFinal}</TableCell>
@@ -215,6 +250,9 @@ export default function ClassesJudiciaisPage() {
               ))}
             </TableBody>
           </Table>
+           {displayedItems.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma classe judicial encontrada.</p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
 import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -169,6 +169,7 @@ export default function ClassificacaoPage() {
     ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sortingClassificacoes, setSortingClassificacoes] = React.useState<SortConfig[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
 
   const resetForm = () => {
     setFormState(initialFormState);
@@ -247,9 +248,9 @@ export default function ClassificacaoPage() {
       updatedClassificacoes = [...placeholderClassificacoes, classificacaoDataToSave];
     }
     setPlaceholderClassificacoes(updatedClassificacoes);
+    setSelectedRowIds([]);
     
     setIsDialogOpen(false);
-    // resetForm is called by onOpenChange when dialog closes
   };
 
   const getSortableValueClassificacoes = (item: Classificacao, columnId: string): any => {
@@ -353,6 +354,8 @@ export default function ClassificacaoPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
+  const numDisplayed = displayedClassificacoes.length;
+  const numSelected = selectedRowIds.length;
 
   return (
     <TooltipProvider>
@@ -533,6 +536,23 @@ export default function ClassificacaoPage() {
             <Table className="min-w-full whitespace-nowrap">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="py-2 px-3 w-12">
+                    <Checkbox
+                      checked={
+                        numDisplayed > 0 && numSelected === numDisplayed
+                          ? true
+                          : numSelected > 0 ? 'indeterminate' : false
+                      }
+                      onCheckedChange={(value) => {
+                        if (value === true) {
+                          setSelectedRowIds(displayedClassificacoes.map(c => c.id));
+                        } else {
+                          setSelectedRowIds([]);
+                        }
+                      }}
+                      aria-label="Selecionar todas as linhas"
+                    />
+                  </TableHead>
                   {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
                     columnVisibilityClassificacoes[column.id as string] ? (
                       <TableHead key={column.id as string} className="py-2 px-3">
@@ -556,7 +576,18 @@ export default function ClassificacaoPage() {
               </TableHeader>
               <TableBody>
                 {displayedClassificacoes.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                    <TableCell className="py-2 px-3">
+                      <Checkbox
+                        checked={selectedRowIds.includes(item.id)}
+                        onCheckedChange={(value) => {
+                          setSelectedRowIds(prev =>
+                            value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                          );
+                        }}
+                        aria-label={`Selecionar classificação ${item.codigo}`}
+                      />
+                    </TableCell>
                     {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
                       columnVisibilityClassificacoes[column.id as string] ? (
                         <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">

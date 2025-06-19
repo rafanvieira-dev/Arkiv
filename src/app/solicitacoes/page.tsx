@@ -1,10 +1,12 @@
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Solicitacao } from "@/types";
 import { PlusCircle, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,6 +19,13 @@ const placeholderSolicitacoes: Solicitacao[] = [
 ];
 
 export default function SolicitacoesPage() {
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  // For this page, displayedItems is the same as placeholderSolicitacoes as there's no filtering/sorting yet.
+  const displayedItems = placeholderSolicitacoes;
+
+  const numDisplayed = displayedItems.length;
+  const numSelected = selectedRowIds.length;
+  
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
@@ -35,6 +44,23 @@ export default function SolicitacoesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      numDisplayed > 0 && numSelected === numDisplayed
+                        ? true
+                        : numSelected > 0 ? 'indeterminate' : false
+                    }
+                    onCheckedChange={(value) => {
+                      if (value === true) {
+                        setSelectedRowIds(displayedItems.map(item => item.id));
+                      } else {
+                        setSelectedRowIds([]);
+                      }
+                    }}
+                    aria-label="Selecionar todas as linhas"
+                  />
+                </TableHead>
                 <TableHead>Nº Solicitação</TableHead>
                 <TableHead>Solicitante</TableHead>
                 <TableHead>Data Solicitação</TableHead>
@@ -43,8 +69,19 @@ export default function SolicitacoesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {placeholderSolicitacoes.map((item) => (
-                <TableRow key={item.id}>
+              {displayedItems.map((item) => (
+                <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRowIds.includes(item.id)}
+                      onCheckedChange={(value) => {
+                        setSelectedRowIds(prev =>
+                          value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                        );
+                      }}
+                      aria-label={`Selecionar solicitação ${item.numeroSolicitacao}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{item.numeroSolicitacao}</TableCell>
                   <TableCell>{item.nomeSolicitante}</TableCell>
                   <TableCell>{format(new Date(item.dataSolicitacao), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
@@ -114,6 +151,9 @@ export default function SolicitacoesPage() {
               ))}
             </TableBody>
           </Table>
+           {displayedItems.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma solicitação encontrada.</p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -14,6 +14,7 @@ import {
   CheckSquare, Square
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -419,6 +420,8 @@ export default function DocumentosPage() {
     ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+
 
   React.useEffect(() => {
     const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
@@ -443,7 +446,6 @@ export default function DocumentosPage() {
           
           const dataArquivamentoDate = parseISO(formState.dataArquivamento);
           let prazoIntermediarioAnosNum = 0;
-
           if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
           }
@@ -463,7 +465,7 @@ export default function DocumentosPage() {
         anoEliminacaoPrevisto: anoEliminacao
       }));
 
-    } else { // Handles if classificationId is cleared or no valid classification is found
+    } else { 
        setFormState(prev => ({
         ...prev,
         assuntoClassificacaoDisplay: "",
@@ -510,7 +512,6 @@ export default function DocumentosPage() {
         setFormState(prev => ({
           ...prev,
           classificacaoArquivisticaId: foundClassification.id,
-          assuntoClassificacaoDisplay: foundClassification.descricao,
         }));
       } else {
         setFormState(prev => ({
@@ -561,6 +562,7 @@ export default function DocumentosPage() {
     } else {
       placeholderDocumentos.push(finalFormState);
     }
+    setSelectedRowIds([]); 
     applyFiltersAndSorting();
 
     setIsDialogOpen(false);
@@ -776,6 +778,9 @@ export default function DocumentosPage() {
     }
     return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
+
+  const numDisp = displayedDocumentos.length;
+  const numSel = selectedRowIds.length;
 
   return (
     <TooltipProvider>
@@ -1017,6 +1022,7 @@ export default function DocumentosPage() {
                 <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística</Label>
                 <Input 
                   id="codigoClassificacaoArquivisticaInput" 
+                  name="codigoClassificacaoArquivisticaInput"
                   value={formState.codigoClassificacaoArquivisticaInput || ""} 
                   onChange={handleInputChange}
                   onBlur={handleCodigoClassificacaoBlur}
@@ -1333,6 +1339,23 @@ export default function DocumentosPage() {
             <Table className="min-w-full whitespace-nowrap">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="py-2 px-3 w-12">
+                    <Checkbox
+                      checked={
+                        numDisp > 0 && numSel === numDisp
+                          ? true
+                          : numSel > 0 ? 'indeterminate' : false
+                      }
+                      onCheckedChange={(value) => {
+                        if (value === true) {
+                          setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
+                        } else {
+                          setSelectedRowIds([]);
+                        }
+                      }}
+                      aria-label="Selecionar todas as linhas"
+                    />
+                  </TableHead>
                   {ALL_COLUMNS_CONFIG.map((column) =>
                     columnVisibility[column.id as string] ? (
                       <TableHead key={column.id as string} className="py-2 px-3">
@@ -1356,7 +1379,18 @@ export default function DocumentosPage() {
               </TableHeader>
               <TableBody>
                 {displayedDocumentos.map((doc) => (
-                  <TableRow key={doc.id}>
+                  <TableRow key={doc.id} data-state={selectedRowIds.includes(doc.id) ? "selected" : ""}>
+                    <TableCell className="py-2 px-3">
+                      <Checkbox
+                        checked={selectedRowIds.includes(doc.id)}
+                        onCheckedChange={(value) => {
+                          setSelectedRowIds(prev =>
+                            value ? [...prev, doc.id] : prev.filter(id => id !== doc.id)
+                          );
+                        }}
+                        aria-label={`Selecionar documento ${doc.numeroDocumento || doc.id}`}
+                      />
+                    </TableCell>
                     {ALL_COLUMNS_CONFIG.map((column) =>
                       columnVisibility[column.id as string] ? (
                         <TableCell key={`${doc.id}-${column.id as string}`} className="py-2 px-3">
@@ -1404,6 +1438,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 

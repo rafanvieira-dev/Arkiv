@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import type { Caixa } from "@/types";
 import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -109,6 +110,8 @@ export default function CaixasPage() {
   );
   const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
   const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>(placeholderCaixas);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+
 
   const resetFormAndDialogState = () => {
     setFormStateCaixa(initialFormStateCaixa);
@@ -165,6 +168,7 @@ export default function CaixasPage() {
       updatedCaixas = [...placeholderCaixas, caixaDataToSave];
     }
     setPlaceholderCaixas(updatedCaixas);
+    setSelectedRowIds([]); // Clear selection after save
 
     setIsDialogOpen(false);
   };
@@ -259,6 +263,8 @@ export default function CaixasPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
+  const numDisplayed = displayedCaixas.length;
+  const numSelected = selectedRowIds.length;
 
   return (
     <TooltipProvider>
@@ -422,6 +428,23 @@ export default function CaixasPage() {
             <Table className="min-w-full whitespace-nowrap">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="py-2 px-3 w-12">
+                    <Checkbox
+                      checked={
+                        numDisplayed > 0 && numSelected === numDisplayed
+                          ? true
+                          : numSelected > 0 ? 'indeterminate' : false
+                      }
+                      onCheckedChange={(value) => {
+                        if (value === true) {
+                          setSelectedRowIds(displayedCaixas.map(c => c.id));
+                        } else {
+                          setSelectedRowIds([]);
+                        }
+                      }}
+                      aria-label="Selecionar todas as linhas"
+                    />
+                  </TableHead>
                   {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
                     columnVisibilityCaixas[column.id as string] ? (
                       <TableHead key={column.id as string} className="py-2 px-3">
@@ -445,7 +468,18 @@ export default function CaixasPage() {
               </TableHeader>
               <TableBody>
                 {displayedCaixas.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                    <TableCell className="py-2 px-3">
+                      <Checkbox
+                        checked={selectedRowIds.includes(item.id)}
+                        onCheckedChange={(value) => {
+                          setSelectedRowIds(prev =>
+                            value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                          );
+                        }}
+                        aria-label={`Selecionar caixa ${item.codigoCaixa}`}
+                      />
+                    </TableCell>
                     {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
                       columnVisibilityCaixas[column.id as string] ? (
                         <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">

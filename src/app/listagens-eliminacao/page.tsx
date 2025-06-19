@@ -1,10 +1,12 @@
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao } from "@/types";
 import { PlusCircle, Edit, Trash2, FileSearch } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +17,13 @@ const placeholderListagens: ListagemEliminacao[] = [
 ];
 
 export default function ListagensEliminacaoPage() {
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  // For this page, displayedItems is the same as placeholderListagens as there's no filtering/sorting yet.
+  const displayedItems = placeholderListagens;
+
+  const numDisplayed = displayedItems.length;
+  const numSelected = selectedRowIds.length;
+
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
@@ -33,6 +42,23 @@ export default function ListagensEliminacaoPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      numDisplayed > 0 && numSelected === numDisplayed
+                        ? true
+                        : numSelected > 0 ? 'indeterminate' : false
+                    }
+                    onCheckedChange={(value) => {
+                      if (value === true) {
+                        setSelectedRowIds(displayedItems.map(item => item.id));
+                      } else {
+                        setSelectedRowIds([]);
+                      }
+                    }}
+                    aria-label="Selecionar todas as linhas"
+                  />
+                </TableHead>
                 <TableHead>Nº Listagem</TableHead>
                 <TableHead>Data Produção</TableHead>
                 <TableHead>Nº Edital</TableHead>
@@ -41,8 +67,19 @@ export default function ListagensEliminacaoPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {placeholderListagens.map((item) => (
-                <TableRow key={item.id}>
+              {displayedItems.map((item) => (
+                <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRowIds.includes(item.id)}
+                      onCheckedChange={(value) => {
+                        setSelectedRowIds(prev =>
+                          value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                        );
+                      }}
+                      aria-label={`Selecionar listagem ${item.numeroListagem}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{item.numeroListagem}</TableCell>
                   <TableCell>{format(new Date(item.dataProducaoListagem), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                   <TableCell>{item.numeroEditalCiencia || "N/A"}</TableCell>
@@ -83,6 +120,9 @@ export default function ListagensEliminacaoPage() {
               ))}
             </TableBody>
           </Table>
+          {displayedItems.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma listagem encontrada.</p>
+          )}
         </CardContent>
       </Card>
     </div>
