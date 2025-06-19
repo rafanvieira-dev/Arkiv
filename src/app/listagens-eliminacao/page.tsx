@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types"; 
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -57,9 +57,9 @@ type SimulatedDocumentForDialog = Pick<
 const simulatedFullDocumentData: SimulatedDocumentForDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Arquivado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, // Status alterado para teste de filtro
   { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C, referente a pedido de vista.", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Aguardando prazo para eliminação", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E para desenvolvimento de software.", nomePartePrincipal: "Serviços de Consultoria Avançada Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
   { id: "DOC007", numeroDocumento: "PA-2019-721", tipoDocumento: "Processo Administrativo", descricaoDocumento: "Processo administrativo F sobre licitação pública complexa.", nomePartePrincipal: "Autarquia Modelo Federal", dataAbrangente: "12/2019", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC008", numeroDocumento: "AJ-2005-001", tipoDocumento: "Ajuste de Contas", descricaoDocumento: "Ajuste de contas G entre fornecedor e cliente.", nomePartePrincipal: "Fornecedor Global Peças e Serviços", dataAbrangente: "03/2005", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
@@ -185,6 +185,8 @@ export default function ListagensEliminacaoPage() {
   const [selectedDialogDocIds, setSelectedDialogDocIds] = React.useState<string[]>([]);
   const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ anoEliminacaoPrevisto: "" });
   const [dialogTableSortConfig, setDialogTableSortConfig] = React.useState<DialogTableSortConfig[]>([]);
+  const [isDocumentTableVisible, setIsDocumentTableVisible] = React.useState(false);
+
 
   const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
     {
@@ -301,6 +303,7 @@ export default function ListagensEliminacaoPage() {
     setSelectedDialogDocIds([]);
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
+    setIsDocumentTableVisible(false);
   };
 
   const handleOpenDialog = (listagem?: ListagemEliminacao) => {
@@ -311,6 +314,11 @@ export default function ListagensEliminacaoPage() {
         ...listagem,
       });
       setSelectedDialogDocIds(listagem.documentoIds || []);
+      if (listagem.documentoIds && listagem.documentoIds.length > 0) {
+        setIsDocumentTableVisible(true);
+      } else {
+        setIsDocumentTableVisible(false);
+      }
     } else {
       resetFormAndDialogState();
     }
@@ -567,67 +575,82 @@ export default function ListagensEliminacaoPage() {
                   </div>
               </div>
 
-              <div className="mt-4 md:col-span-2">
-                <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
-                <Card className="mt-2">
-                  <CardHeader className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <Input
-                            type="text"
-                            placeholder="Filtrar Ano Elim. Prev."
-                            value={dialogTableFilters.anoEliminacaoPrevisto}
-                            onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
-                            className="w-full sm:w-[180px]"
-                        />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <ScrollArea className="h-[300px] w-full border-t">
-                      <Table className="min-w-max whitespace-nowrap text-xs">
-                        <TableHeader>
-                          <TableRow>
-                            {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                              <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
-                                {col.enableSorting ? (
-                                  <Button
-                                    variant="ghost"
-                                    onClick={() => handleDialogTableSort(col.id.toString())}
-                                    className="px-1 py-0 h-auto -ml-1 text-xs"
-                                  >
-                                    {col.header}
-                                    {renderDialogTableSortIcon(col.id.toString())}
-                                  </Button>
-                                ) : (
-                                  col.header
-                                )}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {documentsForDialog.map(doc => (
-                            <TableRow key={doc.id}>
+              {!isDocumentTableVisible && (
+                <div className="mt-4 md:col-span-2 flex justify-center">
+                  <Button
+                    type="button"
+                    onClick={() => setIsDocumentTableVisible(true)}
+                    variant="outline"
+                  >
+                    <ListFilter className="mr-2 h-4 w-4" />
+                    Selecionar Documentos para Eliminação
+                  </Button>
+                </div>
+              )}
+
+              {isDocumentTableVisible && (
+                <div className="mt-4 md:col-span-2">
+                  <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
+                  <Card className="mt-2">
+                    <CardHeader className="p-4">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                          <Input
+                              type="text"
+                              placeholder="Filtrar Ano Elim. Prev."
+                              value={dialogTableFilters.anoEliminacaoPrevisto}
+                              onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
+                              className="w-full sm:w-[180px]"
+                          />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ScrollArea className="h-[300px] w-full border-t">
+                        <Table className="min-w-max whitespace-nowrap text-xs">
+                          <TableHeader>
+                            <TableRow>
                               {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
-                                  {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
-                                </TableCell>
+                                <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
+                                  {col.enableSorting ? (
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => handleDialogTableSort(col.id.toString())}
+                                      className="px-1 py-0 h-auto -ml-1 text-xs"
+                                    >
+                                      {col.header}
+                                      {renderDialogTableSortIcon(col.id.toString())}
+                                    </Button>
+                                  ) : (
+                                    col.header
+                                  )}
+                                </TableHead>
                               ))}
                             </TableRow>
-                          ))}
-                           {documentsForDialog.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                        Nenhum documento "Arquivado" encontrado para os filtros aplicados.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                      </Table>
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
+                          </TableHeader>
+                          <TableBody>
+                            {documentsForDialog.map(doc => (
+                              <TableRow key={doc.id}>
+                                {DIALOG_DOCUMENT_COLUMNS.map(col => (
+                                  <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
+                                    {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                            {documentsForDialog.length === 0 && (
+                                  <TableRow>
+                                      <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
+                                          Nenhum documento "Arquivado" encontrado para os filtros aplicados.
+                                      </TableCell>
+                                  </TableRow>
+                              )}
+                          </TableBody>
+                        </Table>
+                        <ScrollBar orientation="horizontal" />
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
               <DialogFooter className="pt-6">
                 <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
                 <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
@@ -766,3 +789,4 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
