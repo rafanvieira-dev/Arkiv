@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const placeholderClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
@@ -112,7 +113,8 @@ export default function ClassesJudiciaisPage() {
                 Preencha as informações abaixo. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4 max-h-[70vh] overflow-y-auto pr-2">
+            <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
               <div className="space-y-2">
                 <Label htmlFor="codigo">Código Judicial*</Label>
                 <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
@@ -148,7 +150,8 @@ export default function ClassesJudiciaisPage() {
                 <Label htmlFor="inativo" className="mb-0">Inativo</Label>
               </div>
             </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
@@ -247,3 +250,4 @@ export default function ClassesJudiciaisPage() {
     </TooltipProvider>
   );
 }
+

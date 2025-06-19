@@ -289,6 +289,7 @@ export default function CaixasPage() {
                 Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
               <div className="space-y-2">
                 <Label htmlFor="codigoCaixa">Código*</Label>
@@ -363,7 +364,8 @@ export default function CaixasPage() {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>

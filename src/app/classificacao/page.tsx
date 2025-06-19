@@ -453,7 +453,8 @@ export default function ClassificacaoPage() {
                 Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4 max-h-[70vh] overflow-y-auto pr-2">
+            <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
               <div className="space-y-2">
                 <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
                 <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
@@ -539,7 +540,8 @@ export default function ClassificacaoPage() {
                 <Label htmlFor="inativo" className="mb-0">Inativo</Label>
               </div>
             </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
