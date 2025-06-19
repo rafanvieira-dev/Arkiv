@@ -403,6 +403,10 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
   const caixaIdFromUrl = searchParams.get('caixaId');
+  const listagemDocIdsParam = searchParams.get('listagemDocIds');
+  const docIdsFromListagemForTitle = listagemDocIdsParam ? listagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
+  const isFilteredByListagem = !!listagemDocIdsParam && docIdsFromListagemForTitle.length > 0;
+
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
@@ -609,6 +613,9 @@ export default function DocumentosPage() {
   };
   
   const applyFiltersAndSorting = React.useCallback(() => {
+    const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
+    const docIdsFromListagem = currentListagemDocIdsParam ? currentListagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
+
     let newFilteredDocumentos = placeholderDocumentos.filter(doc => {
       let passesAll = true;
 
@@ -617,7 +624,18 @@ export default function DocumentosPage() {
           passesAll = false;
         }
       }
-      if (!passesAll) return false; 
+      if (!passesAll) return false;
+
+      if (currentListagemDocIdsParam) {
+        if (docIdsFromListagem.length > 0) {
+          if (!docIdsFromListagem.includes(doc.id)) {
+            passesAll = false;
+          }
+        } else {
+          passesAll = false; 
+        }
+      }
+      if (!passesAll) return false;
 
       if (filters.status && doc.status !== filters.status) passesAll = false;
       if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
@@ -700,7 +718,7 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting, caixaIdFromUrl]);
+  }, [filters, sorting, caixaIdFromUrl, searchParams]);
 
   React.useEffect(() => {
     applyFiltersAndSorting();
@@ -709,6 +727,8 @@ export default function DocumentosPage() {
 
   const clearFilters = () => {
     setFilters(initialFiltersState);
+    // Note: This does not clear URL-based filters like listagemDocIds or caixaIdFromUrl
+    // To clear those, a router.push would be needed.
   };
 
   const toggleColumnVisibility = (columnId: string) => {
@@ -785,7 +805,10 @@ export default function DocumentosPage() {
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
-      <PageHeader title="Gerenciamento do Acervo" description="Cadastre e gerencie as descrições dos documentos do acervo.">
+      <PageHeader 
+        title={isFilteredByListagem ? "Documentos da Listagem de Eliminação" : caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Gerenciamento do Acervo"}
+        description={isFilteredByListagem ? "Documentos incluídos na listagem de eliminação selecionada." : caixaIdFromUrl ? `Documentos pertencentes à caixa ${caixaIdFromUrl}.` : "Cadastre e gerencie as descrições dos documentos do acervo."}
+      >
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
           setIsDialogOpen(isOpen);
           if (!isOpen) {
@@ -1300,7 +1323,7 @@ export default function DocumentosPage() {
       <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">
-            {caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Lista de Itens do Acervo"}
+            {isFilteredByListagem ? "Documentos da Listagem de Eliminação" : caixaIdFromUrl ? `Documentos na Caixa: ${caixaIdFromUrl}` : "Lista de Itens do Acervo"}
           </CardTitle>
           <div className="flex items-center gap-2">
             <DropdownMenu>
@@ -1426,7 +1449,7 @@ export default function DocumentosPage() {
           </ScrollArea>
            {displayedDocumentos.length === 0 && (
             <p className="text-center text-muted-foreground py-4">
-              {caixaIdFromUrl ? `Nenhum documento encontrado na caixa ${caixaIdFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados."}
+              {isFilteredByListagem ? `Nenhum documento encontrado na listagem de eliminação.` : (caixaIdFromUrl ? `Nenhum documento encontrado na caixa ${caixaIdFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados.")}
             </p>
           )}
         </CardContent>
@@ -1438,6 +1461,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 

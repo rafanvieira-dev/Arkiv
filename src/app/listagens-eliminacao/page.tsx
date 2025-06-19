@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link"; // Added Link import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,7 +41,7 @@ import {
 
 const placeholderListagensInitial: ListagemEliminacao[] = [
   { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC003"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano." },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC00X", "DOC00Y"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "" },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC004", "DOC005"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com docs específicos." },
 ];
 
 const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: string } = {
@@ -67,7 +68,25 @@ type ColumnConfigListagens = {
 };
 
 const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
-  { id: 'numeroListagem', header: 'Nº Listagem', accessorKey: 'numeroListagem', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'numeroListagem', 
+    header: 'Nº Listagem', 
+    accessorKey: 'numeroListagem', 
+    defaultVisible: true, 
+    enableSorting: true,
+    cellFormatter: (value, item) => {
+      if (item.documentoIds && item.documentoIds.length > 0) {
+        return (
+          <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}`} passHref>
+            <span className="text-primary hover:underline cursor-pointer font-medium">
+              {value}
+            </span>
+          </Link>
+        );
+      }
+      return value;
+    } 
+  },
   { 
     id: 'dataProducaoListagem', 
     header: 'Data Prod. Listagem', 
