@@ -57,7 +57,7 @@ type SimulatedDocumentForDialog = Pick<
 const simulatedFullDocumentData: SimulatedDocumentForDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, // Status alterado para teste de filtro
+  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, 
   { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C, referente a pedido de vista.", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E para desenvolvimento de software.", nomePartePrincipal: "Serviços de Consultoria Avançada Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
@@ -532,125 +532,127 @@ export default function ListagensEliminacaoPage() {
                   Preencha as informações da listagem e selecione os documentos a serem eliminados.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid grid-cols-1 gap-x-4 gap-y-3 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroListagem">Nº Listagem*</Label>
-                    <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
-                    <DatePicker
-                      date={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined}
-                      setDate={(date) => handleDateChange('dataProducaoListagem')(date)}
-                      placeholder="Selecione a data"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
-                    <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
-                    <DatePicker
-                      date={formState.dataPublicacaoEdital ? parseISO(formState.dataPublicacaoEdital) : undefined}
-                      setDate={(date) => handleDateChange('dataPublicacaoEdital')(date)}
-                      placeholder="Selecione a data"
-                    />
-                  </div>
-                   <div className="space-y-2">
-                    <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
-                    <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
-                    <DatePicker
-                      date={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined}
-                      setDate={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
-                      placeholder="Selecione a data"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
-                  </div>
-              </div>
-
-              {!isDocumentTableVisible && (
-                <div className="mt-4 flex justify-center">
-                  <Button
-                    type="button"
-                    onClick={() => setIsDocumentTableVisible(true)}
-                    variant="outline"
-                  >
-                    <ListFilter className="mr-2 h-4 w-4" />
-                    Selecionar Documentos para Eliminação
-                  </Button>
+              <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="numeroListagem">Nº Listagem*</Label>
+                      <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
+                      <DatePicker
+                        date={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined}
+                        setDate={(date) => handleDateChange('dataProducaoListagem')(date)}
+                        placeholder="Selecione a data"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
+                      <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
+                      <DatePicker
+                        date={formState.dataPublicacaoEdital ? parseISO(formState.dataPublicacaoEdital) : undefined}
+                        setDate={(date) => handleDateChange('dataPublicacaoEdital')(date)}
+                        placeholder="Selecione a data"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
+                      <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
+                      <DatePicker
+                        date={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined}
+                        setDate={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
+                        placeholder="Selecione a data"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="observacoes">Observações</Label>
+                      <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
+                    </div>
                 </div>
-              )}
 
-              {isDocumentTableVisible && (
-                <div className="mt-4">
-                  <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
-                  <Card className="mt-2">
-                    <CardHeader className="p-4">
-                      <div className="flex flex-col sm:flex-row gap-2">
-                          <Input
-                              type="text"
-                              placeholder="Filtrar Ano Elim. Prev."
-                              value={dialogTableFilters.anoEliminacaoPrevisto}
-                              onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
-                              className="w-full sm:w-[180px]"
-                          />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <ScrollArea className="h-[300px] w-full border-t">
-                        <Table className="min-w-max whitespace-nowrap text-xs">
-                          <TableHeader>
-                            <TableRow>
-                              {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
-                                  {col.enableSorting ? (
-                                    <Button
-                                      variant="ghost"
-                                      onClick={() => handleDialogTableSort(col.id.toString())}
-                                      className="px-1 py-0 h-auto -ml-1 text-xs"
-                                    >
-                                      {col.header}
-                                      {renderDialogTableSortIcon(col.id.toString())}
-                                    </Button>
-                                  ) : (
-                                    col.header
-                                  )}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {documentsForDialog.map(doc => (
-                              <TableRow key={doc.id}>
+                {!isDocumentTableVisible && (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      type="button"
+                      onClick={() => setIsDocumentTableVisible(true)}
+                      variant="outline"
+                    >
+                      <ListFilter className="mr-2 h-4 w-4" />
+                      Selecionar Documentos para Eliminação
+                    </Button>
+                  </div>
+                )}
+
+                {isDocumentTableVisible && (
+                  <div className="mt-4">
+                    <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
+                    <Card className="mt-2">
+                      <CardHeader className="p-4">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <Input
+                                type="text"
+                                placeholder="Filtrar Ano Elim. Prev."
+                                value={dialogTableFilters.anoEliminacaoPrevisto}
+                                onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
+                                className="w-full sm:w-[180px]"
+                            />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <ScrollArea className="h-[300px] w-full border-t">
+                          <Table className="min-w-max whitespace-nowrap text-xs">
+                            <TableHeader>
+                              <TableRow>
                                 {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                  <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
-                                    {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
-                                  </TableCell>
+                                  <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
+                                    {col.enableSorting ? (
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => handleDialogTableSort(col.id.toString())}
+                                        className="px-1 py-0 h-auto -ml-1 text-xs"
+                                      >
+                                        {col.header}
+                                        {renderDialogTableSortIcon(col.id.toString())}
+                                      </Button>
+                                    ) : (
+                                      col.header
+                                    )}
+                                  </TableHead>
                                 ))}
                               </TableRow>
-                            ))}
-                            {documentsForDialog.length === 0 && (
-                                  <TableRow>
-                                      <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                          Nenhum documento "Arquivado" encontrado para os filtros aplicados.
-                                      </TableCell>
-                                  </TableRow>
-                              )}
-                          </TableBody>
-                        </Table>
-                        <ScrollBar orientation="horizontal" />
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+                            </TableHeader>
+                            <TableBody>
+                              {documentsForDialog.map(doc => (
+                                <TableRow key={doc.id}>
+                                  {DIALOG_DOCUMENT_COLUMNS.map(col => (
+                                    <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
+                                      {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                              {documentsForDialog.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
+                                            Nenhum documento "Arquivado" encontrado para os filtros aplicados.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                          </Table>
+                          <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </ScrollArea>
               <DialogFooter className="pt-6">
                 <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
                 <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
