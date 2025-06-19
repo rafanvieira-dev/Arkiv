@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +7,7 @@ import type { ListagemEliminacao } from "@/types";
 import { PlusCircle, Edit, Trash2, FileSearch } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const placeholderListagens: ListagemEliminacao[] = [
   { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC003"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001" },
@@ -14,6 +16,7 @@ const placeholderListagens: ListagemEliminacao[] = [
 
 export default function ListagensEliminacaoPage() {
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
         <Button>
@@ -45,15 +48,36 @@ export default function ListagensEliminacaoPage() {
                   <TableCell>{item.numeroEditalCiencia || "N/A"}</TableCell>
                   <TableCell>{item.numeroTermoEliminacao || "N/A"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Ver Detalhes">
-                      <FileSearch className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" aria-label="Editar">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Ver Detalhes da Listagem">
+                          <FileSearch className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ver Detalhes da Listagem</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Editar Listagem">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Editar Listagem</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Listagem">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Excluir Listagem</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -62,5 +86,6 @@ export default function ListagensEliminacaoPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

@@ -53,6 +53,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 
 const placeholderClassificacoesSimulado = [
@@ -447,8 +448,10 @@ export default function DocumentosPage() {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
           }
           
-          const anoArquivamento = getYear(dataArquivamentoDate);
-          anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
+          if (!isNaN(prazoIntermediarioAnosNum) && dataArquivamentoDate) {
+            const anoArquivamento = getYear(dataArquivamentoDate);
+            anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
+          }
       }
 
       setFormState(prev => ({
@@ -775,6 +778,7 @@ export default function DocumentosPage() {
   };
 
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento do Acervo" description="Cadastre e gerencie as descrições dos documentos do acervo.">
         <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -1362,12 +1366,22 @@ export default function DocumentosPage() {
                     )}
                     <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
                        <div className="flex items-center justify-end">
-                          <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => handleOpenDialog(doc)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label="Editar Documento" onClick={() => handleOpenDialog(doc)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Editar Documento</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Excluir Documento</p></TooltipContent>
+                          </Tooltip>
                         </div>
                     </TableCell>
                   </TableRow>
@@ -1384,11 +1398,13 @@ export default function DocumentosPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
     
 
     
+
 
 
 

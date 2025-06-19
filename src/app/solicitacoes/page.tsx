@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +8,7 @@ import { PlusCircle, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const placeholderSolicitacoes: Solicitacao[] = [
   { id: "SOL001", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
@@ -16,6 +18,7 @@ const placeholderSolicitacoes: Solicitacao[] = [
 
 export default function SolicitacoesPage() {
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Solicitações" description="Cadastre e acompanhe empréstimos e desarquivamentos.">
         <Button>
@@ -63,21 +66,49 @@ export default function SolicitacoesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     {item.status === 'Pendente' && (
-                      <Button variant="ghost" size="icon" aria-label="Atender" className="text-green-600 hover:text-green-700">
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Atender Solicitação" className="text-green-600 hover:text-green-700">
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Atender Solicitação</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                      {item.status === 'Atendida' && (
-                      <Button variant="ghost" size="icon" aria-label="Devolver" className="text-blue-600 hover:text-blue-700">
-                        <CheckCircle className="h-4 w-4" /> {/* Icon can be changed */}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Registrar Devolução" className="text-blue-600 hover:text-blue-700">
+                            <CheckCircle className="h-4 w-4" /> {/* Icon can be changed */}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Registrar Devolução</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
-                    <Button variant="ghost" size="icon" aria-label="Editar">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Editar Solicitação">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Editar Solicitação</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Excluir Solicitação</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -86,5 +117,6 @@ export default function SolicitacoesPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
