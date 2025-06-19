@@ -87,8 +87,8 @@ const opcoesCondicaoTextualFaseCorrente = [
 ];
 
 type ClassificacaoFormState = Omit<Classificacao, 'id' | 'prazoGuardaFaseCorrenteAnos' | 'prazoGuardaFaseIntermediariaAnos'> & {
-  prazoGuardaFaseCorrenteAnos?: string; 
-  prazoGuardaFaseIntermediariaAnos: string; 
+  prazoGuardaFaseCorrenteAnos?: string;
+  prazoGuardaFaseIntermediariaAnos: string;
 };
 
 const initialFormState: ClassificacaoFormState = {
@@ -96,9 +96,9 @@ const initialFormState: ClassificacaoFormState = {
   descricao: "",
   tipoPlanoClassificacao: "Administrativo",
   tipoPrazoFaseCorrente: "Anos",
-  prazoGuardaFaseCorrenteAnos: "", 
+  prazoGuardaFaseCorrenteAnos: "",
   prazoGuardaFaseCorrenteCondicaoTextual: "",
-  prazoGuardaFaseIntermediariaAnos: "", 
+  prazoGuardaFaseIntermediariaAnos: "",
   destinacaoFinal: "Eliminação",
   observacoes: "",
   inativo: false,
@@ -118,11 +118,11 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
   { id: 'tipoPlanoClassificacao', header: 'Tipo de Plano', accessorKey: 'tipoPlanoClassificacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
   { id: 'descricao', header: 'Assunto', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
-  { 
-    id: 'tipoPrazoFaseCorrenteCombined', 
-    header: 'Tipo Prazo Corrente', 
-    accessorKey: 'tipoPrazoFaseCorrente', 
-    defaultVisible: true, 
+  {
+    id: 'tipoPrazoFaseCorrenteCombined',
+    header: 'Tipo Prazo Corrente',
+    accessorKey: 'tipoPrazoFaseCorrente',
+    defaultVisible: true,
     enableSorting: true,
     cellFormatter: (_, item) => {
       if (item.tipoPrazoFaseCorrente === "Anos") {
@@ -134,21 +134,21 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
       return "N/A";
     }
   },
-  { 
-    id: 'prazoGuardaFaseIntermediariaAnos', 
-    header: 'Prazo Intermediário', 
-    accessorKey: 'prazoGuardaFaseIntermediariaAnos', 
-    defaultVisible: true, 
+  {
+    id: 'prazoGuardaFaseIntermediariaAnos',
+    header: 'Prazo Intermediário',
+    accessorKey: 'prazoGuardaFaseIntermediariaAnos',
+    defaultVisible: true,
     enableSorting: true,
     cellFormatter: (value) => `${value ?? 'N/A'} Anos`
   },
   { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
   { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { 
-    id: 'status', 
-    header: 'Status', 
-    accessorKey: 'inativo', 
-    defaultVisible: true, 
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'inativo',
+    defaultVisible: true,
     enableSorting: true,
     cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
   },
@@ -156,12 +156,76 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
+const getCellValueClassificacoes = (item: Classificacao, column: ColumnConfigClassificacoes) => {
+  const value = item[column.accessorKey as keyof Classificacao];
+  if (column.cellFormatter) {
+    return column.cellFormatter(value, item);
+  }
+  return value === undefined || value === null ? 'N/A' : String(value);
+};
+
+interface MemoizedClassificacaoRowProps {
+  item: Classificacao;
+  isSelected: boolean;
+  onToggleSelected: (itemId: string) => void;
+  visibleColumns: ColumnConfigClassificacoes[];
+  onEditClick: (item: Classificacao) => void;
+  onDeleteClick: (itemId: string) => void;
+}
+
+const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
+  item,
+  isSelected,
+  onToggleSelected,
+  visibleColumns,
+  onEditClick,
+  onDeleteClick,
+}: MemoizedClassificacaoRowProps) {
+  return (
+    <TableRow key={item.id} data-state={isSelected ? "selected" : ""}>
+      <TableCell className="py-2 px-3">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onToggleSelected(item.id)}
+          aria-label={`Selecionar classificação ${item.codigo}`}
+        />
+      </TableCell>
+      {visibleColumns.map((column) => (
+        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+          {getCellValueClassificacoes(item, column)}
+        </TableCell>
+      ))}
+      <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+        <div className="flex items-center justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Editar Classificação" onClick={() => onEditClick(item)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Editar Classificação</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação" onClick={() => onDeleteClick(item.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Excluir Classificação</p></TooltipContent>
+          </Tooltip>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+});
+
+
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
   const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
   const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
-  
+
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingClassificacaoId, setEditingClassificacaoId] = React.useState<string | null>(null);
 
@@ -171,13 +235,13 @@ export default function ClassificacaoPage() {
   const [sortingClassificacoes, setSortingClassificacoes] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
 
-  const resetForm = () => {
+  const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
     setIsEditing(false);
     setEditingClassificacaoId(null);
-  };
+  }, []);
 
-  const handleOpenDialog = (classificacao?: Classificacao) => {
+  const handleOpenDialog = React.useCallback((classificacao?: Classificacao) => {
     if (classificacao) {
       setIsEditing(true);
       setEditingClassificacaoId(classificacao.id);
@@ -197,7 +261,7 @@ export default function ClassificacaoPage() {
       resetForm();
     }
     setIsDialogOpen(true);
-  };
+  }, [resetForm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -249,7 +313,7 @@ export default function ClassificacaoPage() {
     }
     setPlaceholderClassificacoes(updatedClassificacoes);
     setSelectedRowIds([]);
-    
+
     setIsDialogOpen(false);
   };
 
@@ -274,19 +338,19 @@ export default function ClassificacaoPage() {
         for (const sortConfig of sortingClassificacoes) {
           const valA = getSortableValueClassificacoes(a, sortConfig.id);
           const valB = getSortableValueClassificacoes(b, sortConfig.id);
-    
+
           let comparisonResult = 0;
-    
+
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
           else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
-            comparisonResult = valA === valB ? 0 : valA ? -1 : 1; 
+            comparisonResult = valA === valB ? 0 : valA ? -1 : 1;
           } else if (typeof valA === 'number' && typeof valB === 'number') {
             comparisonResult = valA - valB;
           } else {
             comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
           }
-    
+
           if (comparisonResult !== 0) {
             return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
           }
@@ -345,17 +409,26 @@ export default function ClassificacaoPage() {
       ALL_COLUMNS_CONFIG_CLASSIFICACOES.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
     );
   };
-  
-  const getCellValueClassificacoes = (item: Classificacao, column: ColumnConfigClassificacoes) => {
-    const value = item[column.accessorKey as keyof Classificacao];
-    if (column.cellFormatter) {
-      return column.cellFormatter(value, item);
-    }
-    return value === undefined || value === null ? 'N/A' : String(value);
-  };
 
   const numDisplayed = displayedClassificacoes.length;
   const numSelected = selectedRowIds.length;
+
+  const handleToggleSelectedRow = React.useCallback((itemId: string) => {
+    setSelectedRowIds(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  }, []);
+
+  const handleDeleteRow = React.useCallback((itemId: string) => {
+    console.log('Delete', itemId);
+    // Actual delete logic would go here, then update placeholderClassificacoes
+    // setPlaceholderClassificacoes(prev => prev.filter(item => item.id !== itemId));
+  }, []);
+  
+  const visibleColumnsForMemo = React.useMemo(() => {
+    return ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]);
+  }, [columnVisibilityClassificacoes]);
+
 
   return (
     <TooltipProvider>
@@ -407,7 +480,7 @@ export default function ClassificacaoPage() {
                 </Label>
                 <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" className="col-span-3" />
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="tipoPrazoFaseCorrente" className="text-right">
                   Tipo Prazo Corrente
@@ -471,7 +544,7 @@ export default function ClassificacaoPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="observacoes" className="text-right">
                   Observações
@@ -576,46 +649,15 @@ export default function ClassificacaoPage() {
               </TableHeader>
               <TableBody>
                 {displayedClassificacoes.map((item) => (
-                  <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                    <TableCell className="py-2 px-3">
-                      <Checkbox
-                        checked={selectedRowIds.includes(item.id)}
-                        onCheckedChange={(value) => {
-                          setSelectedRowIds(prev =>
-                            value ? [...prev, item.id] : prev.filter(id => id !== item.id)
-                          );
-                        }}
-                        aria-label={`Selecionar classificação ${item.codigo}`}
-                      />
-                    </TableCell>
-                    {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
-                      columnVisibilityClassificacoes[column.id as string] ? (
-                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
-                           {getCellValueClassificacoes(item, column)}
-                        </TableCell>
-                      ) : null
-                    )}
-                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
-                      <div className="flex items-center justify-end">
-                        <Tooltip>
-                           <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Editar Classificação" onClick={() => handleOpenDialog(item)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                           </TooltipTrigger>
-                           <TooltipContent><p>Editar Classificação</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação" onClick={() => console.log('Delete', item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Excluir Classificação</p></TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <MemoizedClassificacaoRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedRowIds.includes(item.id)}
+                    onToggleSelected={handleToggleSelectedRow}
+                    visibleColumns={visibleColumnsForMemo}
+                    onEditClick={handleOpenDialog}
+                    onDeleteClick={handleDeleteRow}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -630,4 +672,3 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
-    
