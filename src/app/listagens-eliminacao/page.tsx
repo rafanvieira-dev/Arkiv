@@ -49,7 +49,7 @@ const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: stri
   documentoIds: [],
   numeroEditalCiencia: "",
   dataPublicacaoEdital: undefined,
-  dataProducaoListagem: new Date().toISOString(), // Default to current date for new listings
+  dataProducaoListagem: new Date().toISOString(), 
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
   observacoes: "",
@@ -79,10 +79,10 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
   { 
     id: 'qtdDocumentos', 
     header: 'Qtd. Docs', 
-    accessorKey: 'documentoIds', // Accessor key points to the array
+    accessorKey: 'documentoIds',
     defaultVisible: true, 
-    enableSorting: true, // Sorting by length might be tricky, consider disabling or custom sort
-    cellFormatter: (_value, item) => Array.isArray(item.documentoIds) ? item.documentoIds.length : 0 
+    enableSorting: true, 
+    cellFormatter: (_, item) => Array.isArray(item.documentoIds) ? item.documentoIds.length : 0 
   },
   { id: 'numeroEditalCiencia', header: 'Nº Edital', accessorKey: 'numeroEditalCiencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   { 
@@ -93,16 +93,16 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     enableSorting: true, 
     cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" 
   },
-  { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', accessorKey: 'numeroTermoEliminacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', accessorKey: 'numeroTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   { 
     id: 'dataProducaoTermoEliminacao', 
     header: 'Data Prod. Termo', 
     accessorKey: 'dataProducaoTermoEliminacao', 
-    defaultVisible: true, 
+    defaultVisible: false, 
     enableSorting: true, 
     cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A" 
   },
-  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
 ];
 
 
@@ -488,3 +488,4 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
