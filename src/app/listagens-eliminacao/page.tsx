@@ -57,13 +57,22 @@ const initialFormState: Partial<ListagemEliminacao> & { documentoIdsInput?: stri
   observacoes: "",
 };
 
-const simulatedDocumentData: Array<{ id: string; status: string }> = [
-  { id: "DOC001", status: "Arquivado" },
-  { id: "DOC002", status: "Emprestado" },
-  { id: "DOC003", status: "Arquivado" },
-  { id: "DOC004", status: "Arquivado" },
-  { id: "DOC005", status: "Aguardando prazo para eliminação" },
+// Simulated document data for validation purposes
+const simulatedDocumentData: Array<{ 
+  id: string; 
+  status: string; 
+  destinacaoFinalDisplay?: 'Eliminação' | 'Guarda Permanente' | string;
+  alteracaoDestinacaoFinal: 'Não Alterar' | 'Guarda Permanente – Guarda Amostral' | 'Guarda Permanente – Decisão da CPAD';
+}> = [
+  { id: "DOC001", status: "Arquivado", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC002", status: "Emprestado", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" }, // Invalid status
+  { id: "DOC003", status: "Arquivado", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, // Invalid destinação
+  { id: "DOC004", status: "Arquivado", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" }, // Invalid due to alteração
+  { id: "DOC005", status: "Aguardando prazo para eliminação", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" }, // Invalid status
+  { id: "DOC006", status: "Arquivado", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Guarda Amostral" }, // Invalid destinação (effective)
+  { id: "DOC007", status: "Arquivado", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" }, // Valid
 ];
+
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
@@ -193,20 +202,48 @@ export default function ListagensEliminacaoPage() {
   
   const handleSaveChanges = () => {
     const documentoIdsArray = formState.documentoIdsInput?.split(',').map(id => id.trim()).filter(id => id) || [];
+    const invalidDocEntries: Array<{ id: string; reason: string }> = [];
 
-    const invalidDocIds: string[] = [];
     documentoIdsArray.forEach(docId => {
       const docData = simulatedDocumentData.find(d => d.id === docId);
-      if (!docData || docData.status !== "Arquivado") {
-        invalidDocIds.push(docId);
+      let isInvalid = false;
+      let reasons: string[] = [];
+
+      if (!docData) {
+        isInvalid = true;
+        reasons.push("não encontrado");
+      } else {
+        // Check status
+        if (docData.status !== "Arquivado") {
+          isInvalid = true;
+          reasons.push(`status '${docData.status}' (esperado 'Arquivado')`);
+        }
+
+        // Check destinação final
+        let effectiveDestinacao = docData.destinacaoFinalDisplay;
+        if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || 
+            docData.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+          effectiveDestinacao = "Guarda Permanente";
+        }
+
+        if (effectiveDestinacao === "Guarda Permanente") {
+          isInvalid = true;
+          reasons.push(`destinação '${effectiveDestinacao}'`);
+        }
+      }
+
+      if (isInvalid) {
+        invalidDocEntries.push({ id: docId, reason: reasons.join('; ') });
       }
     });
 
-    if (invalidDocIds.length > 0) {
+    if (invalidDocEntries.length > 0) {
+      const errorMessages = invalidDocEntries.map(entry => `${entry.id} (${entry.reason})`).join(' | ');
       toast({
         variant: "destructive",
-        title: "Erro de Validação",
-        description: `Os seguintes documentos não podem ser incluídos pois não estão com status "Arquivado" ou não foram encontrados: ${invalidDocIds.join(', ')}.`,
+        title: "Erro de Validação de Documentos",
+        description: `Os seguintes documentos não podem ser incluídos: ${errorMessages}. Verifique o status (deve ser 'Arquivado') e a destinação final (não pode ser 'Guarda Permanente').`,
+        duration: 8000, 
       });
       return;
     }
@@ -534,4 +571,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-
