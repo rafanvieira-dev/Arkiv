@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ListagemEliminacao, Documento } from "@/types"; // Assuming Documento type is available
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, Filter } from "lucide-react";
+import type { ListagemEliminacao, Documento } from "@/types"; 
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, parseISO, isValid, getYear } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
@@ -29,13 +29,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/date-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -46,16 +39,36 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 
-// More comprehensive simulated document data for the dialog table and validation
-const simulatedFullDocumentData: Array<Pick<Documento, 'id' | 'numeroDocumento' | 'descricaoDocumento' | 'status' | 'anoEliminacaoPrevisto' | 'destinacaoFinalDisplay' | 'alteracaoDestinacaoFinal'>> = [
-  { id: "DOC001", numeroDocumento: "PRC-2023-001", descricaoDocumento: "Processo contratual A", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC002", numeroDocumento: "OFC-2023-045", descricaoDocumento: "Ofício sobre projeto B", status: "Emprestado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", descricaoDocumento: "Memorando política interna", status: "Arquivado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC004", numeroDocumento: "REQ-2014-001", descricaoDocumento: "Requerimento antigo C", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC005", numeroDocumento: "PET-2010-555", descricaoDocumento: "Petição inicial D", status: "Aguardando prazo para eliminação", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC006", numeroDocumento: "CTR-2015-080", descricaoDocumento: "Contrato de serviço E", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
-  { id: "DOC007", numeroDocumento: "PA-2019-721", descricaoDocumento: "Processo administrativo F", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC008", numeroDocumento: "AJ-2005-001", descricaoDocumento: "Ajuste de contas G", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+type SimulatedDocumentForDialog = Pick<
+  Documento, 
+  'id' | 
+  'numeroDocumento' | 
+  'tipoDocumento' | 
+  'descricaoDocumento' | 
+  'nomePartePrincipal' | 
+  'dataAbrangente' | 
+  'classificacaoArquivisticaId' | 
+  'status' | 
+  'anoEliminacaoPrevisto' | 
+  'destinacaoFinalDisplay' | 
+  'alteracaoDestinacaoFinal'
+>;
+
+const simulatedFullDocumentData: SimulatedDocumentForDialog[] = [
+  { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A", nomePartePrincipal: "Empresa Exemplo Ltda", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna", nomePartePrincipal: "João da Silva", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Arquivado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D", nomePartePrincipal: "Consumidor Teste", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Aguardando prazo para eliminação", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E", nomePartePrincipal: "Serviços Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
+  { id: "DOC007", numeroDocumento: "PA-2019-721", tipoDocumento: "Processo Administrativo", descricaoDocumento: "Processo administrativo F", nomePartePrincipal: "Autarquia Modelo", dataAbrangente: "12/2019", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC008", numeroDocumento: "AJ-2005-001", tipoDocumento: "Ajuste de Contas", descricaoDocumento: "Ajuste de contas G", nomePartePrincipal: "Fornecedor Global", dataAbrangente: "03/2005", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+];
+
+const simulatedClassificacoesData = [
+  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis" },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas" },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais" },
 ];
 
 
@@ -75,8 +88,8 @@ const initialFormState: Partial<ListagemEliminacao> = {
   observacoes: "",
 };
 
-type DialogTableSortConfig = { id: keyof Documento | string; direction: 'asc' | 'desc'; };
-type DialogTableFilters = { status: string; anoEliminacaoPrevisto: string; };
+type DialogTableSortConfig = { id: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string; direction: 'asc' | 'desc'; };
+type DialogTableFilters = { anoEliminacaoPrevisto: string; };
 
 type ColumnConfigListagens = {
   id: keyof ListagemEliminacao | string;
@@ -145,11 +158,11 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
 ];
 
 type DialogDocumentColumn = {
-  id: keyof Pick<Documento, 'id' | 'numeroDocumento' | 'descricaoDocumento' | 'status' | 'anoEliminacaoPrevisto'> | 'selection';
+  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao';
   header: string | React.ReactNode;
-  accessorKey: keyof Pick<Documento, 'id' | 'numeroDocumento' | 'descricaoDocumento' | 'status' | 'anoEliminacaoPrevisto'> | 'selection';
+  accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | string;
   enableSorting: boolean;
-  cellFormatter?: (value: any, doc: Pick<Documento, 'id' | 'numeroDocumento' | 'descricaoDocumento' | 'status' | 'anoEliminacaoPrevisto'>) => React.ReactNode;
+  cellFormatter?: (value: any, doc: SimulatedDocumentForDialog) => React.ReactNode;
 };
 
 
@@ -168,13 +181,12 @@ export default function ListagensEliminacaoPage() {
     ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
 
-  // State for the dialog table
-  const [documentsForDialog, setDocumentsForDialog] = React.useState<Array<Pick<Documento, 'id' | 'numeroDocumento' | 'descricaoDocumento' | 'status' | 'anoEliminacaoPrevisto'>>>([]);
+  const [documentsForDialog, setDocumentsForDialog] = React.useState<SimulatedDocumentForDialog[]>([]);
   const [selectedDialogDocIds, setSelectedDialogDocIds] = React.useState<string[]>([]);
-  const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ status: "", anoEliminacaoPrevisto: "" });
+  const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ anoEliminacaoPrevisto: "" });
   const [dialogTableSortConfig, setDialogTableSortConfig] = React.useState<DialogTableSortConfig[]>([]);
 
-  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = [
+  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
     {
       id: 'selection',
       header: (
@@ -198,19 +210,38 @@ export default function ListagensEliminacaoPage() {
         />
       )
     },
-    { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: false },
+    { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
+    { id: 'tipoDocumento', header: 'Tipo de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-    { id: 'status', header: 'Status', accessorKey: 'status', enableSorting: true },
+    { id: 'nomePartePrincipal', header: 'Partes', accessorKey: 'nomePartePrincipal', enableSorting: true },
+    { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },
+    { 
+      id: 'codigoClassificacao', 
+      header: 'Cód. Class.', 
+      accessorKey: 'classificacaoArquivisticaId', 
+      enableSorting: true,
+      cellFormatter: (_, doc) => {
+        const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
+        return classificacao ? classificacao.codigo : "N/A";
+      } 
+    },
+    { 
+      id: 'assuntoClassificacao', 
+      header: 'Assunto', 
+      accessorKey: 'classificacaoArquivisticaId', 
+      enableSorting: true,
+      cellFormatter: (_, doc) => {
+        const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
+        return classificacao ? <span className="block max-w-xs truncate" title={classificacao.descricao}>{classificacao.descricao}</span> : "N/A";
+      }
+    },
     { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', enableSorting: true },
-  ];
+  ], [documentsForDialog, selectedDialogDocIds]);
 
 
   React.useEffect(() => {
-    let filteredDocs = [...simulatedFullDocumentData];
+    let filteredDocs = simulatedFullDocumentData.filter(doc => doc.status === "Arquivado");
 
-    if (dialogTableFilters.status) {
-      filteredDocs = filteredDocs.filter(doc => doc.status === dialogTableFilters.status);
-    }
     if (dialogTableFilters.anoEliminacaoPrevisto) {
       filteredDocs = filteredDocs.filter(doc => doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto));
     }
@@ -218,8 +249,17 @@ export default function ListagensEliminacaoPage() {
     if (dialogTableSortConfig.length > 0) {
       filteredDocs.sort((a, b) => {
         for (const sortConf of dialogTableSortConfig) {
-          const valA = (a as any)[sortConf.id];
-          const valB = (b as any)[sortConf.id];
+          let valA, valB;
+          if (sortConf.id === 'codigoClassificacao' || sortConf.id === 'assuntoClassificacao') {
+            const classA = simulatedClassificacoesData.find(c => c.id === a.classificacaoArquivisticaId);
+            const classB = simulatedClassificacoesData.find(c => c.id === b.classificacaoArquivisticaId);
+            valA = sortConf.id === 'codigoClassificacao' ? classA?.codigo : classA?.descricao;
+            valB = sortConf.id === 'codigoClassificacao' ? classB?.codigo : classB?.descricao;
+          } else {
+            valA = (a as any)[sortConf.id];
+            valB = (b as any)[sortConf.id];
+          }
+          
           let comparisonResult = 0;
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
@@ -232,7 +272,7 @@ export default function ListagensEliminacaoPage() {
     setDocumentsForDialog(filteredDocs);
   }, [dialogTableFilters, dialogTableSortConfig]);
 
-  const handleDialogTableSort = (columnId: keyof Documento | string) => {
+  const handleDialogTableSort = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {
     setDialogTableSortConfig(prevSorting => {
       const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
       let newSorting = [...prevSorting];
@@ -240,13 +280,13 @@ export default function ListagensEliminacaoPage() {
         if (newSorting[existingSortIndex].direction === 'asc') newSorting[existingSortIndex].direction = 'desc';
         else newSorting.splice(existingSortIndex, 1);
       } else {
-        newSorting = [{ id: columnId, direction: 'asc' }]; // Simplified to single sort for dialog
+        newSorting = [{ id: columnId, direction: 'asc' }]; 
       }
       return newSorting;
     });
   };
 
-  const renderDialogTableSortIcon = (columnId: keyof Documento | string) => {
+  const renderDialogTableSortIcon = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {
     const sortConf = dialogTableSortConfig.find(s => s.id === columnId);
     if (!sortConf) return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/50" />;
     if (sortConf.direction === 'asc') return <ArrowUp className="ml-2 h-3 w-3" />;
@@ -259,7 +299,7 @@ export default function ListagensEliminacaoPage() {
     setIsEditing(false);
     setEditingListagemId(null);
     setSelectedDialogDocIds([]);
-    setDialogTableFilters({ status: "", anoEliminacaoPrevisto: "" });
+    setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
   };
 
@@ -274,10 +314,9 @@ export default function ListagensEliminacaoPage() {
     } else {
       resetFormAndDialogState();
     }
-    // Initialize dialog documents on open
-    setDialogTableFilters({ status: "", anoEliminacaoPrevisto: "" }); // Reset filters
-    setDialogTableSortConfig([]); // Reset sort
-    setDocumentsForDialog([...simulatedFullDocumentData]); // Load all initially
+    setDialogTableFilters({ anoEliminacaoPrevisto: "" }); 
+    setDialogTableSortConfig([]); 
+    setDocumentsForDialog(simulatedFullDocumentData.filter(doc => doc.status === "Arquivado")); 
     setIsDialogOpen(true);
   };
 
@@ -392,8 +431,8 @@ export default function ListagensEliminacaoPage() {
     if (sorting.length > 0) {
       sortedListagens.sort((a, b) => {
         for (const sortConfig of sorting) {
-          const valA = getSortableValue(a, sortConfig.id);
-          const valB = getSortableValue(b, sortConfig.id);
+          const valA = getSortableValue(a, sortConfig.id as string);
+          const valB = getSortableValue(b, sortConfig.id as string);
           let comparisonResult = 0;
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
@@ -529,25 +568,10 @@ export default function ListagensEliminacaoPage() {
               </div>
 
               <div className="mt-4 md:col-span-2">
-                <Label className="text-md font-medium">Documentos a serem eliminados</Label>
+                <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
                 <Card className="mt-2">
                   <CardHeader className="p-4">
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <Select 
-                            value={dialogTableFilters.status} 
-                            onValueChange={(value) => setDialogTableFilters(prev => ({...prev, status: value === "ALL_STATUS" ? "" : value}))}
-                        >
-                        <SelectTrigger className="w-full sm:w-[180px]" id="dialogFilterStatus">
-                            <SelectValue placeholder="Filtrar por Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="ALL_STATUS">Todos Status</SelectItem>
-                            <SelectItem value="Arquivado">Arquivado</SelectItem>
-                            <SelectItem value="Emprestado">Emprestado</SelectItem>
-                            <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
-                            <SelectItem value="Eliminado">Eliminado</SelectItem>
-                        </SelectContent>
-                        </Select>
                         <Input
                             type="text"
                             placeholder="Filtrar Ano Elim. Prev."
@@ -563,15 +587,15 @@ export default function ListagensEliminacaoPage() {
                         <TableHeader>
                           <TableRow>
                             {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                              <TableHead key={col.id} className="py-1 px-2 h-8">
+                              <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
                                 {col.enableSorting ? (
                                   <Button
                                     variant="ghost"
-                                    onClick={() => handleDialogTableSort(col.id)}
+                                    onClick={() => handleDialogTableSort(col.id.toString())}
                                     className="px-1 py-0 h-auto -ml-1 text-xs"
                                   >
                                     {col.header}
-                                    {renderDialogTableSortIcon(col.id)}
+                                    {renderDialogTableSortIcon(col.id.toString())}
                                   </Button>
                                 ) : (
                                   col.header
@@ -584,7 +608,7 @@ export default function ListagensEliminacaoPage() {
                           {documentsForDialog.map(doc => (
                             <TableRow key={doc.id}>
                               {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                <TableCell key={`${doc.id}-${col.id}`} className="py-1 px-2">
+                                <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
                                   {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
                                 </TableCell>
                               ))}
@@ -593,7 +617,7 @@ export default function ListagensEliminacaoPage() {
                            {documentsForDialog.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                        Nenhum documento encontrado para os filtros aplicados.
+                                        Nenhum documento "Arquivado" encontrado para os filtros aplicados.
                                     </TableCell>
                                 </TableRow>
                             )}
