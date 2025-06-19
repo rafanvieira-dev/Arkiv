@@ -55,26 +55,26 @@ type SimulatedDocumentForDialog = Pick<
 >;
 
 const simulatedFullDocumentData: SimulatedDocumentForDialog[] = [
-  { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A", nomePartePrincipal: "Empresa Exemplo Ltda", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna", nomePartePrincipal: "João da Silva", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Arquivado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D", nomePartePrincipal: "Consumidor Teste", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Aguardando prazo para eliminação", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E", nomePartePrincipal: "Serviços Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
-  { id: "DOC007", numeroDocumento: "PA-2019-721", tipoDocumento: "Processo Administrativo", descricaoDocumento: "Processo administrativo F", nomePartePrincipal: "Autarquia Modelo", dataAbrangente: "12/2019", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC008", numeroDocumento: "AJ-2005-001", tipoDocumento: "Ajuste de Contas", descricaoDocumento: "Ajuste de contas G", nomePartePrincipal: "Fornecedor Global", dataAbrangente: "03/2005", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Arquivado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C, referente a pedido de vista.", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Aguardando prazo para eliminação", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E para desenvolvimento de software.", nomePartePrincipal: "Serviços de Consultoria Avançada Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
+  { id: "DOC007", numeroDocumento: "PA-2019-721", tipoDocumento: "Processo Administrativo", descricaoDocumento: "Processo administrativo F sobre licitação pública complexa.", nomePartePrincipal: "Autarquia Modelo Federal", dataAbrangente: "12/2019", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
+  { id: "DOC008", numeroDocumento: "AJ-2005-001", tipoDocumento: "Ajuste de Contas", descricaoDocumento: "Ajuste de contas G entre fornecedor e cliente.", nomePartePrincipal: "Fornecedor Global Peças e Serviços", dataAbrangente: "03/2005", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
 ];
 
 const simulatedClassificacoesData = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis" },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas" },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais" },
+  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas e Expedidas" },
+  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais de Atividades" },
 ];
 
 
 const placeholderListagensInitial: ListagemEliminacao[] = [
-  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano." },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com docs específicos." },
+  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano, documentos de processos judiciais e administrativos." },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com documentos financeiros específicos." },
 ];
 
 const initialFormState: Partial<ListagemEliminacao> = {
@@ -583,7 +583,7 @@ export default function ListagensEliminacaoPage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <ScrollArea className="h-[300px] w-full border-t">
-                      <Table className="min-w-full whitespace-nowrap text-xs">
+                      <Table className="min-w-max whitespace-nowrap text-xs">
                         <TableHeader>
                           <TableRow>
                             {DIALOG_DOCUMENT_COLUMNS.map(col => (
@@ -766,4 +766,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-
