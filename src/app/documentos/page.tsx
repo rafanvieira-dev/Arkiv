@@ -843,9 +843,9 @@ export default function DocumentosPage() {
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[75vh] pr-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 py-4">
               
-              <div className="space-y-2 lg:col-span-1">
+              <div className="space-y-2">
                 <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
                 <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
@@ -940,7 +940,7 @@ export default function DocumentosPage() {
                 <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" />
               </div>
 
-              <div className="space-y-2 md:col-span-3">
+              <div className="space-y-2 sm:col-span-2 xl:col-span-3">
                 <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
                 <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" />
               </div>
@@ -1132,7 +1132,7 @@ export default function DocumentosPage() {
                 <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" />
               </div>
               
-              <div className="space-y-2 md:col-span-3">
+              <div className="space-y-2 sm:col-span-2 xl:col-span-3">
                 <Label htmlFor="observacoesGerais">Observações Gerais</Label>
                 <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" />
               </div>
@@ -1475,6 +1475,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
