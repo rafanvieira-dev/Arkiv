@@ -259,9 +259,12 @@ export default function ListagensEliminacaoPage() {
         <Badge 
           variant={
             value === 'Arquivado' ? 'secondary' :
-            value === 'Aguardando prazo para eliminação' ? 'default' :
+            value === 'Aguardando prazo para eliminação' ? 'default' : 
             value === 'Eliminado' ? 'destructive' :
             'outline' 
+          }
+          className={ 
+            value === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' : ''
           }
         >
           {value}
@@ -341,11 +344,11 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
-    setSimulatedDocuments([...initialSimulatedFullDocumentData]); 
+    setSimulatedDocuments([...initialSimulatedFullDocumentData].map(doc => ({ ...doc }))); 
   };
 
   const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
-    let baseDocs = [...initialSimulatedFullDocumentData].map(doc => ({ ...doc })); // Deep copy for modification
+    let baseDocs = [...initialSimulatedFullDocumentData].map(doc => ({ ...doc })); 
 
     if (listagem) {
       setIsEditing(true);
@@ -368,7 +371,9 @@ export default function ListagensEliminacaoPage() {
       
       if (listagem.dataProducaoTermoEliminacao && listagem.documentoIds && listagem.documentoIds.length > 0) {
         baseDocs = baseDocs.map(doc => {
-          if (listagem.documentoIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação") {
+          // Check the potentially modified status from edital processing
+          const currentStatusInBase = baseDocs.find(bd => bd.id === doc.id)?.status;
+          if (listagem.documentoIds.includes(doc.id) && currentStatusInBase === "Aguardando prazo para eliminação") {
             return { ...doc, status: "Eliminado" as Documento['status'] };
           }
           return doc;
@@ -403,42 +408,45 @@ export default function ListagensEliminacaoPage() {
 
   const handleDateChange = (id: keyof ListagemEliminacao) => (date?: Date) => {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
-    let docsAffectedCount = 0;
 
     if (id === 'dataPublicacaoEdital' && date && selectedDialogDocIds.length > 0) {
-        setSimulatedDocuments(prevDocs => 
-            prevDocs.map(doc => {
+        setSimulatedDocuments(prevDocs => {
+            let affectedCount = 0;
+            const updatedDocs = prevDocs.map(doc => {
                 if (selectedDialogDocIds.includes(doc.id) && doc.status === "Arquivado") {
-                    docsAffectedCount++;
+                    affectedCount++;
                     return { ...doc, status: "Aguardando prazo para eliminação" as Documento['status'] };
                 }
                 return doc;
-            })
-        );
-        if (docsAffectedCount > 0) {
-            toast({
-                title: "Status dos Documentos Atualizado",
-                description: `${docsAffectedCount} documento(s) selecionado(s) tiveram seu status alterado para "Aguardando prazo para eliminação".`,
             });
-        }
+            if (affectedCount > 0) {
+                toast({
+                    title: "Status dos Documentos Atualizado",
+                    description: `${affectedCount} documento(s) selecionado(s) tiveram seu status alterado para "Aguardando prazo para eliminação".`,
+                });
+            }
+            return updatedDocs;
+        });
     }
     
     if (id === 'dataProducaoTermoEliminacao' && date && selectedDialogDocIds.length > 0) {
-        setSimulatedDocuments(prevDocs => 
-            prevDocs.map(doc => {
+        setSimulatedDocuments(prevDocs => {
+            let affectedCount = 0;
+            const updatedDocs = prevDocs.map(doc => {
                 if (selectedDialogDocIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação") {
-                    docsAffectedCount++;
+                    affectedCount++;
                     return { ...doc, status: "Eliminado" as Documento['status'] };
                 }
                 return doc;
-            })
-        );
-        if (docsAffectedCount > 0) {
-             toast({
-                title: "Status dos Documentos Atualizado",
-                description: `${docsAffectedCount} documento(s) selecionado(s) tiveram seu status alterado para "Eliminado".`,
             });
-        }
+            if (affectedCount > 0) {
+                 toast({
+                    title: "Status dos Documentos Atualizado",
+                    description: `${affectedCount} documento(s) selecionado(s) tiveram seu status alterado para "Eliminado".`,
+                });
+            }
+            return updatedDocs;
+        });
     }
   };
 
@@ -446,7 +454,7 @@ export default function ListagensEliminacaoPage() {
     const invalidDocEntries: Array<{ id: string; reason: string }> = [];
     
     const finalSelectedDocsData = selectedDialogDocIds.map(id => 
-        simulatedDocuments.find(d => d.id === id)
+        simulatedDocuments.find(d => d.id === id) 
     ).filter(Boolean) as SimulatedDocumentForDialog[];
 
 
@@ -454,15 +462,10 @@ export default function ListagensEliminacaoPage() {
       let isInvalid = false;
       let reasons: string[] = [];
       
-      // Documentos com status "Eliminado" ou já em "Aguardando prazo para eliminação" (devido a um edital já publicado)
-      // são válidos para estarem numa listagem, mas não para *novas* inclusões se já estão num estado avançado.
-      // A validação principal aqui é sobre a *destinação final*.
-      // Se o status já é "Eliminado", não tem problema estar na lista, mas não pode ser "Guarda Permanente".
       if (docData.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação" && docData.status !== "Eliminado") {
           isInvalid = true;
           reasons.push(`status inválido '${docData.status}'`);
       }
-
 
       let effectiveDestinacao = docData.destinacaoFinalDisplay;
       if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" ||
@@ -520,7 +523,6 @@ export default function ListagensEliminacaoPage() {
     }
     setListagens(updatedListagens);
     
-    // Persist status change to simulatedDocuments if Termo de Eliminação is dated
     if (listagemDataToSave.dataProducaoTermoEliminacao && listagemDataToSave.documentoIds.length > 0) {
         setSimulatedDocuments(prevSimulated => 
             prevSimulated.map(doc => {
@@ -599,10 +601,6 @@ export default function ListagensEliminacaoPage() {
 
   const handleDelete = (listagemId: string) => {
     console.log("Excluir listagem:", listagemId);
-    // Actual deletion logic would involve updating the 'listagens' state
-    // setListagens(prev => prev.filter(l => l.id !== listagemId));
-    // Also, potentially revert status of documents in the deleted list if they were changed
-    // to "Aguardando prazo para eliminação" solely due to this list.
     toast({
         title: "Funcionalidade de Exclusão Pendente",
         description: `A exclusão da listagem ${listagemId} não está implementada nesta simulação.`,
