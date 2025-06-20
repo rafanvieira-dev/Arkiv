@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao as SimpListagemEliminacao } from "@/types";
+import type { Documento, ListagemEliminacao } from "@/types"; // Updated to use full ListagemEliminacao
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getYear, parseISO, isValid } from 'date-fns'; // Removed format and ptBR, will use ClientSideDateFormatter
-import { ClientSideDateFormatter } from "@/components/client-side-date-formatter"; // IMPORT ADDED
+import { getYear, parseISO, isValid } from 'date-fns';
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   Dialog,
   DialogContent,
@@ -64,11 +64,24 @@ const placeholderClassificacoesSimulado = [
   { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 1 },
 ];
 
-// Simplified version of ListagemEliminacao for this page's context
-// We only need numeroListagem and documentoIds for the linking functionality
-const simulatedListagensData: Array<Pick<SimpListagemEliminacao, 'id' | 'numeroListagem' | 'documentoIds' | 'dataPublicacaoEdital'>> = [
-  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"], dataPublicacaoEdital: new Date("2023-10-15").toISOString() },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"], dataPublicacaoEdital: undefined },
+const simulatedListagensData: ListagemEliminacao[] = [
+  { 
+    id: "LE001", 
+    numeroListagem: "LE-2023-001", 
+    documentoIds: ["DOC001", "DOC007"], 
+    dataPublicacaoEdital: new Date("2023-10-15").toISOString(),
+    dataProducaoListagem: new Date("2023-09-30").toISOString(), // Added for completeness
+    numeroEditalCiencia: "EDITAL-005/2023", // Added for completeness
+    numeroTermoEliminacao: "TE-2023-001", // Added for completeness
+    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString() // Added this crucial field
+  },
+  { 
+    id: "LE002", 
+    numeroListagem: "LE-2024-001", 
+    documentoIds: ["DOC008"], 
+    dataPublicacaoEdital: undefined,
+    dataProducaoListagem: new Date("2024-02-10").toISOString() // Added for completeness
+  },
 ];
 
 
@@ -554,18 +567,25 @@ export default function DocumentosPage() {
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
 
-  React.useEffect(() => {
+ React.useEffect(() => {
     const processedDocs = placeholderDocumentos.map(doc => {
-      let currentDoc = { ...doc }; 
-      if (currentDoc.numeroListagemEliminacao) {
+      let currentDocStatus = doc.status; 
+
+      if (doc.numeroListagemEliminacao) {
         const listagem = simulatedListagensData.find(
-          l => l.numeroListagem === currentDoc.numeroListagemEliminacao
+          l => l.numeroListagem === doc.numeroListagemEliminacao
         );
-        if (listagem && listagem.documentoIds && listagem.documentoIds.includes(currentDoc.id) && listagem.dataPublicacaoEdital && currentDoc.status === "Arquivado") {
-          currentDoc.status = "Aguardando prazo para eliminação";
+
+        if (listagem && listagem.documentoIds && listagem.documentoIds.includes(doc.id)) {
+          if (listagem.dataPublicacaoEdital && doc.status === "Arquivado") {
+            currentDocStatus = "Aguardando prazo para eliminação";
+          }
+          if (listagem.dataProducaoTermoEliminacao && currentDocStatus === "Aguardando prazo para eliminação") {
+            currentDocStatus = "Eliminado";
+          }
         }
       }
-      return currentDoc;
+      return { ...doc, status: currentDocStatus as Documento['status'] };
     });
     setMasterDocumentList(processedDocs);
   }, []);
@@ -871,7 +891,7 @@ export default function DocumentosPage() {
   }, [filters, sorting, caixaIdFromUrl, searchParams, masterDocumentList]);
 
   React.useEffect(() => {
-    if (masterDocumentList.length > 0) { // Only apply if master list is populated
+    if (masterDocumentList.length > 0) { 
       applyFiltersAndSorting();
     }
   }, [applyFiltersAndSorting, masterDocumentList]);
@@ -933,7 +953,7 @@ export default function DocumentosPage() {
     const value = doc[column.accessorKey as keyof Documento];
 
     if ((column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') && value && typeof value === 'string') {
-      const parsedDate = Date.parse(value); // Use Date.parse for robust ISO parsing
+      const parsedDate = Date.parse(value); 
       return !isNaN(parsedDate) ? new Date(parsedDate) : null;
     }
     return value;
@@ -1630,6 +1650,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
