@@ -2,12 +2,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento } from "@/types";
+import type { Documento, ListagemEliminacao as SimpListagemEliminacao } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -63,6 +64,14 @@ const placeholderClassificacoesSimulado = [
   { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 1 },
 ];
 
+// Simplified version of ListagemEliminacao for this page's context
+// We only need numeroListagem and documentoIds for the linking functionality
+const simulatedListagensData: Array<Pick<SimpListagemEliminacao, 'id' | 'numeroListagem' | 'documentoIds'>> = [
+  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"] },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"] },
+];
+
+
 const placeholderDocumentos: Documento[] = [
   { 
     id: "DOC001", 
@@ -104,6 +113,7 @@ const placeholderDocumentos: Documento[] = [
     codigoAtoM: "ATOM001",
     observacoesGerais: "Nenhuma observação específica para este documento de exemplo.",
     codigoClassificacaoJudicialId: "CJ001",
+    numeroListagemEliminacao: "LE-2023-001",
     dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
   },
   { 
@@ -274,6 +284,78 @@ const placeholderDocumentos: Documento[] = [
     codigoClassificacaoJudicialId: "CJ001",
     dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
   },
+  { 
+    id: "DOC007", // Added to LE-2023-001
+    status: "Arquivado", 
+    orgao: "TRF2", 
+    origem: "Vara Cível", 
+    tipoMeio: "Não digital", 
+    generoDocumental: "Textual", 
+    categoria: "Processo Judicial", 
+    tipoDocumento: "Execução Fiscal", 
+    numeroDocumento: "EXEC-2020-789", 
+    dataAbrangente: "07/2020 - 12/2020",
+    descricaoDocumento: "Processo de execução fiscal.",
+    nomePartePrincipal: "Fazenda Nacional",
+    documentosRelacionadosIds: "",
+    dataArquivamento: new Date("2020-12-15").toISOString(), 
+    quantidadeVolumes: 1,
+    quantidadeApensos: 0,
+    numerosApensos: "",
+    totalMidias: 0,
+    digitalizado: "Não", 
+    classificacaoArquivisticaId: "CLA001",
+    prazoArquivoCorrenteDisplay: "5 Anos",
+    prazoArquivoIntermediarioDisplay: "15 Anos",
+    destinacaoFinalDisplay: "Guarda Permanente",
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "2036", 
+    tipoPartePrincipal: "Exequente",
+    segredoJustica: "Não", 
+    grauSigilo: "Ostensivo", 
+    codigosCaixa: "CX004", 
+    codigoAtoM: "ATOM007",
+    observacoesGerais: "",
+    codigoClassificacaoJudicialId: "CJ001",
+    numeroListagemEliminacao: "LE-2023-001", 
+    dataCadastro: new Date("2020-07-01T10:00:00Z").toISOString(), 
+  },
+  { 
+    id: "DOC008", // Added to LE-2024-001
+    status: "Aguardando prazo para eliminação", 
+    orgao: "SJRJ", 
+    origem: "Juizado Especial", 
+    tipoMeio: "Digital", 
+    generoDocumental: "Textual", 
+    categoria: "Processo Judicial", 
+    tipoDocumento: "Procedimento do Juizado Especial Cível", 
+    numeroDocumento: "JEC-2018-123", 
+    dataAbrangente: "03/2018",
+    descricaoDocumento: "Pequenas causas, aguardando eliminação.",
+    nomePartePrincipal: "Fulano de Tal",
+    documentosRelacionadosIds: "",
+    dataArquivamento: new Date("2018-03-20").toISOString(), 
+    quantidadeVolumes: 0,
+    quantidadeApensos: 0,
+    numerosApensos: "",
+    totalMidias: 0,
+    digitalizado: "Sim", 
+    classificacaoArquivisticaId: "CLA001",
+    prazoArquivoCorrenteDisplay: "5 Anos",
+    prazoArquivoIntermediarioDisplay: "15 Anos", 
+    destinacaoFinalDisplay: "Eliminação", 
+    alteracaoDestinacaoFinal: "Não Alterar", 
+    anoEliminacaoPrevisto: "2034", 
+    tipoPartePrincipal: "Autor",
+    segredoJustica: "Não", 
+    grauSigilo: "Ostensivo", 
+    codigosCaixa: "CX-DIG-012", 
+    codigoAtoM: "ATOM008",
+    observacoesGerais: "Documento digitalizado.",
+    codigoClassificacaoJudicialId: "CJ001",
+    numeroListagemEliminacao: "LE-2024-001", 
+    dataCadastro: new Date("2018-03-01T14:00:00Z").toISOString(), 
+  },
 ];
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -317,6 +399,7 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   documentosRelacionadosIds: "",
   observacoesGerais: "",
   codigoClassificacaoJudicialId: "",
+  numeroListagemEliminacao: "",
 };
 
 const tiposParteOpcoes = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima", "Outro"];
@@ -344,6 +427,7 @@ const initialFiltersState = {
   anoLimiteDocumento: "", 
   prazoCorrente: "",
   prazoIntermediario: "",
+  numeroListagemEliminacao: "",
 };
 
 const ALL_VALUES_SENTINEL = "ALL_VALUES"; 
@@ -415,6 +499,29 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
   { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: false, enableSorting: true },
   { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
+  { 
+    id: 'numeroListagemEliminacao', 
+    header: 'Listagem Eliminação', 
+    accessorKey: 'numeroListagemEliminacao', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value, doc) => {
+      if (!value) return "N/A";
+      const listagem = simulatedListagensData.find(l => l.numeroListagem === value);
+      if (!listagem || !listagem.documentoIds) return value; // Fallback if list not found or has no docs
+
+      return (
+        <Link 
+          href={`/documentos?listagemDocIds=${encodeURIComponent(listagem.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(value)}`} 
+          passHref
+        >
+          <span className="text-primary hover:underline cursor-pointer font-medium">
+            {value}
+          </span>
+        </Link>
+      );
+    }
+  },
 ];
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
@@ -579,6 +686,7 @@ export default function DocumentosPage() {
       alteracaoDestinacaoFinal: formState.alteracaoDestinacaoFinal || 'Não Alterar',
       segredoJustica: formState.segredoJustica || 'Não',
       grauSigilo: formState.grauSigilo || 'Ostensivo',
+      numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, // Ensure it's undefined if empty
     };
     
     const docIndex = placeholderDocumentos.findIndex(doc => doc.id === finalFormState.id);
@@ -709,6 +817,9 @@ export default function DocumentosPage() {
       }
       if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) passesAll = false;
       if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) passesAll = false;
+      if (filters.numeroListagemEliminacao && doc.numeroListagemEliminacao && !doc.numeroListagemEliminacao.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) passesAll = false;
+      else if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao) passesAll = false;
+
 
       return passesAll;
     });
@@ -1343,6 +1454,10 @@ export default function DocumentosPage() {
                 <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
                 <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterNumeroListagemEliminacao">Nº Listagem Eliminação</Label>
+                <Input id="filterNumeroListagemEliminacao" name="numeroListagemEliminacao" value={filters.numeroListagemEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2 px-6 pb-6">
               <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
@@ -1494,6 +1609,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
