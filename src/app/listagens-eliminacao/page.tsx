@@ -54,7 +54,7 @@ type SimulatedDocumentForDialog = Pick<
   'alteracaoDestinacaoFinal'
 >;
 
-const simulatedFullDocumentData: SimulatedDocumentForDialog[] = [
+const initialSimulatedFullDocumentData: SimulatedDocumentForDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, 
@@ -158,9 +158,9 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
 ];
 
 type DialogDocumentColumn = {
-  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao';
+  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status';
   header: string | React.ReactNode;
-  accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | string;
+  accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string;
   enableSorting: boolean;
   cellFormatter?: (value: any, doc: SimulatedDocumentForDialog) => React.ReactNode;
 };
@@ -181,6 +181,7 @@ export default function ListagensEliminacaoPage() {
     ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
 
+  const [simulatedDocuments, setSimulatedDocuments] = React.useState<SimulatedDocumentForDialog[]>(initialSimulatedFullDocumentData);
   const [documentsForDialog, setDocumentsForDialog] = React.useState<SimulatedDocumentForDialog[]>([]);
   const [selectedDialogDocIds, setSelectedDialogDocIds] = React.useState<string[]>([]);
   const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ anoEliminacaoPrevisto: "" });
@@ -193,11 +194,14 @@ export default function ListagensEliminacaoPage() {
       id: 'selection',
       header: (
         <Checkbox
-          checked={documentsForDialog.length > 0 && selectedDialogDocIds.length === documentsForDialog.length && documentsForDialog.every(doc => selectedDialogDocIds.includes(doc.id))}
+          checked={documentsForDialog.length > 0 && selectedDialogDocIds.length === documentsForDialog.filter(doc => doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação").length && documentsForDialog.every(doc => (doc.status !== "Arquivado" && doc.status !== "Aguardando prazo para eliminação") || selectedDialogDocIds.includes(doc.id))}
           onCheckedChange={(value) => {
-            setSelectedDialogDocIds(value ? documentsForDialog.map(d => d.id) : []);
+             const eligibleDocIds = documentsForDialog
+              .filter(d => d.status === "Arquivado" || d.status === "Aguardando prazo para eliminação")
+              .map(d => d.id);
+            setSelectedDialogDocIds(value ? eligibleDocIds : []);
           }}
-          aria-label="Selecionar todos os documentos"
+          aria-label="Selecionar todos os documentos elegíveis"
         />
       ),
       accessorKey: 'selection',
@@ -209,6 +213,7 @@ export default function ListagensEliminacaoPage() {
             setSelectedDialogDocIds(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
           }}
           aria-label={`Selecionar documento ${doc.numeroDocumento}`}
+          disabled={doc.status !== "Arquivado" && doc.status !== "Aguardando prazo para eliminação"}
         />
       )
     },
@@ -238,15 +243,33 @@ export default function ListagensEliminacaoPage() {
       }
     },
     { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', enableSorting: true },
+    { id: 'status', header: 'Status', accessorKey: 'status', enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Aguardando prazo para eliminação' ? 'default' : 'outline' }>{value}</Badge> },
   ], [documentsForDialog, selectedDialogDocIds]);
 
 
   React.useEffect(() => {
-    let filteredDocs = simulatedFullDocumentData.filter(doc => doc.status === "Arquivado");
+    let filteredDocs = simulatedDocuments.filter(doc => {
+      const isCurrentlySelectedAndNowAwaitingElimination = 
+        selectedDialogDocIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação";
+      
+      const isEligibleForInitialSelection = doc.status === "Arquivado";
 
-    if (dialogTableFilters.anoEliminacaoPrevisto) {
-      filteredDocs = filteredDocs.filter(doc => doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto));
-    }
+      if (!isCurrentlySelectedAndNowAwaitingElimination && !isEligibleForInitialSelection) {
+        // If not part of current selection cycle and not "Arquivado", exclude
+        if(selectedDialogDocIds.includes(doc.id) && doc.status !== "Aguardando prazo para eliminação"){
+             //This case means it was selected but its status is neither "Arquivado" nor "Aguardando...", so it's an invalid prior selection.
+             //Or it means it was selected, its status was "Arquivado", dataPubEdital was NOT set, and then another doc caused a re-render.
+             //We keep it if it's in selectedDialogDocIds to allow unchecking.
+        } else if (!selectedDialogDocIds.includes(doc.id) && !isEligibleForInitialSelection) {
+             return false;
+        }
+      }
+
+      if (dialogTableFilters.anoEliminacaoPrevisto) {
+        return doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto);
+      }
+      return true;
+    });
 
     if (dialogTableSortConfig.length > 0) {
       filteredDocs.sort((a, b) => {
@@ -272,7 +295,7 @@ export default function ListagensEliminacaoPage() {
       });
     }
     setDocumentsForDialog(filteredDocs);
-  }, [dialogTableFilters, dialogTableSortConfig]);
+  }, [simulatedDocuments, dialogTableFilters, dialogTableSortConfig, selectedDialogDocIds]);
 
   const handleDialogTableSort = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {
     setDialogTableSortConfig(prevSorting => {
@@ -288,7 +311,7 @@ export default function ListagensEliminacaoPage() {
     });
   };
 
-  const renderDialogTableSortIcon = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {
+  const renderDialogTableSortIcon = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string) => {
     const sortConf = dialogTableSortConfig.find(s => s.id === columnId);
     if (!sortConf) return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/50" />;
     if (sortConf.direction === 'asc') return <ArrowUp className="ml-2 h-3 w-3" />;
@@ -304,9 +327,14 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
+    // Reset simulatedDocuments to its initial state if needed, or fetch fresh if it were a real DB
+    setSimulatedDocuments(initialSimulatedFullDocumentData); 
   };
 
   const handleOpenDialog = (listagem?: ListagemEliminacao) => {
+    // Crucially, reset or re-fetch simulatedDocuments to ensure fresh state for each dialog opening
+    setSimulatedDocuments(initialSimulatedFullDocumentData);
+
     if (listagem) {
       setIsEditing(true);
       setEditingListagemId(listagem.id);
@@ -320,11 +348,15 @@ export default function ListagensEliminacaoPage() {
         setIsDocumentTableVisible(false);
       }
     } else {
-      resetFormAndDialogState();
+      // For new listagem, ensure formState is reset but selectedDialogDocIds is also empty
+      setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString() });
+      setIsEditing(false);
+      setEditingListagemId(null);
+      setSelectedDialogDocIds([]);
+      setIsDocumentTableVisible(false);
     }
     setDialogTableFilters({ anoEliminacaoPrevisto: "" }); 
     setDialogTableSortConfig([]); 
-    setDocumentsForDialog(simulatedFullDocumentData.filter(doc => doc.status === "Arquivado")); 
     setIsDialogOpen(true);
   };
 
@@ -337,41 +369,62 @@ export default function ListagensEliminacaoPage() {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
 
     if (id === 'dataPublicacaoEdital' && date && selectedDialogDocIds.length > 0) {
-        console.warn(`[SIMULAÇÃO] Os seguintes documentos teriam seu status alterado para "Aguardando prazo para Eliminação": ${selectedDialogDocIds.join(', ')}. A atualização real do status dos documentos requer integração com a fonte de dados dos documentos.`);
+        setSimulatedDocuments(prevDocs => 
+            prevDocs.map(doc => {
+                if (selectedDialogDocIds.includes(doc.id) && doc.status === "Arquivado") {
+                    return { ...doc, status: "Aguardando prazo para eliminação" as Documento['status'] };
+                }
+                return doc;
+            })
+        );
+        toast({
+            title: "Status dos Documentos Atualizado",
+            description: `${selectedDialogDocIds.length} documento(s) selecionado(s) tiveram seu status alterado para "Aguardando prazo para eliminação".`,
+        });
     }
     if (id === 'dataProducaoTermoEliminacao' && date && selectedDialogDocIds.length > 0) {
-        console.warn(`[SIMULAÇÃO] Os seguintes documentos teriam seu status alterado para "Eliminado": ${selectedDialogDocIds.join(', ')}. A atualização real do status dos documentos requer integração com a fonte de dados dos documentos.`);
+        // Logic for status change to "Eliminado" would go here if needed
+        // For now, just logging the simulated action for the Termo
+        console.warn(`[SIMULAÇÃO] Os seguintes documentos teriam seu status alterado para "Eliminado" na base de dados principal: ${selectedDialogDocIds.join(', ')}. Esta é uma simulação frontend.`);
     }
   };
 
   const handleSaveChanges = () => {
     const invalidDocEntries: Array<{ id: string; reason: string }> = [];
+    
+    const finalSelectedDocsData = selectedDialogDocIds.map(id => 
+        simulatedDocuments.find(d => d.id === id)
+    ).filter(Boolean) as SimulatedDocumentForDialog[];
 
-    selectedDialogDocIds.forEach(docId => {
-      const docData = simulatedFullDocumentData.find(d => d.id === docId);
+
+    finalSelectedDocsData.forEach(docData => {
       let isInvalid = false;
       let reasons: string[] = [];
-
-      if (!docData) {
-        isInvalid = true;
-        reasons.push("não encontrado na simulação");
-      } else {
-        if (docData.status !== "Arquivado") {
+      
+      // Status validation: ensure it was originally "Arquivado" or became "Aguardando..."
+      const originalDoc = initialSimulatedFullDocumentData.find(d => d.id === docData.id);
+      if (originalDoc && originalDoc.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
+          // This case should ideally not happen if table filtering and status updates are correct
           isInvalid = true;
-          reasons.push(`status '${docData.status}' (esperado 'Arquivado')`);
-        }
-        let effectiveDestinacao = docData.destinacaoFinalDisplay;
-        if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" ||
-            docData.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
-          effectiveDestinacao = "Guarda Permanente";
-        }
-        if (effectiveDestinacao === "Guarda Permanente") {
+          reasons.push(`status inicial inválido '${originalDoc.status}'`);
+      } else if (docData.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
           isInvalid = true;
-          reasons.push(`destinação final efetiva 'Guarda Permanente'`);
-        }
+          reasons.push(`status atual inválido '${docData.status}'`);
       }
+
+
+      let effectiveDestinacao = docData.destinacaoFinalDisplay;
+      if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" ||
+          docData.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+        effectiveDestinacao = "Guarda Permanente";
+      }
+      if (effectiveDestinacao === "Guarda Permanente") {
+        isInvalid = true;
+        reasons.push(`destinação final efetiva 'Guarda Permanente'`);
+      }
+
       if (isInvalid) {
-        invalidDocEntries.push({ id: docId, reason: reasons.join('; ') });
+        invalidDocEntries.push({ id: docData.id, reason: reasons.join('; ') });
       }
     });
 
@@ -415,8 +468,22 @@ export default function ListagensEliminacaoPage() {
       updatedListagens = [...listagens, listagemDataToSave];
     }
     setListagens(updatedListagens);
+    
+    // Update the main simulated data if documents were effectively "eliminated" or status changed by Termo
+    if (listagemDataToSave.dataProducaoTermoEliminacao && listagemDataToSave.documentoIds.length > 0) {
+        setSimulatedDocuments(prevSimulated => 
+            prevSimulated.map(doc => 
+                listagemDataToSave.documentoIds.includes(doc.id) ? { ...doc, status: "Eliminado" as Documento['status'] } : doc
+            )
+        );
+         // And also update the initialSimulatedFullDocumentData if we want this change to be "permanent" for the session
+        // This part is tricky for a pure frontend simulation without a backend. For now, only `simulatedDocuments` state is updated.
+    }
+
+
     setSelectedRowIds([]);
     setIsDialogOpen(false);
+    // resetFormAndDialogState(); // Called when dialog is closed
   };
 
   const getSortableValue = (item: ListagemEliminacao, columnId: string): any => {
@@ -482,6 +549,7 @@ export default function ListagensEliminacaoPage() {
   const handleDelete = (listagemId: string) => {
     console.log("Excluir listagem:", listagemId);
     // setListagens(prev => prev.filter(l => l.id !== listagemId));
+    // setSimulatedDocuments( initialSimulatedFullDocumentData); // Potentially revert status of docs in this list
   };
 
   const getCellValueListagens = (item: ListagemEliminacao, column: ColumnConfigListagens) => {
@@ -591,7 +659,7 @@ export default function ListagensEliminacaoPage() {
 
                 {isDocumentTableVisible && (
                   <div className="mt-4">
-                    <Label className="text-md font-medium">Documentos a serem eliminados (Apenas status 'Arquivado')</Label>
+                    <Label className="text-md font-medium">Documentos (Serão listados apenas documentos com status "Arquivado" ou "Aguardando prazo para eliminação" que foram selecionados)</Label>
                     <Card className="mt-2">
                       <CardHeader className="p-4">
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -640,7 +708,7 @@ export default function ListagensEliminacaoPage() {
                               {documentsForDialog.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                            Nenhum documento "Arquivado" encontrado para os filtros aplicados.
+                                            Nenhum documento elegível ("Arquivado") encontrado para os filtros aplicados, ou nenhum documento selecionado teve seu status alterado.
                                         </TableCell>
                                     </TableRow>
                                 )}
