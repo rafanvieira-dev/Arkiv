@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ListagemEliminacao, Documento } from "@/types"; 
+import type { ListagemEliminacao, Documento } from "@/types";
 import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ClientSideDateFormatter } from "@/components/client-side-date-formatter"; // IMPORT ADDED
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -40,24 +40,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 type SimulatedDocumentForDialog = Pick<
-  Documento, 
-  'id' | 
-  'numeroDocumento' | 
-  'tipoDocumento' | 
-  'descricaoDocumento' | 
-  'nomePartePrincipal' | 
-  'dataAbrangente' | 
-  'classificacaoArquivisticaId' | 
-  'status' | 
-  'anoEliminacaoPrevisto' | 
-  'destinacaoFinalDisplay' | 
+  Documento,
+  'id' |
+  'numeroDocumento' |
+  'tipoDocumento' |
+  'descricaoDocumento' |
+  'nomePartePrincipal' |
+  'dataAbrangente' |
+  'classificacaoArquivisticaId' |
+  'status' |
+  'anoEliminacaoPrevisto' |
+  'destinacaoFinalDisplay' |
   'alteracaoDestinacaoFinal'
 >;
 
 const initialSimulatedFullDocumentData: SimulatedDocumentForDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" }, 
+  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C, referente a pedido de vista.", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
   { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E para desenvolvimento de software.", nomePartePrincipal: "Serviços de Consultoria Avançada Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
@@ -197,7 +197,7 @@ export default function ListagensEliminacaoPage() {
           checked={
             documentsForDialog.length > 0 &&
             selectedDialogDocIds.length === documentsForDialog.filter(doc => doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação").length &&
-            documentsForDialog.every(doc => 
+            documentsForDialog.every(doc =>
               (doc.status !== "Arquivado" && doc.status !== "Aguardando prazo para eliminação") || selectedDialogDocIds.includes(doc.id)
             )
           }
@@ -228,20 +228,20 @@ export default function ListagensEliminacaoPage() {
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { id: 'nomePartePrincipal', header: 'Partes', accessorKey: 'nomePartePrincipal', enableSorting: true },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },
-    { 
-      id: 'codigoClassificacao', 
-      header: 'Cód. Class.', 
-      accessorKey: 'classificacaoArquivisticaId', 
+    {
+      id: 'codigoClassificacao',
+      header: 'Cód. Class.',
+      accessorKey: 'classificacaoArquivisticaId',
       enableSorting: true,
       cellFormatter: (_, doc) => {
         const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
         return classificacao ? classificacao.codigo : "N/A";
-      } 
+      }
     },
-    { 
-      id: 'assuntoClassificacao', 
-      header: 'Assunto', 
-      accessorKey: 'classificacaoArquivisticaId', 
+    {
+      id: 'assuntoClassificacao',
+      header: 'Assunto',
+      accessorKey: 'classificacaoArquivisticaId',
       enableSorting: true,
       cellFormatter: (_, doc) => {
         const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
@@ -249,44 +249,45 @@ export default function ListagensEliminacaoPage() {
       }
     },
     { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', enableSorting: true },
-    { 
-      id: 'status', 
-      header: 'Status', 
-      accessorKey: 'status', 
-      enableSorting: true, 
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      enableSorting: true,
       cellFormatter: (value) => (
-        <Badge 
+        <Badge
           variant={
             value === 'Arquivado' ? 'secondary' :
-            value === 'Aguardando prazo para eliminação' ? 'default' : 
+            value === 'Aguardando prazo para eliminação' ? 'default' :
             value === 'Eliminado' ? 'destructive' :
-            'outline' 
+            'outline'
           }
-          className={ 
+          className={
             value === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
             value === 'Eliminado' ? '' : ''
           }
         >
           {value}
         </Badge>
-      ) 
+      )
     },
   ], [documentsForDialog, selectedDialogDocIds]);
 
 
   React.useEffect(() => {
     let filteredDocs = simulatedDocuments.filter(doc => {
-      const isSelected = selectedDialogDocIds.includes(doc.id);
-      const isEligibleForSelection = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
-      
-      let passesFilter = true;
-      if (dialogTableFilters.anoEliminacaoPrevisto) {
-        if (!doc.anoEliminacaoPrevisto || !doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto)) {
-          passesFilter = false; 
+        const isSelected = selectedDialogDocIds.includes(doc.id);
+
+        let passesTextFilters = true;
+        if (dialogTableFilters.anoEliminacaoPrevisto) {
+            if (!doc.anoEliminacaoPrevisto || !doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto)) {
+                passesTextFilters = false;
+            }
         }
-      }
-      // Show doc if it's eligible for selection and passes filters OR if it's already selected (and passes filters)
-      return (isEligibleForSelection && passesFilter) || (isSelected && passesFilter);
+        if (!passesTextFilters) return false;
+
+        const isEligibleForAdding = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
+        return isEligibleForAdding || isSelected;
     });
 
     if (dialogTableSortConfig.length > 0) {
@@ -302,7 +303,7 @@ export default function ListagensEliminacaoPage() {
             valA = (a as any)[sortConf.id];
             valB = (b as any)[sortConf.id];
           }
-          
+
           let comparisonResult = 0;
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
@@ -323,7 +324,7 @@ export default function ListagensEliminacaoPage() {
         if (newSorting[existingSortIndex].direction === 'asc') newSorting[existingSortIndex].direction = 'desc';
         else newSorting.splice(existingSortIndex, 1);
       } else {
-        newSorting = [{ id: columnId, direction: 'asc' }]; 
+        newSorting = [{ id: columnId, direction: 'asc' }];
       }
       return newSorting;
     });
@@ -345,11 +346,11 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
-    setSimulatedDocuments(initialSimulatedFullDocumentData.map(doc => ({ ...doc }))); 
+    setSimulatedDocuments(initialSimulatedFullDocumentData.map(doc => ({ ...doc })));
   };
 
   const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
-    let processedDocs = initialSimulatedFullDocumentData.map(doc => ({ ...doc })); 
+    let processedDocsInit = initialSimulatedFullDocumentData.map(doc => ({ ...doc }));
 
     if (listagem) {
       setIsEditing(true);
@@ -360,10 +361,9 @@ export default function ListagensEliminacaoPage() {
         dataProducaoListagem: listagem.dataProducaoListagem || new Date().toISOString(),
       });
       setSelectedDialogDocIds(listagem.documentoIds || []);
-      
-      // Process status changes based on existing dates when opening for edit
+
       if (listagem.dataPublicacaoEdital && listagem.documentoIds && listagem.documentoIds.length > 0) {
-        processedDocs = processedDocs.map(doc => {
+        processedDocsInit = processedDocsInit.map(doc => {
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Arquivado") {
             return { ...doc, status: "Aguardando prazo para eliminação" as Documento['status'] };
           }
@@ -371,30 +371,30 @@ export default function ListagensEliminacaoPage() {
         });
       }
       if (listagem.dataProducaoTermoEliminacao && listagem.documentoIds && listagem.documentoIds.length > 0) {
-         processedDocs = processedDocs.map(doc => { 
+         processedDocsInit = processedDocsInit.map(doc => {
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação") {
             return { ...doc, status: "Eliminado" as Documento['status'] };
           }
           return doc;
         });
       }
-      setSimulatedDocuments(processedDocs);
+      setSimulatedDocuments(processedDocsInit);
 
       if (listagem.documentoIds && listagem.documentoIds.length > 0) {
         setIsDocumentTableVisible(true);
       } else {
         setIsDocumentTableVisible(false);
       }
-    } else { // New listagem
+    } else {
       setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString() });
       setIsEditing(false);
       setEditingListagemId(null);
       setSelectedDialogDocIds([]);
-      setSimulatedDocuments(processedDocs); 
+      setSimulatedDocuments(processedDocsInit);
       setIsDocumentTableVisible(false);
     }
-    setDialogTableFilters({ anoEliminacaoPrevisto: "" }); // Reset filters for dialog table
-    setDialogTableSortConfig([]); // Reset sort for dialog table
+    setDialogTableFilters({ anoEliminacaoPrevisto: "" });
+    setDialogTableSortConfig([]);
     setIsDialogOpen(true);
   }, [setSimulatedDocuments, setIsEditing, setEditingListagemId, setFormState, setSelectedDialogDocIds, setIsDocumentTableVisible, setDialogTableFilters, setDialogTableSortConfig, setIsDialogOpen ]);
 
@@ -426,7 +426,7 @@ export default function ListagensEliminacaoPage() {
             return updatedDocs;
         });
     }
-    
+
     if (id === 'dataProducaoTermoEliminacao' && date) {
         setSimulatedDocuments(prevDocs => {
             let affectedCount = 0;
@@ -450,31 +450,19 @@ export default function ListagensEliminacaoPage() {
 
   const handleSaveChanges = () => {
     const invalidDocEntries: Array<{ id: string; reason: string }> = [];
-    
-    const finalSelectedDocsData = selectedDialogDocIds.map(id => 
-        simulatedDocuments.find(d => d.id === id) 
+
+    const finalSelectedDocsData = selectedDialogDocIds.map(id =>
+        simulatedDocuments.find(d => d.id === id)
     ).filter(Boolean) as SimulatedDocumentForDialog[];
 
 
     finalSelectedDocsData.forEach(docData => {
       let isInvalid = false;
       let reasons: string[] = [];
-      
+
       const isProcessedByEdital = formState.dataPublicacaoEdital && docData.status === "Aguardando prazo para eliminação";
       const isProcessedByTermo = formState.dataProducaoTermoEliminacao && docData.status === "Eliminado";
       const isStillArchived = docData.status === "Arquivado";
-
-      // Check if the document is in a valid state to be part of the list
-      // It should be either still "Arquivado" (will be processed by edital date), 
-      // "Aguardando prazo para eliminação" (will be processed by termo date),
-      // or already "Eliminado" (if termo date is set).
-      // Any other status or if it's "Arquivado" but edital date is not set implies potential issue
-      // However, the core validation is for "Guarda Permanente"
-      if (!isStillArchived && !isProcessedByEdital && !isProcessedByTermo) {
-          // This condition might be too strict if the user unsets a date.
-          // The primary concern for inclusion is its destination.
-      }
-
 
       let effectiveDestinacao = docData.destinacaoFinalDisplay;
       if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" ||
@@ -501,7 +489,7 @@ export default function ListagensEliminacaoPage() {
       });
       return;
     }
-    if (selectedDialogDocIds.length === 0 && !isEditing) { // Check if we are creating a new list and no docs are selected
+    if (selectedDialogDocIds.length === 0 && !isEditing) {
         toast({
             variant: "destructive",
             title: "Nenhum Documento Selecionado",
@@ -531,11 +519,9 @@ export default function ListagensEliminacaoPage() {
       updatedListagens = [...listagens, listagemDataToSave];
     }
     setListagens(updatedListagens);
-    
-    // Update the master simulatedDocuments list based on the saved listagem
-    // This ensures the main document list (if used elsewhere or for next open) reflects these changes
+
     if (listagemDataToSave.documentoIds.length > 0) {
-        setSimulatedDocuments(prevSimulatedGlobalDocs => 
+        setSimulatedDocuments(prevSimulatedGlobalDocs =>
             prevSimulatedGlobalDocs.map(globalDoc => {
                 if (listagemDataToSave.documentoIds.includes(globalDoc.id)) {
                     let newStatus = globalDoc.status;
@@ -567,7 +553,7 @@ export default function ListagensEliminacaoPage() {
       return value.length;
     }
     if (['dataProducaoListagem', 'dataPublicacaoEdital', 'dataProducaoTermoEliminacao'].includes(column.accessorKey as string) && typeof value === 'string') {
-      const parsedDate = Date.parse(value); // Use Date.parse for robust ISO parsing
+      const parsedDate = Date.parse(value);
       return !isNaN(parsedDate) ? new Date(parsedDate) : null;
     }
     return value;
@@ -676,7 +662,7 @@ export default function ListagensEliminacaoPage() {
                 </DialogDescription>
               </DialogHeader>
               <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
                     <div className="space-y-2">
                       <Label htmlFor="numeroListagem">Nº Listagem*</Label>
                       <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
@@ -713,7 +699,7 @@ export default function ListagensEliminacaoPage() {
                         placeholder="Selecione a data"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="observacoes">Observações</Label>
                       <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
                     </div>
@@ -734,7 +720,7 @@ export default function ListagensEliminacaoPage() {
 
                 {isDocumentTableVisible && (
                   <div className="mt-4">
-                    <Label className="text-md font-medium">Documentos (Serão listados apenas documentos com status "Arquivado" ou "Aguardando prazo para eliminação" que foram selecionados ou que se qualificam para inclusão)</Label>
+                    <Label className="text-md font-medium">Documentos</Label>
                     <Card className="mt-2">
                       <CardHeader className="p-4">
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -783,7 +769,7 @@ export default function ListagensEliminacaoPage() {
                               {documentsForDialog.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                            Nenhum documento elegível encontrado para os filtros aplicados, ou nenhum documento que já estava selecionado teve seu status alterado para um que seja visível.
+                                            Nenhum documento elegível encontrado para os filtros aplicados.
                                         </TableCell>
                                     </TableRow>
                                 )}
