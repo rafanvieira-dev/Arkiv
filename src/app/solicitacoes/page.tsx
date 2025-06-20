@@ -10,8 +10,7 @@ import type { Solicitacao, Documento } from "@/types";
 import { PlusCircle, Edit, Trash2, CheckCircle, XCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, ListFilter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { parseISO } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -41,10 +40,9 @@ type SimulatedDocumentForSolicitacaoDialog = Pick<Documento,
   'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa'
 >;
 
-// Simplified document data for selection in the dialog
 const simulatedAcervoDocumentos: SimulatedDocumentForSolicitacaoDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo referente à disputa contratual X.", status: "Arquivado", codigosCaixa: "CX001" },
-  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Solicitação de Informações", descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.", status: "Emprestado", codigosCaixa: "CX002" }, // Example of an already borrowed document
+  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Solicitação de Informações", descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.", status: "Emprestado", codigosCaixa: "CX002" },
   { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Comunicação Interna", descricaoDocumento: "Memorando sobre nova política interna.", status: "Arquivado", codigosCaixa: "CX001, CX003" },
   { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.", status: "Eliminado", codigosCaixa: "" },
   { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial do processo, aguardando prazo para eliminação.", status: "Aguardando prazo para eliminação", codigosCaixa: "CX-DIG-010" },
@@ -64,7 +62,7 @@ const initialFormStateSolicitacao: Partial<Solicitacao> = {
 };
 
 type DialogDocSortConfig = { id: keyof SimulatedDocumentForSolicitacaoDialog | string; direction: 'asc' | 'desc'; };
-type DialogDocFilters = { numeroDocumento: string; descricaoDocumento: string; };
+type DialogDocFilters = { searchTerm: string; };
 
 export default function SolicitacoesPage() {
   const { toast } = useToast();
@@ -74,24 +72,30 @@ export default function SolicitacoesPage() {
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Solicitacao>>(initialFormStateSolicitacao);
-  const [isEditing, setIsEditing] = React.useState(false); // For future edit functionality
-  const [editingId, setEditingId] = React.useState<string | null>(null); // For future edit functionality
+  const [isEditing, setIsEditing] = React.useState(false); 
+  const [editingId, setEditingId] = React.useState<string | null>(null); 
 
   const [documentsForDialog, setDocumentsForDialog] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>([]);
   const [selectedDocIdsInDialog, setSelectedDocIdsInDialog] = React.useState<string[]>([]);
-  const [dialogDocFilters, setDialogDocFilters] = React.useState<DialogDocFilters>({ numeroDocumento: "", descricaoDocumento: "" });
+  const [dialogDocFilters, setDialogDocFilters] = React.useState<DialogDocFilters>({ searchTerm: "" });
   const [dialogDocSortConfig, setDialogDocSortConfig] = React.useState<DialogDocSortConfig[]>([]);
   const [isDocumentSelectionVisible, setIsDocumentSelectionVisible] = React.useState(false);
 
   React.useEffect(() => {
-    setDisplayedSolicitacoes(solicitacoes); // Simplistic update for now
+    setDisplayedSolicitacoes(solicitacoes); 
   }, [solicitacoes]);
   
   React.useEffect(() => {
+    const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
     let filteredDocs = simulatedAcervoDocumentos.filter(doc => {
-      const numeroMatch = !dialogDocFilters.numeroDocumento || (doc.numeroDocumento && doc.numeroDocumento.toLowerCase().includes(dialogDocFilters.numeroDocumento.toLowerCase()));
-      const descricaoMatch = !dialogDocFilters.descricaoDocumento || (doc.descricaoDocumento && doc.descricaoDocumento.toLowerCase().includes(dialogDocFilters.descricaoDocumento.toLowerCase()));
-      return numeroMatch && descricaoMatch;
+      if (!lowerSearchTerm) return true; // If no search term, include all
+
+      const numeroMatch = doc.numeroDocumento && doc.numeroDocumento.toLowerCase().includes(lowerSearchTerm);
+      const tipoMatch = doc.tipoDocumento && doc.tipoDocumento.toLowerCase().includes(lowerSearchTerm);
+      const descricaoMatch = doc.descricaoDocumento && doc.descricaoDocumento.toLowerCase().includes(lowerSearchTerm);
+      const caixaMatch = doc.codigosCaixa && doc.codigosCaixa.toLowerCase().includes(lowerSearchTerm);
+
+      return numeroMatch || tipoMatch || descricaoMatch || caixaMatch;
     });
 
     if (dialogDocSortConfig.length > 0) {
@@ -117,14 +121,13 @@ export default function SolicitacoesPage() {
     setIsEditing(false);
     setEditingId(null);
     setSelectedDocIdsInDialog([]);
-    setDialogDocFilters({ numeroDocumento: "", descricaoDocumento: "" });
+    setDialogDocFilters({ searchTerm: "" });
     setDialogDocSortConfig([]);
     setIsDocumentSelectionVisible(false);
   };
 
   const handleOpenDialog = (solicitacao?: Solicitacao) => {
     if (solicitacao) {
-      // Logic for editing (future)
       setIsEditing(true);
       setEditingId(solicitacao.id);
       setFormState(solicitacao);
@@ -167,7 +170,6 @@ export default function SolicitacoesPage() {
       documentoIds: selectedDocIdsInDialog,
       status: formState.status || "Pendente",
       observacoes: formState.observacoes,
-      // dataAtendimento and dataDevolucao will be set later by other actions
     };
 
     if (isEditing && editingId) {
@@ -181,8 +183,8 @@ export default function SolicitacoesPage() {
   };
   
   const handleDialogDocFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setDialogDocFilters(prev => ({ ...prev, [name]: value }));
+    const { value } = e.target;
+    setDialogDocFilters({ searchTerm: value });
   };
 
   const handleDialogDocSort = (columnId: keyof SimulatedDocumentForSolicitacaoDialog | string) => {
@@ -209,13 +211,10 @@ export default function SolicitacoesPage() {
   const numSelected = selectedRowIds.length;
   
   const isDocumentSelectable = (doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
-    // Only "Arquivado" documents can be requested
     if (doc.status !== 'Arquivado') {
       return false;
     }
     
-    // Check if document is already in an active (Pendente or Atendida) solicitation,
-    // excluding the current solicitation if it's being edited.
     const isBorrowedInActiveSolicitation = solicitacoes.some(sol => 
         (sol.status === 'Pendente' || sol.status === 'Atendida') &&
         sol.documentoIds.includes(doc.id) &&
@@ -289,18 +288,11 @@ export default function SolicitacoesPage() {
                     <CardHeader className="p-4">
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Input 
-                          name="numeroDocumento" 
-                          placeholder="Filtrar por Nº Documento" 
-                          value={dialogDocFilters.numeroDocumento} 
+                          name="searchTerm" 
+                          placeholder="Pesquisar por nº, tipo, descrição, caixa..." 
+                          value={dialogDocFilters.searchTerm} 
                           onChange={handleDialogDocFilterChange}
-                          className="w-full sm:w-auto"
-                        />
-                        <Input 
-                          name="descricaoDocumento" 
-                          placeholder="Filtrar por Descrição" 
-                          value={dialogDocFilters.descricaoDocumento}
-                          onChange={handleDialogDocFilterChange}
-                          className="w-full sm:w-auto flex-grow"
+                          className="w-full"
                         />
                       </div>
                     </CardHeader>
@@ -466,7 +458,7 @@ export default function SolicitacoesPage() {
                       variant={
                         item.status === 'Pendente' ? 'default' :
                         item.status === 'Atendida' ? 'secondary' :
-                        item.status === 'Devolvido' ? 'outline' : 'destructive' // 'Cancelada' or other errors
+                        item.status === 'Devolvido' ? 'outline' : 'destructive' 
                       }
                       className={
                         item.status === 'Pendente' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
@@ -529,3 +521,4 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
+
