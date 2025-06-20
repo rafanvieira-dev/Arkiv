@@ -359,7 +359,24 @@ type ColumnConfig = {
 
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
-  { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Emprestado' ? 'outline' : value === 'Eliminado' ? 'destructive' : 'default' }>{value || 'N/A'}</Badge> },
+  { 
+    id: 'status', 
+    header: 'Status', 
+    accessorKey: 'status', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value) => {
+      if (value === 'Aguardando prazo para eliminação') {
+        return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">{value || 'N/A'}</Badge>;
+      }
+      return <Badge variant={
+        value === 'Arquivado' ? 'secondary' :
+        value === 'Emprestado' ? 'outline' :
+        value === 'Eliminado' ? 'destructive' :
+        'default' 
+      }>{value || 'N/A'}</Badge>;
+    } 
+  },
   { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: true, enableSorting: true },
   { id: 'origem', header: 'Origem', accessorKey: 'origem', defaultVisible: true, enableSorting: true },
   { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
@@ -1475,6 +1492,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
