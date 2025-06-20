@@ -369,8 +369,10 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
       if (value === 'Aguardando prazo para eliminação') {
         return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">{value || 'N/A'}</Badge>;
       }
+      if (value === 'Arquivado') {
+        return <Badge className="border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80">{value || 'N/A'}</Badge>;
+      }
       return <Badge variant={
-        value === 'Arquivado' ? 'secondary' :
         value === 'Emprestado' ? 'outline' :
         value === 'Eliminado' ? 'destructive' :
         'default' 
@@ -1492,6 +1494,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
