@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge"; // Added import for Badge
 
 type SimulatedDocumentForDialog = Pick<
   Documento, 
@@ -255,11 +256,7 @@ export default function ListagensEliminacaoPage() {
       const isEligibleForInitialSelection = doc.status === "Arquivado";
 
       if (!isCurrentlySelectedAndNowAwaitingElimination && !isEligibleForInitialSelection) {
-        // If not part of current selection cycle and not "Arquivado", exclude
         if(selectedDialogDocIds.includes(doc.id) && doc.status !== "Aguardando prazo para eliminação"){
-             //This case means it was selected but its status is neither "Arquivado" nor "Aguardando...", so it's an invalid prior selection.
-             //Or it means it was selected, its status was "Arquivado", dataPubEdital was NOT set, and then another doc caused a re-render.
-             //We keep it if it's in selectedDialogDocIds to allow unchecking.
         } else if (!selectedDialogDocIds.includes(doc.id) && !isEligibleForInitialSelection) {
              return false;
         }
@@ -327,12 +324,10 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
-    // Reset simulatedDocuments to its initial state if needed, or fetch fresh if it were a real DB
     setSimulatedDocuments(initialSimulatedFullDocumentData); 
   };
 
   const handleOpenDialog = (listagem?: ListagemEliminacao) => {
-    // Crucially, reset or re-fetch simulatedDocuments to ensure fresh state for each dialog opening
     setSimulatedDocuments(initialSimulatedFullDocumentData);
 
     if (listagem) {
@@ -348,7 +343,6 @@ export default function ListagensEliminacaoPage() {
         setIsDocumentTableVisible(false);
       }
     } else {
-      // For new listagem, ensure formState is reset but selectedDialogDocIds is also empty
       setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString() });
       setIsEditing(false);
       setEditingListagemId(null);
@@ -383,8 +377,6 @@ export default function ListagensEliminacaoPage() {
         });
     }
     if (id === 'dataProducaoTermoEliminacao' && date && selectedDialogDocIds.length > 0) {
-        // Logic for status change to "Eliminado" would go here if needed
-        // For now, just logging the simulated action for the Termo
         console.warn(`[SIMULAÇÃO] Os seguintes documentos teriam seu status alterado para "Eliminado" na base de dados principal: ${selectedDialogDocIds.join(', ')}. Esta é uma simulação frontend.`);
     }
   };
@@ -401,10 +393,8 @@ export default function ListagensEliminacaoPage() {
       let isInvalid = false;
       let reasons: string[] = [];
       
-      // Status validation: ensure it was originally "Arquivado" or became "Aguardando..."
       const originalDoc = initialSimulatedFullDocumentData.find(d => d.id === docData.id);
       if (originalDoc && originalDoc.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
-          // This case should ideally not happen if table filtering and status updates are correct
           isInvalid = true;
           reasons.push(`status inicial inválido '${originalDoc.status}'`);
       } else if (docData.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
@@ -469,21 +459,17 @@ export default function ListagensEliminacaoPage() {
     }
     setListagens(updatedListagens);
     
-    // Update the main simulated data if documents were effectively "eliminated" or status changed by Termo
     if (listagemDataToSave.dataProducaoTermoEliminacao && listagemDataToSave.documentoIds.length > 0) {
         setSimulatedDocuments(prevSimulated => 
             prevSimulated.map(doc => 
                 listagemDataToSave.documentoIds.includes(doc.id) ? { ...doc, status: "Eliminado" as Documento['status'] } : doc
             )
         );
-         // And also update the initialSimulatedFullDocumentData if we want this change to be "permanent" for the session
-        // This part is tricky for a pure frontend simulation without a backend. For now, only `simulatedDocuments` state is updated.
     }
 
 
     setSelectedRowIds([]);
     setIsDialogOpen(false);
-    // resetFormAndDialogState(); // Called when dialog is closed
   };
 
   const getSortableValue = (item: ListagemEliminacao, columnId: string): any => {
@@ -548,8 +534,6 @@ export default function ListagensEliminacaoPage() {
 
   const handleDelete = (listagemId: string) => {
     console.log("Excluir listagem:", listagemId);
-    // setListagens(prev => prev.filter(l => l.id !== listagemId));
-    // setSimulatedDocuments( initialSimulatedFullDocumentData); // Potentially revert status of docs in this list
   };
 
   const getCellValueListagens = (item: ListagemEliminacao, column: ColumnConfigListagens) => {
