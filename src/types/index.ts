@@ -1,4 +1,5 @@
 
+
 export interface ParteDocumento {
   id: string; // UUID for the part entry itself
   nome: string;
@@ -134,4 +135,5 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+
 
