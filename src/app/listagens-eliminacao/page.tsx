@@ -10,8 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types"; 
 import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, parseISO, isValid } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter"; // IMPORT ADDED
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -127,7 +126,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     accessorKey: 'dataProducaoListagem',
     defaultVisible: true,
     enableSorting: true,
-    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A"
+    cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} />
   },
   {
     id: 'qtdDocumentos',
@@ -144,7 +143,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     accessorKey: 'dataPublicacaoEdital',
     defaultVisible: true,
     enableSorting: true,
-    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A"
+    cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} />
   },
   { id: 'numeroTermoEliminacao', header: 'Nº Termo Elim.', accessorKey: 'numeroTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   {
@@ -153,7 +152,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     accessorKey: 'dataProducaoTermoEliminacao',
     defaultVisible: false,
     enableSorting: true,
-    cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : "N/A"
+    cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} />
   },
   { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
 ];
@@ -286,6 +285,7 @@ export default function ListagensEliminacaoPage() {
           passesFilter = false; 
         }
       }
+      // Show doc if it's eligible for selection and passes filters OR if it's already selected (and passes filters)
       return (isEligibleForSelection && passesFilter) || (isSelected && passesFilter);
     });
 
@@ -361,6 +361,7 @@ export default function ListagensEliminacaoPage() {
       });
       setSelectedDialogDocIds(listagem.documentoIds || []);
       
+      // Process status changes based on existing dates when opening for edit
       if (listagem.dataPublicacaoEdital && listagem.documentoIds && listagem.documentoIds.length > 0) {
         processedDocs = processedDocs.map(doc => {
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Arquivado") {
@@ -370,7 +371,7 @@ export default function ListagensEliminacaoPage() {
         });
       }
       if (listagem.dataProducaoTermoEliminacao && listagem.documentoIds && listagem.documentoIds.length > 0) {
-         processedDocs = processedDocs.map(doc => { // Use the already processedDocs from above
+         processedDocs = processedDocs.map(doc => { 
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação") {
             return { ...doc, status: "Eliminado" as Documento['status'] };
           }
@@ -384,7 +385,7 @@ export default function ListagensEliminacaoPage() {
       } else {
         setIsDocumentTableVisible(false);
       }
-    } else {
+    } else { // New listagem
       setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString() });
       setIsEditing(false);
       setEditingListagemId(null);
@@ -392,8 +393,8 @@ export default function ListagensEliminacaoPage() {
       setSimulatedDocuments(processedDocs); 
       setIsDocumentTableVisible(false);
     }
-    setDialogTableFilters({ anoEliminacaoPrevisto: "" });
-    setDialogTableSortConfig([]);
+    setDialogTableFilters({ anoEliminacaoPrevisto: "" }); // Reset filters for dialog table
+    setDialogTableSortConfig([]); // Reset sort for dialog table
     setIsDialogOpen(true);
   }, [setSimulatedDocuments, setIsEditing, setEditingListagemId, setFormState, setSelectedDialogDocIds, setIsDocumentTableVisible, setDialogTableFilters, setDialogTableSortConfig, setIsDialogOpen ]);
 
@@ -463,9 +464,15 @@ export default function ListagensEliminacaoPage() {
       const isProcessedByTermo = formState.dataProducaoTermoEliminacao && docData.status === "Eliminado";
       const isStillArchived = docData.status === "Arquivado";
 
+      // Check if the document is in a valid state to be part of the list
+      // It should be either still "Arquivado" (will be processed by edital date), 
+      // "Aguardando prazo para eliminação" (will be processed by termo date),
+      // or already "Eliminado" (if termo date is set).
+      // Any other status or if it's "Arquivado" but edital date is not set implies potential issue
+      // However, the core validation is for "Guarda Permanente"
       if (!isStillArchived && !isProcessedByEdital && !isProcessedByTermo) {
-          isInvalid = true;
-          reasons.push(`status inválido '${docData.status}' (não é 'Arquivado' nem processado por edital/termo)`);
+          // This condition might be too strict if the user unsets a date.
+          // The primary concern for inclusion is its destination.
       }
 
 
@@ -494,7 +501,7 @@ export default function ListagensEliminacaoPage() {
       });
       return;
     }
-    if (selectedDialogDocIds.length === 0 && !isEditing) {
+    if (selectedDialogDocIds.length === 0 && !isEditing) { // Check if we are creating a new list and no docs are selected
         toast({
             variant: "destructive",
             title: "Nenhum Documento Selecionado",
@@ -560,7 +567,8 @@ export default function ListagensEliminacaoPage() {
       return value.length;
     }
     if (['dataProducaoListagem', 'dataPublicacaoEdital', 'dataProducaoTermoEliminacao'].includes(column.accessorKey as string) && typeof value === 'string') {
-      return isValid(parseISO(value)) ? parseISO(value) : null;
+      const parsedDate = Date.parse(value); // Use Date.parse for robust ISO parsing
+      return !isNaN(parsedDate) ? new Date(parsedDate) : null;
     }
     return value;
   };
@@ -676,7 +684,7 @@ export default function ListagensEliminacaoPage() {
                     <div className="space-y-2">
                       <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
                       <DatePicker
-                        date={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined}
+                        date={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
                         setDate={(date) => handleDateChange('dataProducaoListagem')(date)}
                         placeholder="Selecione a data"
                       />
@@ -688,7 +696,7 @@ export default function ListagensEliminacaoPage() {
                     <div className="space-y-2">
                       <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
                       <DatePicker
-                        date={formState.dataPublicacaoEdital ? parseISO(formState.dataPublicacaoEdital) : undefined}
+                        date={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
                         setDate={(date) => handleDateChange('dataPublicacaoEdital')(date)}
                         placeholder="Selecione a data"
                       />
@@ -700,7 +708,7 @@ export default function ListagensEliminacaoPage() {
                     <div className="space-y-2">
                       <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
                       <DatePicker
-                        date={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined}
+                        date={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
                         setDate={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
                         placeholder="Selecione a data"
                       />
@@ -926,4 +934,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-

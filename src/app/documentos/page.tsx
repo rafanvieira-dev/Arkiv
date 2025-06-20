@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, parseISO, isValid, getYear } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getYear, parseISO, isValid } from 'date-fns'; // Removed format and ptBR, will use ClientSideDateFormatter
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter"; // IMPORT ADDED
 import {
   Dialog,
   DialogContent,
@@ -474,7 +474,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
   { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: false, enableSorting: true },
   { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: false, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
-  { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
+  { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
   { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: false, enableSorting: true },
   { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: false, enableSorting: true },
   { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: false, enableSorting: true },
@@ -484,7 +484,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: false, enableSorting: true },
   { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true },
   { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: false, enableSorting: true },
-  { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value && isValid(parseISO(value)) ? format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A' },
+  { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
   { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: false, enableSorting: true },
   { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: false, enableSorting: true, cellFormatter: (value) => {
       const classif = placeholderClassificacoesSimulado.find(c => c.id === value);
@@ -933,7 +933,8 @@ export default function DocumentosPage() {
     const value = doc[column.accessorKey as keyof Documento];
 
     if ((column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') && value && typeof value === 'string') {
-      return isValid(parseISO(value)) ? parseISO(value) : null;
+      const parsedDate = Date.parse(value); // Use Date.parse for robust ISO parsing
+      return !isNaN(parsedDate) ? new Date(parsedDate) : null;
     }
     return value;
   };
@@ -1629,6 +1630,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
