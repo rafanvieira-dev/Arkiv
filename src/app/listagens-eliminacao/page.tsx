@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge"; // Added import for Badge
+import { Badge } from "@/components/ui/badge";
 
 type SimulatedDocumentForDialog = Pick<
   Documento, 
@@ -250,22 +250,16 @@ export default function ListagensEliminacaoPage() {
 
   React.useEffect(() => {
     let filteredDocs = simulatedDocuments.filter(doc => {
-      const isCurrentlySelectedAndNowAwaitingElimination = 
-        selectedDialogDocIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação";
-      
-      const isEligibleForInitialSelection = doc.status === "Arquivado";
-
-      if (!isCurrentlySelectedAndNowAwaitingElimination && !isEligibleForInitialSelection) {
-        if(selectedDialogDocIds.includes(doc.id) && doc.status !== "Aguardando prazo para eliminação"){
-        } else if (!selectedDialogDocIds.includes(doc.id) && !isEligibleForInitialSelection) {
-             return false;
-        }
-      }
+      const isSelected = selectedDialogDocIds.includes(doc.id);
+      const isEligibleForSelection = doc.status === "Arquivado"; 
+      const isRelevantDueToSelection = isSelected; 
 
       if (dialogTableFilters.anoEliminacaoPrevisto) {
-        return doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto);
+        if (!doc.anoEliminacaoPrevisto || !doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto)) {
+          return false; 
+        }
       }
-      return true;
+      return isEligibleForSelection || isRelevantDueToSelection;
     });
 
     if (dialogTableSortConfig.length > 0) {
@@ -327,16 +321,29 @@ export default function ListagensEliminacaoPage() {
     setSimulatedDocuments(initialSimulatedFullDocumentData); 
   };
 
-  const handleOpenDialog = (listagem?: ListagemEliminacao) => {
-    setSimulatedDocuments(initialSimulatedFullDocumentData);
+  const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
+    let baseDocs = [...initialSimulatedFullDocumentData];
 
     if (listagem) {
       setIsEditing(true);
       setEditingListagemId(listagem.id);
       setFormState({
+        ...initialFormState,
         ...listagem,
+        dataProducaoListagem: listagem.dataProducaoListagem || new Date().toISOString(),
       });
       setSelectedDialogDocIds(listagem.documentoIds || []);
+
+      if (listagem.dataPublicacaoEdital && listagem.documentoIds && listagem.documentoIds.length > 0) {
+        baseDocs = baseDocs.map(doc => {
+          if (listagem.documentoIds.includes(doc.id) && doc.status === "Arquivado") {
+            return { ...doc, status: "Aguardando prazo para eliminação" as Documento['status'] };
+          }
+          return doc;
+        });
+      }
+      setSimulatedDocuments(baseDocs);
+
       if (listagem.documentoIds && listagem.documentoIds.length > 0) {
         setIsDocumentTableVisible(true);
       } else {
@@ -347,12 +354,14 @@ export default function ListagensEliminacaoPage() {
       setIsEditing(false);
       setEditingListagemId(null);
       setSelectedDialogDocIds([]);
+      setSimulatedDocuments(baseDocs);
       setIsDocumentTableVisible(false);
     }
-    setDialogTableFilters({ anoEliminacaoPrevisto: "" }); 
-    setDialogTableSortConfig([]); 
+    setDialogTableFilters({ anoEliminacaoPrevisto: "" });
+    setDialogTableSortConfig([]);
     setIsDialogOpen(true);
-  };
+  }, [setSimulatedDocuments, setIsEditing, setEditingListagemId, setFormState, setSelectedDialogDocIds, setIsDocumentTableVisible, setDialogTableFilters, setDialogTableSortConfig, setIsDialogOpen ]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -373,7 +382,10 @@ export default function ListagensEliminacaoPage() {
         );
         toast({
             title: "Status dos Documentos Atualizado",
-            description: `${selectedDialogDocIds.length} documento(s) selecionado(s) tiveram seu status alterado para "Aguardando prazo para eliminação".`,
+            description: `${selectedDialogDocIds.filter(docId => {
+                const doc = simulatedDocuments.find(d => d.id === docId);
+                return doc && doc.status === "Arquivado";
+            }).length} documento(s) selecionado(s) tiveram seu status alterado para "Aguardando prazo para eliminação".`,
         });
     }
     if (id === 'dataProducaoTermoEliminacao' && date && selectedDialogDocIds.length > 0) {
@@ -393,13 +405,9 @@ export default function ListagensEliminacaoPage() {
       let isInvalid = false;
       let reasons: string[] = [];
       
-      const originalDoc = initialSimulatedFullDocumentData.find(d => d.id === docData.id);
-      if (originalDoc && originalDoc.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
+      if (docData.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
           isInvalid = true;
-          reasons.push(`status inicial inválido '${originalDoc.status}'`);
-      } else if (docData.status !== "Arquivado" && docData.status !== "Aguardando prazo para eliminação") {
-          isInvalid = true;
-          reasons.push(`status atual inválido '${docData.status}'`);
+          reasons.push(`status inválido '${docData.status}' (esperado 'Arquivado' ou 'Aguardando prazo para eliminação')`);
       }
 
 
