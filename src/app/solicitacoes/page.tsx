@@ -209,15 +209,19 @@ export default function SolicitacoesPage() {
   const numSelected = selectedRowIds.length;
   
   const isDocumentSelectable = (doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
-    // Cannot request eliminated documents
-    if (doc.status === 'Eliminado') return false;
+    // Only "Arquivado" documents can be requested
+    if (doc.status !== 'Arquivado') {
+      return false;
+    }
     
-    // Check if document is already in an active (Pendente or Atendida) solicitation
+    // Check if document is already in an active (Pendente or Atendida) solicitation,
+    // excluding the current solicitation if it's being edited.
     const isBorrowedInActiveSolicitation = solicitacoes.some(sol => 
         (sol.status === 'Pendente' || sol.status === 'Atendida') &&
         sol.documentoIds.includes(doc.id) &&
-        (!editingId || sol.id !== editingId) // Exclude current solicitation if editing
+        (!editingId || sol.id !== editingId) 
     );
+    
     return !isBorrowedInActiveSolicitation;
   };
 
@@ -307,11 +311,12 @@ export default function SolicitacoesPage() {
                             <TableRow>
                               <TableHead className="py-1 px-2 w-10 sticky left-0 bg-card z-10">
                                 <Checkbox
-                                  checked={documentsForDialog.length > 0 && documentsForDialog.every(doc => !isDocumentSelectable(doc) || selectedDocIdsInDialog.includes(doc.id))}
+                                  checked={documentsForDialog.length > 0 && documentsForDialog.filter(isDocumentSelectable).length > 0 && documentsForDialog.filter(isDocumentSelectable).every(doc => selectedDocIdsInDialog.includes(doc.id))}
                                   onCheckedChange={(value) => {
                                     const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
                                     setSelectedDocIdsInDialog(value ? selectableIds : []);
                                   }}
+                                  disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
                                 />
                               </TableHead>
                               <TableHead className="py-1 px-2 sticky left-12 bg-card z-10">
@@ -371,8 +376,9 @@ export default function SolicitacoesPage() {
                                         'outline'
                                       }
                                       className={
-                                        doc.status === 'Emprestado' ? 'bg-orange-500 text-white' :
-                                        doc.status === 'Aguardando prazo para eliminação' ? 'bg-yellow-500 text-white' : ''
+                                        doc.status === 'Emprestado' ? 'border-transparent bg-orange-500 text-orange-50 hover:bg-orange-500/80 dark:bg-orange-600 dark:text-orange-50 dark:hover:bg-orange-600/80' :
+                                        doc.status === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
+                                        doc.status === 'Arquivado' ? 'border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80' : ''
                                       }
                                     >
                                       {doc.status}
@@ -463,10 +469,10 @@ export default function SolicitacoesPage() {
                         item.status === 'Devolvido' ? 'outline' : 'destructive' // 'Cancelada' or other errors
                       }
                       className={
-                        item.status === 'Pendente' ? 'bg-yellow-500 text-white hover:bg-yellow-500/90' :
-                        item.status === 'Atendida' ? 'bg-green-500 text-white hover:bg-green-500/90' :
-                        item.status === 'Devolvido' ? 'bg-blue-500 text-white hover:bg-blue-500/90' :
-                        item.status === 'Cancelada' ? 'bg-red-500 text-white hover:bg-red-500/90' : ''
+                        item.status === 'Pendente' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
+                        item.status === 'Atendida' ? 'border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80' :
+                        item.status === 'Devolvido' ? 'border-transparent bg-blue-500 text-blue-50 hover:bg-blue-500/80 dark:bg-blue-600 dark:text-blue-50 dark:hover:bg-blue-600/80' :
+                        item.status === 'Cancelada' ? 'border-transparent bg-red-500 text-red-50 hover:bg-red-500/80 dark:bg-red-600 dark:text-red-50 dark:hover:bg-red-600/80' : ''
                       }
                     >
                       {item.status}
@@ -523,4 +529,3 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
-
