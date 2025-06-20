@@ -70,17 +70,17 @@ const simulatedListagensData: ListagemEliminacao[] = [
     numeroListagem: "LE-2023-001", 
     documentoIds: ["DOC001", "DOC007"], 
     dataPublicacaoEdital: new Date("2023-10-15").toISOString(),
-    dataProducaoListagem: new Date("2023-09-30").toISOString(), // Added for completeness
-    numeroEditalCiencia: "EDITAL-005/2023", // Added for completeness
-    numeroTermoEliminacao: "TE-2023-001", // Added for completeness
-    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString() // Added this crucial field
+    dataProducaoListagem: new Date("2023-09-30").toISOString(),
+    numeroEditalCiencia: "EDITAL-005/2023",
+    numeroTermoEliminacao: "TE-2023-001",
+    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString()
   },
   { 
     id: "LE002", 
     numeroListagem: "LE-2024-001", 
     documentoIds: ["DOC008"], 
     dataPublicacaoEdital: undefined,
-    dataProducaoListagem: new Date("2024-02-10").toISOString() // Added for completeness
+    dataProducaoListagem: new Date("2024-02-10").toISOString()
   },
 ];
 
@@ -568,8 +568,10 @@ export default function DocumentosPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
 
  React.useEffect(() => {
-    const processedDocs = placeholderDocumentos.map(doc => {
-      let currentDocStatus = doc.status; 
+    const processedDocs = placeholderDocumentos.map(originalDoc => {
+      const doc = {...originalDoc}; // Create a mutable copy
+      let currentDocStatus = doc.status;
+      let updatedCodigosCaixa = doc.codigosCaixa;
 
       if (doc.numeroListagemEliminacao) {
         const listagem = simulatedListagensData.find(
@@ -577,15 +579,22 @@ export default function DocumentosPage() {
         );
 
         if (listagem && listagem.documentoIds && listagem.documentoIds.includes(doc.id)) {
-          if (listagem.dataPublicacaoEdital && doc.status === "Arquivado") {
+          // First, check for Edital publication
+          if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
             currentDocStatus = "Aguardando prazo para eliminação";
           }
+          // Then, check for Termo production, based on potentially updated status
           if (listagem.dataProducaoTermoEliminacao && currentDocStatus === "Aguardando prazo para eliminação") {
             currentDocStatus = "Eliminado";
           }
         }
       }
-      return { ...doc, status: currentDocStatus as Documento['status'] };
+      
+      if (currentDocStatus === "Eliminado") {
+        updatedCodigosCaixa = ""; 
+      }
+
+      return { ...doc, status: currentDocStatus as Documento['status'], codigosCaixa: updatedCodigosCaixa };
     });
     setMasterDocumentList(processedDocs);
   }, []);
@@ -1650,6 +1659,8 @@ export default function DocumentosPage() {
     
 
     
+
+
 
 
 
