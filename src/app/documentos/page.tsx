@@ -66,9 +66,9 @@ const placeholderClassificacoesSimulado = [
 
 // Simplified version of ListagemEliminacao for this page's context
 // We only need numeroListagem and documentoIds for the linking functionality
-const simulatedListagensData: Array<Pick<SimpListagemEliminacao, 'id' | 'numeroListagem' | 'documentoIds'>> = [
-  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"] },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"] },
+const simulatedListagensData: Array<Pick<SimpListagemEliminacao, 'id' | 'numeroListagem' | 'documentoIds' | 'dataPublicacaoEdital'>> = [
+  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"], dataPublicacaoEdital: new Date("2023-10-15").toISOString() },
+  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"], dataPublicacaoEdital: undefined },
 ];
 
 
@@ -285,7 +285,7 @@ const placeholderDocumentos: Documento[] = [
     dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
   },
   { 
-    id: "DOC007", // Added to LE-2023-001
+    id: "DOC007", 
     status: "Arquivado", 
     orgao: "TRF2", 
     origem: "Vara Cível", 
@@ -321,7 +321,7 @@ const placeholderDocumentos: Documento[] = [
     dataCadastro: new Date("2020-07-01T10:00:00Z").toISOString(), 
   },
   { 
-    id: "DOC008", // Added to LE-2024-001
+    id: "DOC008", 
     status: "Aguardando prazo para eliminação", 
     orgao: "SJRJ", 
     origem: "Juizado Especial", 
@@ -508,7 +508,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
     cellFormatter: (value, doc) => {
       if (!value) return "N/A";
       const listagem = simulatedListagensData.find(l => l.numeroListagem === value);
-      if (!listagem || !listagem.documentoIds) return value; // Fallback if list not found or has no docs
+      if (!listagem || !listagem.documentoIds) return value; 
 
       return (
         <Link 
@@ -535,7 +535,7 @@ export default function DocumentosPage() {
   const docIdsFromListagemForTitle = listagemDocIdsParam ? listagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
   const isFilteredByListagem = !!listagemDocIdsParam && docIdsFromListagemForTitle.length > 0;
 
-
+  const [masterDocumentList, setMasterDocumentList] = React.useState<Documento[]>([]);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
@@ -545,7 +545,7 @@ export default function DocumentosPage() {
   const [outroTipoParte, setOutroTipoParte] = React.useState("");
   
   const [filters, setFilters] = React.useState(initialFiltersState);
-  const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>(placeholderDocumentos);
+  const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
@@ -553,6 +553,22 @@ export default function DocumentosPage() {
   );
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    const processedDocs = placeholderDocumentos.map(doc => {
+      let currentDoc = { ...doc }; 
+      if (currentDoc.numeroListagemEliminacao) {
+        const listagem = simulatedListagensData.find(
+          l => l.numeroListagem === currentDoc.numeroListagemEliminacao
+        );
+        if (listagem && listagem.documentoIds && listagem.documentoIds.includes(currentDoc.id) && listagem.dataPublicacaoEdital && currentDoc.status === "Arquivado") {
+          currentDoc.status = "Aguardando prazo para eliminação";
+        }
+      }
+      return currentDoc;
+    });
+    setMasterDocumentList(processedDocs);
+  }, []);
 
 
   React.useEffect(() => {
@@ -686,18 +702,20 @@ export default function DocumentosPage() {
       alteracaoDestinacaoFinal: formState.alteracaoDestinacaoFinal || 'Não Alterar',
       segredoJustica: formState.segredoJustica || 'Não',
       grauSigilo: formState.grauSigilo || 'Ostensivo',
-      numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, // Ensure it's undefined if empty
+      numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, 
     };
     
-    const docIndex = placeholderDocumentos.findIndex(doc => doc.id === finalFormState.id);
-    if (docIndex > -1) {
-      placeholderDocumentos[docIndex] = finalFormState;
-    } else {
-      placeholderDocumentos.push(finalFormState);
-    }
+    setMasterDocumentList(prevDocs => {
+      const docIndex = prevDocs.findIndex(d => d.id === finalFormState.id);
+      if (docIndex > -1) {
+        const updatedDocs = [...prevDocs];
+        updatedDocs[docIndex] = finalFormState;
+        return updatedDocs;
+      } else {
+        return [...prevDocs, finalFormState];
+      }
+    });
     setSelectedRowIds([]); 
-    applyFiltersAndSorting();
-
     setIsDialogOpen(false);
   };
 
@@ -745,7 +763,7 @@ export default function DocumentosPage() {
     const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
     const docIdsFromListagem = currentListagemDocIdsParam ? currentListagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
 
-    let newFilteredDocumentos = placeholderDocumentos.filter(doc => {
+    let newFilteredDocumentos = masterDocumentList.filter(doc => {
       let passesAll = true;
 
       if (caixaIdFromUrl) {
@@ -850,11 +868,13 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting, caixaIdFromUrl, searchParams]);
+  }, [filters, sorting, caixaIdFromUrl, searchParams, masterDocumentList]);
 
   React.useEffect(() => {
-    applyFiltersAndSorting();
-  }, [applyFiltersAndSorting]);
+    if (masterDocumentList.length > 0) { // Only apply if master list is populated
+      applyFiltersAndSorting();
+    }
+  }, [applyFiltersAndSorting, masterDocumentList]);
 
 
   const clearFilters = () => {
@@ -1609,6 +1629,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
