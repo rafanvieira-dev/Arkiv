@@ -49,12 +49,41 @@ const initialFormState: Omit<ClasseJudicial, 'id'> = {
   inativo: false,
 };
 
+const CLASSES_JUDICIAIS_STORAGE_KEY = 'arquivocentral_classes_judiciais';
+
 export default function ClassesJudiciaisPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState(initialFormState);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
-  // For this page, displayedItems is the same as placeholderClassesJudiciais as there's no filtering/sorting yet.
-  const displayedItems = placeholderClassesJudiciais; 
+  
+  const [classesJudiciais, setClassesJudiciais] = React.useState<ClasseJudicial[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CLASSES_JUDICIAIS_STORAGE_KEY);
+      setClassesJudiciais(stored ? JSON.parse(stored) : placeholderClassesJudiciais);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setClassesJudiciais(placeholderClassesJudiciais);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+      if (isDataLoaded) {
+        try {
+          window.localStorage.setItem(CLASSES_JUDICIAIS_STORAGE_KEY, JSON.stringify(classesJudiciais));
+        } catch (error) {
+          console.error("Failed to write to localStorage:", error);
+        }
+      }
+  }, [classesJudiciais, isDataLoaded]);
+  
+  const displayedItems = classesJudiciais; 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -76,16 +105,41 @@ export default function ClassesJudiciaisPage() {
 
   const resetForm = () => {
     setFormState(initialFormState);
+    setIsEditing(false);
+    setEditingId(null);
+  };
+  
+  const handleOpenDialog = (item?: ClasseJudicial) => {
+    if (item) {
+        setIsEditing(true);
+        setEditingId(item.id);
+        setFormState(item);
+    } else {
+        resetForm();
+    }
+    setIsDialogOpen(true);
   };
 
   const handleSaveChanges = () => {
-    console.log("Salvando nova classe judicial:", formState);
-    // Logic to add/update placeholderClassesJudiciais would go here
-    // For now, just closing and resetting form and selection
+    const finalFormState: ClasseJudicial = {
+      ...formState,
+      id: isEditing && editingId ? editingId : `CJ${Date.now()}`,
+    };
+    
+    if (isEditing) {
+        setClassesJudiciais(prev => prev.map(c => c.id === editingId ? finalFormState : c));
+    } else {
+        setClassesJudiciais(prev => [...prev, finalFormState]);
+    }
+    
     setSelectedRowIds([]);
     setIsDialogOpen(false);
-    resetForm();
   };
+
+  const handleDelete = (id: string) => {
+    setClassesJudiciais(prev => prev.filter(c => c.id !== id));
+  };
+
 
   const numDisplayed = displayedItems.length;
   const numSelected = selectedRowIds.length;
@@ -101,14 +155,14 @@ export default function ClassesJudiciaisPage() {
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Classe Judicial
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle className="font-headline text-primary">Nova Classe Judicial</DialogTitle>
+              <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
               <DialogDescription>
                 Preencha as informações abaixo. Campos com * são obrigatórios.
               </DialogDescription>
@@ -143,7 +197,7 @@ export default function ClassesJudiciaisPage() {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="observacoes">Observações</Label>
-                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
+                <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
               </div>
               <div className="space-y-2 md:col-span-2 flex items-center gap-2">
                 <UICheckbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
@@ -218,7 +272,7 @@ export default function ClassesJudiciaisPage() {
                   <TableCell className="text-right">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial">
+                        <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial" onClick={() => handleOpenDialog(item)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -228,7 +282,7 @@ export default function ClassesJudiciaisPage() {
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial">
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" onClick={() => handleDelete(item.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -250,4 +304,3 @@ export default function ClassesJudiciaisPage() {
     </TooltipProvider>
   );
 }
-

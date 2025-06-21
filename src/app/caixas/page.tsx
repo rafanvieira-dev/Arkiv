@@ -61,6 +61,7 @@ const initialFormStateCaixa: Partial<Caixa> = {
   situacao: "Incompleta",
 };
 
+const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 
 type ColumnConfigCaixas = {
   id: keyof Caixa | string;
@@ -103,14 +104,37 @@ export default function CaixasPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
-  const [placeholderCaixas, setPlaceholderCaixas] = React.useState<Caixa[]>(placeholderCaixasInitial);
+  const [placeholderCaixas, setPlaceholderCaixas] = React.useState<Caixa[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
   const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
-  const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>(placeholderCaixas);
+  const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+
+
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
+      setPlaceholderCaixas(stored ? JSON.parse(stored) : placeholderCaixasInitial);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setPlaceholderCaixas(placeholderCaixasInitial);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+        window.localStorage.setItem(CAIXAS_STORAGE_KEY, JSON.stringify(placeholderCaixas));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [placeholderCaixas, isDataLoaded]);
 
 
   const resetFormAndDialogState = () => {
@@ -171,6 +195,10 @@ export default function CaixasPage() {
     setSelectedRowIds([]); // Clear selection after save
 
     setIsDialogOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    setPlaceholderCaixas(prev => prev.filter(c => c.id !== id));
   };
 
 
@@ -488,7 +516,7 @@ export default function CaixasPage() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa">
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" onClick={() => handleDelete(item.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
@@ -513,4 +541,3 @@ export default function CaixasPage() {
     </TooltipProvider>
   );
 }
-

@@ -48,6 +48,8 @@ const placeholderClassificacoesInitial: Classificacao[] = [
   { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
 ];
 
+const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+
 const opcoesCondicaoTextualFaseCorrente = [
   "3 anos após o encerramento",
   "Após aprovação das contas pelo TCU",
@@ -223,8 +225,10 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
-  const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
-  const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>(placeholderClassificacoesInitial);
+  const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>([]);
+  const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingClassificacaoId, setEditingClassificacaoId] = React.useState<string | null>(null);
@@ -234,6 +238,28 @@ export default function ClassificacaoPage() {
   );
   const [sortingClassificacoes, setSortingClassificacoes] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
+      setPlaceholderClassificacoes(stored ? JSON.parse(stored) : placeholderClassificacoesInitial);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setPlaceholderClassificacoes(placeholderClassificacoesInitial);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+        window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(placeholderClassificacoes));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [placeholderClassificacoes, isDataLoaded]);
+
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -420,9 +446,7 @@ export default function ClassificacaoPage() {
   }, []);
 
   const handleDeleteRow = React.useCallback((itemId: string) => {
-    console.log('Delete', itemId);
-    // Actual delete logic would go here, then update placeholderClassificacoes
-    // setPlaceholderClassificacoes(prev => prev.filter(item => item.id !== itemId));
+    setPlaceholderClassificacoes(prev => prev.filter(item => item.id !== itemId));
   }, []);
   
   const visibleColumnsForMemo = React.useMemo(() => {
@@ -654,4 +678,3 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
-
