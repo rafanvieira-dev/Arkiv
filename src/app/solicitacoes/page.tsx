@@ -163,33 +163,28 @@ export default function SolicitacoesPage() {
 
   React.useEffect(() => {
     if (isDialogOpen && formState.dataAtendimento && formState.dataAtendimento !== previousDataAtendimentoRef.current) {
-        const newDocStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
-        
-        setFormState(prev => ({ ...prev, status: 'Atendida' }));
-        
-        setAcervoDocs(prevDocs =>
-            prevDocs.map(doc =>
-                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newDocStatus as Documento['status'] } : doc
-            )
-        );
-        toast({ title: "Status Atualizado", description: `Solicitação marcada como "Atendida" e documentos como "${newDocStatus}".` });
+      const newDocStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+      setAcervoDocs(prevDocs =>
+        prevDocs.map(doc =>
+          selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newDocStatus as Documento['status'] } : doc
+        )
+      );
+      toast({ title: "Status dos Documentos Atualizado", description: `Status dos documentos selecionados na lista do acervo foi atualizado.` });
     }
     previousDataAtendimentoRef.current = formState.dataAtendimento;
-  }, [formState.dataAtendimento, formState.tipo, selectedDocIdsInDialog, isDialogOpen, toast]);
-
+  }, [formState.dataAtendimento, formState.tipo, selectedDocIdsInDialog, isDialogOpen, toast, setAcervoDocs]);
+  
   React.useEffect(() => {
-      if (isDialogOpen && formState.dataDevolucao && formState.dataDevolucao !== previousDataDevolucaoRef.current) {
-          setFormState(prev => ({ ...prev, status: 'Devolvido' }));
-
-          setAcervoDocs(prevDocs =>
-              prevDocs.map(doc =>
-                  selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
-              )
-          );
-          toast({ title: "Status Atualizado", description: `Solicitação marcada como "Devolvido" e documentos como "Arquivado".` });
-      }
-      previousDataDevolucaoRef.current = formState.dataDevolucao;
-  }, [formState.dataDevolucao, selectedDocIdsInDialog, isDialogOpen, toast]);
+    if (isDialogOpen && formState.dataDevolucao && formState.dataDevolucao !== previousDataDevolucaoRef.current) {
+      setAcervoDocs(prevDocs =>
+        prevDocs.map(doc =>
+          selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
+        )
+      );
+      toast({ title: "Status dos Documentos Atualizado", description: `Status dos documentos selecionados na lista do acervo foi atualizado para "Arquivado".` });
+    }
+    previousDataDevolucaoRef.current = formState.dataDevolucao;
+  }, [formState.dataDevolucao, selectedDocIdsInDialog, isDialogOpen, toast, setAcervoDocs]);
 
 
   const resetFormAndDialogState = () => {
@@ -243,9 +238,16 @@ export default function SolicitacoesPage() {
       toast({ variant: "destructive", title: "Erro", description: "Selecione ao menos um documento." });
       return;
     }
-
+  
     const numeroSolicitacao = `SOL-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
-
+  
+    let finalStatus: Solicitacao['status'] = formState.status || 'Pendente';
+    if (formState.dataDevolucao) {
+      finalStatus = 'Devolvido';
+    } else if (formState.dataAtendimento) {
+      finalStatus = 'Atendida';
+    }
+  
     const newSolicitacao: Solicitacao = {
       id: isEditing && editingId ? editingId : `SOL_NEW_${Date.now()}`,
       numeroSolicitacao: isEditing && formState.numeroSolicitacao ? formState.numeroSolicitacao : numeroSolicitacao,
@@ -260,10 +262,10 @@ export default function SolicitacoesPage() {
       dataAtendimento: formState.dataAtendimento,
       dataDevolucao: formState.dataDevolucao,
       documentoIds: selectedDocIdsInDialog,
-      status: formState.status || "Pendente",
+      status: finalStatus,
       observacoes: formState.observacoes,
     };
-
+  
     if (isEditing && editingId) {
       setSolicitacoes(prev => prev.map(s => s.id === editingId ? newSolicitacao : s));
       toast({ title: "Sucesso", description: "Solicitação atualizada." });
@@ -644,4 +646,3 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
-
