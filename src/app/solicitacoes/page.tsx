@@ -133,12 +133,21 @@ export default function SolicitacoesPage() {
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
     let filteredDocs = acervoDocs.filter(doc => {
-      if (!lowerSearchTerm) return true; 
+      // Only show documents with status "Arquivado"
+      if (doc.status !== 'Arquivado') {
+        return false;
+      }
 
-      const numeroMatch = doc.numeroDocumento && doc.numeroDocumento.toLowerCase().includes(lowerSearchTerm);
-      const tipoMatch = doc.tipoDocumento && doc.tipoDocumento.toLowerCase().includes(lowerSearchTerm);
-      const descricaoMatch = doc.descricaoDocumento && doc.descricaoDocumento.toLowerCase().includes(lowerSearchTerm);
-      const caixaMatch = doc.codigosCaixa && doc.codigosCaixa.toLowerCase().includes(lowerSearchTerm);
+      // If there is no search term, include all "Arquivado" documents
+      if (!lowerSearchTerm) {
+        return true;
+      }
+
+      // Otherwise, apply search term filter
+      const numeroMatch = doc.numeroDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
+      const tipoMatch = doc.tipoDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
+      const descricaoMatch = doc.descricaoDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
+      const caixaMatch = doc.codigosCaixa?.toLowerCase().includes(lowerSearchTerm) ?? false;
 
       return numeroMatch || tipoMatch || descricaoMatch || caixaMatch;
     });
@@ -241,7 +250,7 @@ export default function SolicitacoesPage() {
   
     const numeroSolicitacao = `SOL-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
   
-    let finalStatus: Solicitacao['status'] = formState.status || 'Pendente';
+    let finalStatus: Solicitacao['status'] = 'Pendente';
     if (formState.dataDevolucao) {
       finalStatus = 'Devolvido';
     } else if (formState.dataAtendimento) {
@@ -315,9 +324,8 @@ export default function SolicitacoesPage() {
   }, [solicitacoes, editingId]);
 
   const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
-    if (doc.status !== 'Arquivado') {
-      return false;
-    }
+    // The list is already filtered to only show 'Arquivado' documents.
+    // This function now only needs to check if the document is part of another active request.
     return !borrowedDocIds.has(doc.id);
   }, [borrowedDocIds]);
 
