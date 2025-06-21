@@ -250,19 +250,22 @@ export default function SolicitacoesPage() {
   const numDisplayed = displayedSolicitacoes.length;
   const numSelected = selectedRowIds.length;
   
-  const isDocumentSelectable = (doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
+  const borrowedDocIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    solicitacoes.forEach(sol => {
+      if ((sol.status === 'Pendente' || sol.status === 'Atendida') && (!editingId || sol.id !== editingId)) {
+        sol.documentoIds.forEach(docId => ids.add(docId));
+      }
+    });
+    return ids;
+  }, [solicitacoes, editingId]);
+
+  const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
     if (doc.status !== 'Arquivado') {
       return false;
     }
-    
-    const isBorrowedInActiveSolicitation = solicitacoes.some(sol => 
-        (sol.status === 'Pendente' || sol.status === 'Atendida') &&
-        sol.documentoIds.includes(doc.id) &&
-        (!editingId || sol.id !== editingId) 
-    );
-    
-    return !isBorrowedInActiveSolicitation;
-  };
+    return !borrowedDocIds.has(doc.id);
+  }, [borrowedDocIds]);
 
 
   return (
