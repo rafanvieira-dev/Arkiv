@@ -56,320 +56,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { placeholderDocumentos, simulatedListagensData, placeholderClassificacoesSimulado, placeholderSolicitacoesInitial } from "@/lib/mock-data";
 
-
-const placeholderClassificacoesSimulado = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas", inativo: true, prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: 'Eliminação' as const, tipoPrazoFaseCorrente: "Condição Textual" as const, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização" },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais", inativo: false, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 1 },
-];
-
-const simulatedListagensData: ListagemEliminacao[] = [
-  { 
-    id: "LE001", 
-    numeroListagem: "LE-2023-001", 
-    documentoIds: ["DOC001", "DOC007"], 
-    dataPublicacaoEdital: new Date("2023-10-15").toISOString(),
-    dataProducaoListagem: new Date("2023-09-30").toISOString(),
-    numeroEditalCiencia: "EDITAL-005/2023",
-    numeroTermoEliminacao: "TE-2023-001",
-    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString()
-  },
-  { 
-    id: "LE002", 
-    numeroListagem: "LE-2024-001", 
-    documentoIds: ["DOC008"], 
-    dataPublicacaoEdital: undefined,
-    dataProducaoListagem: new Date("2024-02-10").toISOString()
-  },
-];
-
-
-const placeholderDocumentos: Documento[] = [
-  { 
-    id: "DOC001", 
-    status: "Arquivado", 
-    orgao: "TRF2", 
-    origem: "Tribunal de Justiça", 
-    tipoMeio: "Não digital", 
-    generoDocumental: "Textual", 
-    categoria: "Processo Judicial", 
-    tipoDocumento: "Ação Ordinária", 
-    numeroDocumento: "PRC-2023-001", 
-    dataAbrangente: "01/2023 - 03/2023",
-    descricaoDocumento: "Processo referente à disputa contratual X. Este é um exemplo de descrição um pouco mais longa para testar o comportamento da célula na tabela.",
-    nomePartePrincipal: "Empresa Exemplo Ltda",
-    documentosRelacionadosIds: "DOC002,DOC003",
-    dataArquivamento: new Date("2023-01-15").toISOString(), 
-    quantidadeVolumes: 1,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 0,
-    tipoMidiaDetalhe: undefined,
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "",
-    paginaMidiaDetalhe: "",
-    digitalizado: "Não", 
-    tipoBaixa: "",
-    dataBaixa: undefined,
-    classificacaoArquivisticaId: "CLA001",
-    prazoArquivoCorrenteDisplay: "5 Anos",
-    prazoArquivoIntermediarioDisplay: "15 Anos",
-    destinacaoFinalDisplay: "Guarda Permanente",
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "2039", 
-    tipoPartePrincipal: "Autor",
-    outroTipoPartePrincipal: "",
-    segredoJustica: "Não", 
-    grauSigilo: "Ostensivo", 
-    codigosCaixa: "CX001", 
-    codigoAtoM: "ATOM001",
-    observacoesGerais: "Nenhuma observação específica para este documento de exemplo.",
-    codigoClassificacaoJudicialId: "CJ001",
-    numeroListagemEliminacao: "LE-2023-001",
-    dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
-  },
-  { 
-    id: "DOC002", 
-    status: "Emprestado", 
-    orgao: "SJRJ", 
-    origem: "Secretaria Municipal", 
-    tipoMeio: "Digital", 
-    generoDocumental: "Audiovisual", 
-    categoria: "Documento", 
-    tipoDocumento: "Solicitação de Informações", 
-    numeroDocumento: "OFC-2023-045", 
-    dataAbrangente: "20/03/2023",
-    descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.",
-    nomePartePrincipal: "Maria Santos",
-    documentosRelacionadosIds: "DOC001",
-    dataArquivamento: new Date("2023-03-20").toISOString(), 
-    quantidadeVolumes: 1,
-    quantidadeApensos: 1,
-    numerosApensos: "AP001",
-    totalMidias: 1,
-    tipoMidiaDetalhe: "DVD-R",
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "M001",
-    paginaMidiaDetalhe: "1-10",
-    digitalizado: "Sim", 
-    tipoBaixa: "Devolvido ao Arquivo",
-    dataBaixa: new Date("2023-04-10").toISOString(),
-    classificacaoArquivisticaId: "CLA002", 
-    prazoArquivoCorrenteDisplay: "Até a próxima atualização",
-    prazoArquivoIntermediarioDisplay: "3 Anos",
-    destinacaoFinalDisplay: "Eliminação",
-    alteracaoDestinacaoFinal: "Não Alterar",
-    anoEliminacaoPrevisto: "2027", 
-    tipoPartePrincipal: "Requerente",
-    outroTipoPartePrincipal: "",
-    segredoJustica: "Não", 
-    grauSigilo: "Ostensivo", 
-    codigosCaixa: "CX002", 
-    codigoAtoM: "ATOM002",
-    observacoesGerais: "Prioridade alta.",
-    codigoClassificacaoJudicialId: "",
-    dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
-  },
-  { 
-    id: "DOC003", 
-    status: "Arquivado", 
-    orgao: "SJES", 
-    origem: "Câmara de Vereadores", 
-    tipoMeio: "Híbrido", 
-    generoDocumental: "Textual", 
-    categoria: "Processo Administrativo", 
-    tipoDocumento: "Comunicação Interna", 
-    numeroDocumento: "MEM-2022-112", 
-    dataAbrangente: "05/11/2022",
-    descricaoDocumento: "Memorando sobre nova política interna.",
-    nomePartePrincipal: "João da Silva",
-    documentosRelacionadosIds: "",
-    dataArquivamento: new Date("2022-11-05").toISOString(), 
-    quantidadeVolumes: 2,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 2,
-    tipoMidiaDetalhe: "Pen Drive",
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "M002, M003",
-    paginaMidiaDetalhe: "N/A",
-    digitalizado: "Sim", 
-    tipoBaixa: "",
-    dataBaixa: undefined,
-    classificacaoArquivisticaId: "CLA003", 
-    prazoArquivoCorrenteDisplay: "1 Ano",
-    prazoArquivoIntermediarioDisplay: "0 Anos",
-    destinacaoFinalDisplay: "Guarda Permanente",
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "", 
-    tipoPartePrincipal: "Interessado",
-    outroTipoPartePrincipal: "",
-    segredoJustica: "Sim", 
-    grauSigilo: "Secreto", 
-    codigosCaixa: "CX001, CX003", 
-    codigoAtoM: "ATOM003",
-    observacoesGerais: "Documento de acesso restrito.",
-    codigoClassificacaoJudicialId: "",
-    dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
-  },
-   { 
-    id: "DOC004", 
-    status: "Eliminado", 
-    orgao: "TRF2", 
-    origem: "Advocacia Geral", 
-    tipoMeio: "Não digital", 
-    generoDocumental: "Textual", 
-    categoria: "Documento", 
-    tipoDocumento: "Requerimento", 
-    numeroDocumento: "REQ-2014-001", 
-    dataAbrangente: "10/06/2014",
-    descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.",
-    nomePartePrincipal: "Empresa XYZ",
-    documentosRelacionadosIds: "DOC005", 
-    dataArquivamento: new Date("2014-06-15").toISOString(), 
-    quantidadeVolumes: 1,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 0,
-    tipoMidiaDetalhe: undefined,
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "",
-    paginaMidiaDetalhe: "",
-    digitalizado: "Não", 
-    tipoBaixa: "Eliminação Concluída",
-    dataBaixa: new Date("2018-12-01").toISOString(),
-    classificacaoArquivisticaId: "CLA002",
-    prazoArquivoCorrenteDisplay: "Até a próxima atualização",
-    prazoArquivoIntermediarioDisplay: "3 Anos", 
-    destinacaoFinalDisplay: "Eliminação",      
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "2018", 
-    tipoPartePrincipal: "Requerente",
-    outroTipoPartePrincipal: "",
-    segredoJustica: "Não", 
-    grauSigilo: "Ostensivo", 
-    codigosCaixa: "CX-TEMP-001", 
-    codigoAtoM: "",
-    observacoesGerais: "Documento eliminado conforme edital.",
-    codigoClassificacaoJudicialId: "",
-    dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
-  },
-  { 
-    id: "DOC005", 
-    status: "Aguardando prazo para eliminação", 
-    orgao: "SJRJ", 
-    origem: "Vara Federal", 
-    tipoMeio: "Digital", 
-    generoDocumental: "Iconográfico", 
-    categoria: "Processo Judicial", 
-    tipoDocumento: "Petição", 
-    numeroDocumento: "PET-2010-555", 
-    dataAbrangente: "15/08/2010",
-    descricaoDocumento: "Petição inicial do processo, aguardando prazo para eliminação.",
-    nomePartePrincipal: "Consumidor Teste",
-    documentosRelacionadosIds: "",
-    dataArquivamento: new Date("2010-08-20").toISOString(), 
-    quantidadeVolumes: 0,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 1,
-    tipoMidiaDetalhe: "Outro",
-    outroTipoMidiaDetalhe: "Arquivo Digitalizado",
-    numeroMidiaDetalhe: "ARQ001",
-    paginaMidiaDetalhe: "1-50",
-    digitalizado: "Sim", 
-    tipoBaixa: "",
-    dataBaixa: undefined,
-    classificacaoArquivisticaId: "CLA001", 
-    prazoArquivoCorrenteDisplay: "5 Anos",
-    prazoArquivoIntermediarioDisplay: "15 Anos", 
-    destinacaoFinalDisplay: "Guarda Permanente", 
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "2026", 
-    tipoPartePrincipal: "Autor",
-    outroTipoPartePrincipal: "",
-    segredoJustica: "Não", 
-    grauSigilo: "Reservado", 
-    codigosCaixa: "CX-DIG-010", 
-    codigoAtoM: "ATOM005",
-    observacoesGerais: "Documento sujeito à análise da CPAD.",
-    codigoClassificacaoJudicialId: "CJ001",
-    dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
-  },
-  { 
-    id: "DOC007", 
-    status: "Arquivado", 
-    orgao: "TRF2", 
-    origem: "Vara Cível", 
-    tipoMeio: "Não digital", 
-    generoDocumental: "Textual", 
-    categoria: "Processo Judicial", 
-    tipoDocumento: "Execução Fiscal", 
-    numeroDocumento: "EXEC-2020-789", 
-    dataAbrangente: "07/2020 - 12/2020",
-    descricaoDocumento: "Processo de execução fiscal.",
-    nomePartePrincipal: "Fazenda Nacional",
-    documentosRelacionadosIds: "",
-    dataArquivamento: new Date("2020-12-15").toISOString(), 
-    quantidadeVolumes: 1,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 0,
-    digitalizado: "Não", 
-    classificacaoArquivisticaId: "CLA001",
-    prazoArquivoCorrenteDisplay: "5 Anos",
-    prazoArquivoIntermediarioDisplay: "15 Anos",
-    destinacaoFinalDisplay: "Guarda Permanente",
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "2036", 
-    tipoPartePrincipal: "Exequente",
-    segredoJustica: "Não", 
-    grauSigilo: "Ostensivo", 
-    codigosCaixa: "CX004", 
-    codigoAtoM: "ATOM007",
-    observacoesGerais: "",
-    codigoClassificacaoJudicialId: "CJ001",
-    numeroListagemEliminacao: "LE-2023-001", 
-    dataCadastro: new Date("2020-07-01T10:00:00Z").toISOString(), 
-  },
-  { 
-    id: "DOC008", 
-    status: "Aguardando prazo para eliminação", 
-    orgao: "SJRJ", 
-    origem: "Juizado Especial", 
-    tipoMeio: "Digital", 
-    generoDocumental: "Textual", 
-    categoria: "Processo Judicial", 
-    tipoDocumento: "Procedimento do Juizado Especial Cível", 
-    numeroDocumento: "JEC-2018-123", 
-    dataAbrangente: "03/2018",
-    descricaoDocumento: "Pequenas causas, aguardando eliminação.",
-    nomePartePrincipal: "Fulano de Tal",
-    documentosRelacionadosIds: "",
-    dataArquivamento: new Date("2018-03-20").toISOString(), 
-    quantidadeVolumes: 0,
-    quantidadeApensos: 0,
-    numerosApensos: "",
-    totalMidias: 0,
-    digitalizado: "Sim", 
-    classificacaoArquivisticaId: "CLA001",
-    prazoArquivoCorrenteDisplay: "5 Anos",
-    prazoArquivoIntermediarioDisplay: "15 Anos", 
-    destinacaoFinalDisplay: "Eliminação", 
-    alteracaoDestinacaoFinal: "Não Alterar", 
-    anoEliminacaoPrevisto: "2034", 
-    tipoPartePrincipal: "Autor",
-    segredoJustica: "Não", 
-    grauSigilo: "Ostensivo", 
-    codigosCaixa: "CX-DIG-012", 
-    codigoAtoM: "ATOM008",
-    observacoesGerais: "Documento digitalizado.",
-    codigoClassificacaoJudicialId: "CJ001",
-    numeroListagemEliminacao: "LE-2024-001", 
-    dataCadastro: new Date("2018-03-01T14:00:00Z").toISOString(), 
-  },
-];
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
   status: "Arquivado",
@@ -539,12 +227,6 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
-const placeholderSolicitacoes: Solicitacao[] = [
-  { id: "SOL001", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", setorSolicitante: "Gab. Des. A", siglaServidor: "JSS", matriculaSolicitante: "12345", ramal: "1234", emailContato: "joao.silva@trf2.jus.br", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
-  { id: "SOL002", tipo: "Desarquivamento", numeroSolicitacao: "SOL-2024-002", nomeSolicitante: "Maria Oliveira", setorSolicitante: "Vara Federal 1", siglaServidor: "MOO", matriculaSolicitante: "54321", ramal: "4321", emailContato: "maria.oliveira@trf2.jus.br", dataSolicitacao: new Date("2024-03-05").toISOString(), dataAtendimento: new Date("2024-03-06").toISOString(), documentoIds: ["DOC002"], status: "Atendida" },
-  { id: "SOL003", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-003", nomeSolicitante: "Carlos Pereira", setorSolicitante: "Secretaria", siglaServidor: "CAP", matriculaSolicitante: "67890", ramal: "6789", emailContato: "carlos.pereira@trf2.jus.br", dataSolicitacao: new Date("2024-03-10").toISOString(), dataAtendimento: new Date("2024-03-11").toISOString(), dataDevolucao: new Date("2024-03-20").toISOString(), documentoIds: ["DOC003"], status: "Devolvido" },
-];
-
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 
 export default function DocumentosPage() {
@@ -579,10 +261,10 @@ export default function DocumentosPage() {
   React.useEffect(() => {
     try {
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
-      setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoes);
+      setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
     } catch (error) {
       console.error("Failed to read solicitations from localStorage:", error);
-      setSolicitacoes(placeholderSolicitacoes);
+      setSolicitacoes(placeholderSolicitacoesInitial);
     }
   }, []);
 
@@ -598,27 +280,27 @@ export default function DocumentosPage() {
 
     const processedDocs = placeholderDocumentos.map(originalDoc => {
       let doc = { ...originalDoc };
-      let finalStatus = doc.status;
+      let currentDocStatus = doc.status;
       let isEliminated = false;
 
       if (doc.numeroListagemEliminacao) {
         const listagem = simulatedListagensData.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
         if (listagem?.documentoIds?.includes(doc.id)) {
           if (listagem.dataProducaoTermoEliminacao) {
-            finalStatus = "Eliminado";
+            currentDocStatus = "Eliminado";
             isEliminated = true;
-          } else if (listagem.dataPublicacaoEdital && finalStatus === "Arquivado") {
-            finalStatus = "Aguardando prazo para eliminação";
+          } else if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
+            currentDocStatus = "Aguardando prazo para eliminação";
           }
         }
       }
 
-      if (!isEliminated && finalStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
+      if (!isEliminated && currentDocStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
         const tipoSolicitacao = activeLoanMap.get(doc.id);
-        finalStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+        currentDocStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
       }
 
-      doc.status = finalStatus as Documento['status'];
+      doc.status = currentDocStatus as Documento['status'];
 
       if (doc.status === "Eliminado") {
         doc.codigosCaixa = "";
@@ -1690,6 +1372,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 

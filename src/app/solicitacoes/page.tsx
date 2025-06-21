@@ -30,27 +30,12 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-
-const placeholderSolicitacoesInitial: Solicitacao[] = [
-  { id: "SOL001", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", setorSolicitante: "Gab. Des. A", siglaServidor: "JSS", matriculaSolicitante: "12345", ramal: "1234", emailContato: "joao.silva@trf2.jus.br", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
-  { id: "SOL002", tipo: "Desarquivamento", numeroSolicitacao: "SOL-2024-002", nomeSolicitante: "Maria Oliveira", setorSolicitante: "Vara Federal 1", siglaServidor: "MOO", matriculaSolicitante: "54321", ramal: "4321", emailContato: "maria.oliveira@trf2.jus.br", dataSolicitacao: new Date("2024-03-05").toISOString(), dataAtendimento: new Date("2024-03-06").toISOString(), documentoIds: ["DOC002"], status: "Atendida" },
-  { id: "SOL003", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-003", nomeSolicitante: "Carlos Pereira", setorSolicitante: "Secretaria", siglaServidor: "CAP", matriculaSolicitante: "67890", ramal: "6789", emailContato: "carlos.pereira@trf2.jus.br", dataSolicitacao: new Date("2024-03-10").toISOString(), dataAtendimento: new Date("2024-03-11").toISOString(), dataDevolucao: new Date("2024-03-20").toISOString(), documentoIds: ["DOC003"], status: "Devolvido" },
-];
-
-type SimulatedDocumentForSolicitacaoDialog = Pick<Documento, 
-  'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa'
->;
-
-const simulatedAcervoDocumentosInitial: SimulatedDocumentForSolicitacaoDialog[] = [
-  { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo referente à disputa contratual X.", status: "Arquivado", codigosCaixa: "CX001" },
-  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Solicitação de Informações", descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.", status: "Emprestado", codigosCaixa: "CX002" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Comunicação Interna", descricaoDocumento: "Memorando sobre nova política interna.", status: "Arquivado", codigosCaixa: "CX001, CX003" },
-  { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo, processo finalizado e eliminado.", status: "Eliminado", codigosCaixa: "" },
-  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial do processo, aguardando prazo para eliminação.", status: "Aguardando prazo para eliminação", codigosCaixa: "CX-DIG-010" },
-  { id: "DOC007", numeroDocumento: "EXEC-2020-789", tipoDocumento: "Execução Fiscal", descricaoDocumento: "Processo de execução fiscal.", status: "Arquivado", codigosCaixa: "CX004" },
-  { id: "DOC008", numeroDocumento: "JEC-2018-123", tipoDocumento: "Procedimento do Juizado Especial Cível", descricaoDocumento: "Pequenas causas, aguardando eliminação.", status: "Aguardando prazo para eliminação", codigosCaixa: "CX-DIG-012"},
-];
+import { 
+  placeholderSolicitacoesInitial, 
+  placeholderDocumentos, 
+  simulatedListagensData,
+  type SimulatedDocumentForSolicitacaoDialog
+} from "@/lib/mock-data";
 
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
@@ -105,26 +90,72 @@ export default function SolicitacoesPage() {
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
 
-      const storedAcervo = window.localStorage.getItem(ACERVO_SOL_STORAGE_KEY);
-      setAcervoDocs(storedAcervo ? JSON.parse(storedAcervo) : simulatedAcervoDocumentosInitial);
+      // We no longer load acervo from local storage, we calculate it.
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setSolicitacoes(placeholderSolicitacoesInitial);
-      setAcervoDocs(simulatedAcervoDocumentosInitial);
     }
     setIsDataLoaded(true);
   }, []);
 
   React.useEffect(() => {
-    if (isDataLoaded) {
-      try {
-        window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
-        window.localStorage.setItem(ACERVO_SOL_STORAGE_KEY, JSON.stringify(acervoDocs));
-      } catch (error) {
-        console.error("Failed to write to localStorage:", error);
+    if (!isDataLoaded) return;
+  
+    // Calculate definitive document statuses
+    const activeLoanMap = new Map<string, Solicitacao['tipo']>();
+    solicitacoes.forEach(sol => {
+      if (sol.dataAtendimento && !sol.dataDevolucao) {
+        sol.documentoIds.forEach(docId => activeLoanMap.set(docId, sol.tipo));
       }
+    });
+  
+    const processedDocs = placeholderDocumentos.map(originalDoc => {
+      let doc = { ...originalDoc };
+      let currentDocStatus = doc.status;
+      let isEliminated = false;
+  
+      if (doc.numeroListagemEliminacao) {
+        const listagem = simulatedListagensData.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
+        if (listagem?.documentoIds?.includes(doc.id)) {
+          if (listagem.dataProducaoTermoEliminacao) {
+            currentDocStatus = "Eliminado";
+            isEliminated = true;
+          } else if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
+            currentDocStatus = "Aguardando prazo para eliminação";
+          }
+        }
+      }
+  
+      if (!isEliminated && currentDocStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
+        const tipoSolicitacao = activeLoanMap.get(doc.id);
+        currentDocStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+      }
+  
+      doc.status = currentDocStatus as Documento['status'];
+  
+      if (doc.status === "Eliminado") {
+        doc.codigosCaixa = "";
+      }
+      return doc;
+    });
+  
+    const condensedDocs: SimulatedDocumentForSolicitacaoDialog[] = processedDocs.map(doc => ({
+      id: doc.id,
+      numeroDocumento: doc.numeroDocumento,
+      tipoDocumento: doc.tipoDocumento,
+      descricaoDocumento: doc.descricaoDocumento,
+      status: doc.status,
+      codigosCaixa: doc.codigosCaixa,
+    }));
+  
+    setAcervoDocs(condensedDocs);
+    try {
+        window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
+    } catch (error) {
+      console.error("Failed to write to localStorage:", error);
     }
-  }, [solicitacoes, acervoDocs, isDataLoaded]);
+  
+  }, [solicitacoes, isDataLoaded]);
 
   React.useEffect(() => {
     setDisplayedSolicitacoes(solicitacoes); 
@@ -133,17 +164,13 @@ export default function SolicitacoesPage() {
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
     let filteredDocs = acervoDocs.filter(doc => {
-      // Only show documents with status "Arquivado"
       if (doc.status !== 'Arquivado') {
         return false;
       }
-
-      // If there is no search term, include all "Arquivado" documents
       if (!lowerSearchTerm) {
         return true;
       }
 
-      // Otherwise, apply search term filter
       const numeroMatch = doc.numeroDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
       const tipoMatch = doc.tipoDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
       const descricaoMatch = doc.descricaoDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
@@ -324,8 +351,6 @@ export default function SolicitacoesPage() {
   }, [solicitacoes, editingId]);
 
   const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
-    // The list is already filtered to only show 'Arquivado' documents.
-    // This function now only needs to check if the document is part of another active request.
     return !borrowedDocIds.has(doc.id);
   }, [borrowedDocIds]);
 
