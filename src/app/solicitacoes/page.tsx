@@ -72,11 +72,17 @@ const initialFormStateSolicitacao: Partial<Solicitacao> = {
 type DialogDocSortConfig = { id: keyof SimulatedDocumentForSolicitacaoDialog | string; direction: 'asc' | 'desc'; };
 type DialogDocFilters = { searchTerm: string; };
 
+const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
+const ACERVO_SOL_STORAGE_KEY = 'arquivocentral_acervo_sol';
+
+
 export default function SolicitacoesPage() {
   const { toast } = useToast();
-  const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>(placeholderSolicitacoesInitial);
-  const [acervoDocs, setAcervoDocs] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>(simulatedAcervoDocumentosInitial);
-  const [displayedSolicitacoes, setDisplayedSolicitacoes] = React.useState<Solicitacao[]>(solicitacoes);
+  const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
+  const [acervoDocs, setAcervoDocs] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
+  const [displayedSolicitacoes, setDisplayedSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -89,6 +95,32 @@ export default function SolicitacoesPage() {
   const [dialogDocFilters, setDialogDocFilters] = React.useState<DialogDocFilters>({ searchTerm: "" });
   const [dialogDocSortConfig, setDialogDocSortConfig] = React.useState<DialogDocSortConfig[]>([]);
   const [isDocumentSelectionVisible, setIsDocumentSelectionVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
+      setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
+
+      const storedAcervo = window.localStorage.getItem(ACERVO_SOL_STORAGE_KEY);
+      setAcervoDocs(storedAcervo ? JSON.parse(storedAcervo) : simulatedAcervoDocumentosInitial);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setSolicitacoes(placeholderSolicitacoesInitial);
+      setAcervoDocs(simulatedAcervoDocumentosInitial);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+        window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
+        window.localStorage.setItem(ACERVO_SOL_STORAGE_KEY, JSON.stringify(acervoDocs));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [solicitacoes, acervoDocs, isDataLoaded]);
 
   React.useEffect(() => {
     setDisplayedSolicitacoes(solicitacoes); 
