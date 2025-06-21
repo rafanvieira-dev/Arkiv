@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Solicitacao, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, CheckCircle, XCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, ListFilter } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ListFilter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { parseISO } from 'date-fns';
@@ -29,18 +29,20 @@ import { DatePicker } from "@/components/date-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const placeholderSolicitacoesInitial: Solicitacao[] = [
-  { id: "SOL001", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
-  { id: "SOL002", numeroSolicitacao: "SOL-2024-002", nomeSolicitante: "Maria Oliveira", dataSolicitacao: new Date("2024-03-05").toISOString(), dataAtendimento: new Date("2024-03-06").toISOString(), documentoIds: ["DOC002"], status: "Atendida" },
-  { id: "SOL003", numeroSolicitacao: "SOL-2024-003", nomeSolicitante: "Carlos Pereira", dataSolicitacao: new Date("2024-03-10").toISOString(), dataAtendimento: new Date("2024-03-11").toISOString(), dataDevolucao: new Date("2024-03-20").toISOString(), documentoIds: ["DOC003"], status: "Devolvido" },
+  { id: "SOL001", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", setorSolicitante: "Gab. Des. A", siglaServidor: "JSS", matriculaSolicitante: "12345", ramal: "1234", emailContato: "joao.silva@trf2.jus.br", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
+  { id: "SOL002", tipo: "Desarquivamento", numeroSolicitacao: "SOL-2024-002", nomeSolicitante: "Maria Oliveira", setorSolicitante: "Vara Federal 1", siglaServidor: "MOO", matriculaSolicitante: "54321", ramal: "4321", emailContato: "maria.oliveira@trf2.jus.br", dataSolicitacao: new Date("2024-03-05").toISOString(), dataAtendimento: new Date("2024-03-06").toISOString(), documentoIds: ["DOC002"], status: "Atendida" },
+  { id: "SOL003", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-003", nomeSolicitante: "Carlos Pereira", setorSolicitante: "Secretaria", siglaServidor: "CAP", matriculaSolicitante: "67890", ramal: "6789", emailContato: "carlos.pereira@trf2.jus.br", dataSolicitacao: new Date("2024-03-10").toISOString(), dataAtendimento: new Date("2024-03-11").toISOString(), dataDevolucao: new Date("2024-03-20").toISOString(), documentoIds: ["DOC003"], status: "Devolvido" },
 ];
 
 type SimulatedDocumentForSolicitacaoDialog = Pick<Documento, 
   'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa'
 >;
 
-const simulatedAcervoDocumentos: SimulatedDocumentForSolicitacaoDialog[] = [
+const simulatedAcervoDocumentosInitial: SimulatedDocumentForSolicitacaoDialog[] = [
   { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo referente à disputa contratual X.", status: "Arquivado", codigosCaixa: "CX001" },
   { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Solicitação de Informações", descricaoDocumento: "Ofício solicitando informações sobre o projeto Y.", status: "Emprestado", codigosCaixa: "CX002" },
   { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Comunicação Interna", descricaoDocumento: "Memorando sobre nova política interna.", status: "Arquivado", codigosCaixa: "CX001, CX003" },
@@ -53,9 +55,15 @@ const simulatedAcervoDocumentos: SimulatedDocumentForSolicitacaoDialog[] = [
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
   nomeSolicitante: "",
-  contatoSolicitante: "",
-  unidadeSetorSolicitante: "",
+  setorSolicitante: "",
+  siglaServidor: "",
+  matriculaSolicitante: "",
+  ramal: "",
+  emailContato: "",
+  tipo: 'Empréstimo',
   dataSolicitacao: new Date().toISOString(),
+  dataAtendimento: undefined,
+  dataDevolucao: undefined,
   documentoIds: [],
   status: "Pendente",
   observacoes: "",
@@ -67,6 +75,7 @@ type DialogDocFilters = { searchTerm: string; };
 export default function SolicitacoesPage() {
   const { toast } = useToast();
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>(placeholderSolicitacoesInitial);
+  const [acervoDocs, setAcervoDocs] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>(simulatedAcervoDocumentosInitial);
   const [displayedSolicitacoes, setDisplayedSolicitacoes] = React.useState<Solicitacao[]>(solicitacoes);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
@@ -87,8 +96,8 @@ export default function SolicitacoesPage() {
   
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
-    let filteredDocs = simulatedAcervoDocumentos.filter(doc => {
-      if (!lowerSearchTerm) return true; // If no search term, include all
+    let filteredDocs = acervoDocs.filter(doc => {
+      if (!lowerSearchTerm) return true; 
 
       const numeroMatch = doc.numeroDocumento && doc.numeroDocumento.toLowerCase().includes(lowerSearchTerm);
       const tipoMatch = doc.tipoDocumento && doc.tipoDocumento.toLowerCase().includes(lowerSearchTerm);
@@ -113,7 +122,7 @@ export default function SolicitacoesPage() {
       });
     }
     setDocumentsForDialog(filteredDocs);
-  }, [dialogDocFilters, dialogDocSortConfig]);
+  }, [dialogDocFilters, dialogDocSortConfig, acervoDocs]);
 
 
   const resetFormAndDialogState = () => {
@@ -144,9 +153,34 @@ export default function SolicitacoesPage() {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
-    setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
+  const handleSelectChange = (id: keyof Solicitacao) => (value: string) => {
+    setFormState(prev => ({ ...prev, [id]: value }));
   };
+
+  const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
+    const isoDate = date?.toISOString();
+    setFormState(prev => ({ ...prev, [id]: isoDate }));
+
+    if (id === 'dataAtendimento' && date) {
+      const newStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+      setAcervoDocs(prevDocs => 
+          prevDocs.map(doc => 
+              selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newStatus as Documento['status'] } : doc
+          )
+      );
+      toast({ title: "Status de Documentos Atualizado", description: `Documentos selecionados foram marcados como "${newStatus}".` });
+    }
+
+    if (id === 'dataDevolucao' && date) {
+        setAcervoDocs(prevDocs => 
+            prevDocs.map(doc => 
+                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
+            )
+        );
+        toast({ title: "Status de Documentos Atualizado", description: "Documentos selecionados foram marcados como 'Arquivado'." });
+    }
+  };
+
 
   const handleSaveChanges = () => {
     if (!formState.nomeSolicitante?.trim()) {
@@ -164,9 +198,15 @@ export default function SolicitacoesPage() {
       id: isEditing && editingId ? editingId : `SOL_NEW_${Date.now()}`,
       numeroSolicitacao: isEditing && formState.numeroSolicitacao ? formState.numeroSolicitacao : numeroSolicitacao,
       nomeSolicitante: formState.nomeSolicitante!,
-      contatoSolicitante: formState.contatoSolicitante,
-      unidadeSetorSolicitante: formState.unidadeSetorSolicitante,
+      setorSolicitante: formState.setorSolicitante,
+      siglaServidor: formState.siglaServidor,
+      matriculaSolicitante: formState.matriculaSolicitante,
+      ramal: formState.ramal,
+      emailContato: formState.emailContato,
+      tipo: formState.tipo || 'Empréstimo',
       dataSolicitacao: formState.dataSolicitacao || new Date().toISOString(),
+      dataAtendimento: formState.dataAtendimento,
+      dataDevolucao: formState.dataDevolucao,
       documentoIds: selectedDocIdsInDialog,
       status: formState.status || "Pendente",
       observacoes: formState.observacoes,
@@ -239,19 +279,56 @@ export default function SolicitacoesPage() {
               Nova Solicitação
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
-              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Solicitação" : "Nova Solicitação"}</DialogTitle>
+              <DialogTitle className="font-headline text-primary">{isEditing ? `Editar Solicitação: ${formState.numeroSolicitacao}` : "Nova Solicitação"}</DialogTitle>
               <DialogDescription>
                 Preencha os dados da solicitação. Campos com * são obrigatórios.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
+                 <div className="space-y-2 lg:col-span-3">
+                  <Label htmlFor="tipo">Tipo de Solicitação*</Label>
+                  <Select onValueChange={handleSelectChange('tipo')} value={formState.tipo}>
+                    <SelectTrigger id="tipo"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Empréstimo">Empréstimo</SelectItem>
+                      <SelectItem value="Desarquivamento">Desarquivamento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formState.tipo === 'Empréstimo' && (
+                      <p className="text-xs text-muted-foreground mt-2">Empréstimo é para quando o documento será somente consultado, sem tramitação.</p>
+                  )}
+                  {formState.tipo === 'Desarquivamento' && (
+                      <p className="text-xs text-muted-foreground mt-2">Essa opção é para quando o documento voltará a tramitar, e implica em nova contagem de prazo após o rearquivamento.</p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="nomeSolicitante">Nome Solicitante*</Label>
                   <Input id="nomeSolicitante" value={formState.nomeSolicitante || ""} onChange={handleFormInputChange} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="setorSolicitante">Setor do Solicitante</Label>
+                  <Input id="setorSolicitante" value={formState.setorSolicitante || ""} onChange={handleFormInputChange} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="siglaServidor">Sigla do Servidor</Label>
+                  <Input id="siglaServidor" value={formState.siglaServidor || ""} onChange={handleFormInputChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="matriculaSolicitante">Matrícula</Label>
+                  <Input id="matriculaSolicitante" value={formState.matriculaSolicitante || ""} onChange={handleFormInputChange} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="ramal">Ramal</Label>
+                  <Input id="ramal" value={formState.ramal || ""} onChange={handleFormInputChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emailContato">E-mail de Contato</Label>
+                  <Input id="emailContato" type="email" value={formState.emailContato || ""} onChange={handleFormInputChange} />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="dataSolicitacao">Data da Solicitação*</Label>
                   <DatePicker 
@@ -260,14 +337,21 @@ export default function SolicitacoesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unidadeSetorSolicitante">Unidade/Setor Solicitante</Label>
-                  <Input id="unidadeSetorSolicitante" value={formState.unidadeSetorSolicitante || ""} onChange={handleFormInputChange} />
+                  <Label htmlFor="dataAtendimento">Data de Atendimento</Label>
+                  <DatePicker 
+                    date={formState.dataAtendimento ? parseISO(formState.dataAtendimento) : undefined}
+                    setDate={(date) => handleDateChange('dataAtendimento')(date)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contatoSolicitante">Contato Solicitante</Label>
-                  <Input id="contatoSolicitante" value={formState.contatoSolicitante || ""} onChange={handleFormInputChange} placeholder="Telefone ou email"/>
+                  <Label htmlFor="dataDevolucao">Data de Devolução</Label>
+                  <DatePicker 
+                    date={formState.dataDevolucao ? parseISO(formState.dataDevolucao) : undefined}
+                    setDate={(date) => handleDateChange('dataDevolucao')(date)}
+                  />
                 </div>
-                <div className="md:col-span-2 space-y-2">
+
+                <div className="lg:col-span-3 space-y-2">
                   <Label htmlFor="observacoes">Observações</Label>
                   <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleFormInputChange} rows={2}/>
                 </div>
@@ -365,10 +449,12 @@ export default function SolicitacoesPage() {
                                         doc.status === 'Arquivado' ? 'secondary' :
                                         doc.status === 'Emprestado' ? 'default' :
                                         doc.status === 'Eliminado' ? 'destructive' :
+                                        doc.status === 'Desarquivado' ? 'destructive' :
                                         'outline'
                                       }
                                       className={
                                         doc.status === 'Emprestado' ? 'border-transparent bg-orange-500 text-orange-50 hover:bg-orange-500/80 dark:bg-orange-600 dark:text-orange-50 dark:hover:bg-orange-600/80' :
+                                        doc.status === 'Desarquivado' ? 'border-transparent bg-purple-500 text-purple-50 hover:bg-purple-500/80 dark:bg-purple-600 dark:text-purple-50 dark:hover:bg-purple-600/80' :
                                         doc.status === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
                                         doc.status === 'Arquivado' ? 'border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80' : ''
                                       }
@@ -426,6 +512,7 @@ export default function SolicitacoesPage() {
                   />
                 </TableHead>
                 <TableHead>Nº Solicitação</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Solicitante</TableHead>
                 <TableHead>Data Solicitação</TableHead>
                 <TableHead>Qtd. Docs</TableHead>
@@ -448,6 +535,7 @@ export default function SolicitacoesPage() {
                     />
                   </TableCell>
                   <TableCell className="font-medium">{item.numeroSolicitacao}</TableCell>
+                  <TableCell>{item.tipo}</TableCell>
                   <TableCell>{item.nomeSolicitante}</TableCell>
                   <TableCell>
                     <ClientSideDateFormatter isoDateString={item.dataSolicitacao} />
@@ -471,26 +559,6 @@ export default function SolicitacoesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {item.status === 'Pendente' && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Atender Solicitação" className="text-green-600 hover:text-green-700">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Atender Solicitação</p></TooltipContent>
-                      </Tooltip>
-                    )}
-                     {item.status === 'Atendida' && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Registrar Devolução" className="text-blue-600 hover:text-blue-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-archive-restore"><path d="M20 21v-5.3a2 2 0 0 0-1.1-1.8l-6-3.4a2 2 0 0 0-1.8 0l-6 3.4A2 2 0 0 0 4 15.7V21"/><path d="M16 10h0"/><path d="M12 10h0"/><path d="M8 10h0"/><path d="M5 21h14"/><path d="M12 3v3M10 5l2-2 2 2"/></svg>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Registrar Devolução</p></TooltipContent>
-                      </Tooltip>
-                    )}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label="Editar Solicitação" onClick={() => handleOpenDialog(item)} >
@@ -521,4 +589,3 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
-

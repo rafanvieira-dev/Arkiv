@@ -63,7 +63,7 @@ export interface Documento {
   codigosCaixa?: string; // 1.32 - Simplificado para string (separada por vírgula) por agora
   codigoAtoM?: string; // 1.33
   observacoesGerais?: string; // 1.35
-  codigoClassificacaoJudicialId?: string; // 1.36 - FK to ClasseJudicial, habilitado se categoria for "Processo Judicial"
+  codigoClassificacaoJudicialId?: string; // 1.36 - Habilitado se categoria for "Processo Judicial"
   numeroListagemEliminacao?: string; // New field for elimination list number
   
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)
@@ -109,8 +109,12 @@ export interface Solicitacao {
   id: string;
   numeroSolicitacao: string;
   nomeSolicitante: string;
-  contatoSolicitante?: string;
-  unidadeSetorSolicitante?: string;
+  setorSolicitante?: string;
+  siglaServidor?: string;
+  matriculaSolicitante?: string;
+  ramal?: string;
+  emailContato?: string;
+  tipo: 'Empréstimo' | 'Desarquivamento';
   dataSolicitacao: string; 
   dataAtendimento?: string; 
   dataDevolucao?: string; 
@@ -135,5 +139,3 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
-
-
