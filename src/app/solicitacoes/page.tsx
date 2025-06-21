@@ -163,25 +163,30 @@ export default function SolicitacoesPage() {
 
   React.useEffect(() => {
     if (isDialogOpen && formState.dataAtendimento && formState.dataAtendimento !== previousDataAtendimentoRef.current) {
-        const newStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+        const newDocStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+        
+        setFormState(prev => ({ ...prev, status: 'Atendida' }));
+        
         setAcervoDocs(prevDocs =>
             prevDocs.map(doc =>
-                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newStatus as Documento['status'] } : doc
+                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newDocStatus as Documento['status'] } : doc
             )
         );
-        toast({ title: "Status de Documentos Atualizado", description: `Documentos selecionados foram marcados como "${newStatus}".` });
+        toast({ title: "Status Atualizado", description: `Solicitação marcada como "Atendida" e documentos como "${newDocStatus}".` });
     }
     previousDataAtendimentoRef.current = formState.dataAtendimento;
   }, [formState.dataAtendimento, formState.tipo, selectedDocIdsInDialog, isDialogOpen, toast]);
 
   React.useEffect(() => {
       if (isDialogOpen && formState.dataDevolucao && formState.dataDevolucao !== previousDataDevolucaoRef.current) {
+          setFormState(prev => ({ ...prev, status: 'Devolvido' }));
+
           setAcervoDocs(prevDocs =>
               prevDocs.map(doc =>
                   selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
               )
           );
-          toast({ title: "Status de Documentos Atualizado", description: "Documentos selecionados foram marcados como 'Arquivado'." });
+          toast({ title: "Status Atualizado", description: `Solicitação marcada como "Devolvido" e documentos como "Arquivado".` });
       }
       previousDataDevolucaoRef.current = formState.dataDevolucao;
   }, [formState.dataDevolucao, selectedDocIdsInDialog, isDialogOpen, toast]);
@@ -639,3 +644,4 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
+
