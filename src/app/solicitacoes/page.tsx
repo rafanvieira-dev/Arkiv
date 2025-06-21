@@ -96,6 +96,10 @@ export default function SolicitacoesPage() {
   const [dialogDocSortConfig, setDialogDocSortConfig] = React.useState<DialogDocSortConfig[]>([]);
   const [isDocumentSelectionVisible, setIsDocumentSelectionVisible] = React.useState(false);
 
+  const previousDataAtendimentoRef = React.useRef<string | undefined>();
+  const previousDataDevolucaoRef = React.useRef<string | undefined>();
+
+
   React.useEffect(() => {
     try {
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
@@ -157,6 +161,32 @@ export default function SolicitacoesPage() {
   }, [dialogDocFilters, dialogDocSortConfig, acervoDocs]);
 
 
+  React.useEffect(() => {
+    if (isDialogOpen && formState.dataAtendimento && formState.dataAtendimento !== previousDataAtendimentoRef.current) {
+        const newStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+        setAcervoDocs(prevDocs =>
+            prevDocs.map(doc =>
+                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newStatus as Documento['status'] } : doc
+            )
+        );
+        toast({ title: "Status de Documentos Atualizado", description: `Documentos selecionados foram marcados como "${newStatus}".` });
+    }
+    previousDataAtendimentoRef.current = formState.dataAtendimento;
+  }, [formState.dataAtendimento, formState.tipo, selectedDocIdsInDialog, isDialogOpen, toast]);
+
+  React.useEffect(() => {
+      if (isDialogOpen && formState.dataDevolucao && formState.dataDevolucao !== previousDataDevolucaoRef.current) {
+          setAcervoDocs(prevDocs =>
+              prevDocs.map(doc =>
+                  selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
+              )
+          );
+          toast({ title: "Status de Documentos Atualizado", description: "Documentos selecionados foram marcados como 'Arquivado'." });
+      }
+      previousDataDevolucaoRef.current = formState.dataDevolucao;
+  }, [formState.dataDevolucao, selectedDocIdsInDialog, isDialogOpen, toast]);
+
+
   const resetFormAndDialogState = () => {
     setFormState({ ...initialFormStateSolicitacao, dataSolicitacao: new Date().toISOString() });
     setIsEditing(false);
@@ -174,8 +204,12 @@ export default function SolicitacoesPage() {
       setFormState(solicitacao);
       setSelectedDocIdsInDialog(solicitacao.documentoIds || []);
       if(solicitacao.documentoIds && solicitacao.documentoIds.length > 0) setIsDocumentSelectionVisible(true);
+      previousDataAtendimentoRef.current = solicitacao.dataAtendimento;
+      previousDataDevolucaoRef.current = solicitacao.dataDevolucao;
     } else {
       resetFormAndDialogState();
+      previousDataAtendimentoRef.current = undefined;
+      previousDataDevolucaoRef.current = undefined;
     }
     setIsDialogOpen(true);
   };
@@ -192,25 +226,6 @@ export default function SolicitacoesPage() {
   const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
     const isoDate = date?.toISOString();
     setFormState(prev => ({ ...prev, [id]: isoDate }));
-
-    if (id === 'dataAtendimento' && date) {
-      const newStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
-      setAcervoDocs(prevDocs => 
-          prevDocs.map(doc => 
-              selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newStatus as Documento['status'] } : doc
-          )
-      );
-      toast({ title: "Status de Documentos Atualizado", description: `Documentos selecionados foram marcados como "${newStatus}".` });
-    }
-
-    if (id === 'dataDevolucao' && date) {
-        setAcervoDocs(prevDocs => 
-            prevDocs.map(doc => 
-                selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
-            )
-        );
-        toast({ title: "Status de Documentos Atualizado", description: "Documentos selecionados foram marcados como 'Arquivado'." });
-    }
   };
 
 
