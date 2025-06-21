@@ -163,12 +163,23 @@ export default function SolicitacoesPage() {
   
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
+    
     let filteredDocs = acervoDocs.filter(doc => {
-      if (doc.status !== 'Arquivado') {
+      const isAlreadySelectedInThisSolicitation = selectedDocIdsInDialog.includes(doc.id);
+
+      // A document should appear in the dialog's list if:
+      // 1. It's already part of the solicitation being edited (regardless of its status).
+      // OR
+      // 2. It's available for loan (status is 'Arquivado').
+      const isVisible = isAlreadySelectedInThisSolicitation || doc.status === 'Arquivado';
+
+      if (!isVisible) {
         return false;
       }
+      
+      // If it's visible, then apply the search term filter if one exists.
       if (!lowerSearchTerm) {
-        return true;
+        return true; // No search term, so it's included.
       }
 
       const numeroMatch = doc.numeroDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
@@ -194,7 +205,7 @@ export default function SolicitacoesPage() {
       });
     }
     setDocumentsForDialog(filteredDocs);
-  }, [dialogDocFilters, dialogDocSortConfig, acervoDocs]);
+  }, [dialogDocFilters, dialogDocSortConfig, acervoDocs, selectedDocIdsInDialog]);
 
 
   React.useEffect(() => {
@@ -351,6 +362,9 @@ export default function SolicitacoesPage() {
   }, [solicitacoes, editingId]);
 
   const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
+    if (doc.status !== 'Arquivado') {
+      return false;
+    }
     return !borrowedDocIds.has(doc.id);
   }, [borrowedDocIds]);
 
@@ -516,7 +530,7 @@ export default function SolicitacoesPage() {
                             {documentsForDialog.map(doc => {
                               const selectable = isDocumentSelectable(doc);
                               return (
-                                <TableRow key={doc.id} className={!selectable ? "opacity-50" : ""}>
+                                <TableRow key={doc.id} className={!selectable && !selectedDocIdsInDialog.includes(doc.id) ? "opacity-50" : ""}>
                                   <TableCell className="py-1 px-2 sticky left-0 bg-card z-10">
                                     <Checkbox 
                                       checked={selectedDocIdsInDialog.includes(doc.id)}
