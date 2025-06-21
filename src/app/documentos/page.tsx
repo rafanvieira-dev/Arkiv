@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao } from "@/types"; // Updated to use full ListagemEliminacao
+import type { Documento, ListagemEliminacao, Solicitacao } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -539,6 +539,14 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
+const placeholderSolicitacoes: Solicitacao[] = [
+  { id: "SOL001", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-001", nomeSolicitante: "João Silva", setorSolicitante: "Gab. Des. A", siglaServidor: "JSS", matriculaSolicitante: "12345", ramal: "1234", emailContato: "joao.silva@trf2.jus.br", dataSolicitacao: new Date("2024-03-01").toISOString(), documentoIds: ["DOC001"], status: "Pendente" },
+  { id: "SOL002", tipo: "Desarquivamento", numeroSolicitacao: "SOL-2024-002", nomeSolicitante: "Maria Oliveira", setorSolicitante: "Vara Federal 1", siglaServidor: "MOO", matriculaSolicitante: "54321", ramal: "4321", emailContato: "maria.oliveira@trf2.jus.br", dataSolicitacao: new Date("2024-03-05").toISOString(), dataAtendimento: new Date("2024-03-06").toISOString(), documentoIds: ["DOC002"], status: "Atendida" },
+  { id: "SOL003", tipo: "Empréstimo", numeroSolicitacao: "SOL-2024-003", nomeSolicitante: "Carlos Pereira", setorSolicitante: "Secretaria", siglaServidor: "CAP", matriculaSolicitante: "67890", ramal: "6789", emailContato: "carlos.pereira@trf2.jus.br", dataSolicitacao: new Date("2024-03-10").toISOString(), dataAtendimento: new Date("2024-03-11").toISOString(), dataDevolucao: new Date("2024-03-20").toISOString(), documentoIds: ["DOC003"], status: "Devolvido" },
+];
+
+const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
+
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
   const caixaIdFromUrl = searchParams.get('caixaId');
@@ -562,40 +570,65 @@ export default function DocumentosPage() {
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
-    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
   );
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
 
- React.useEffect(() => {
+  React.useEffect(() => {
+    try {
+      const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
+      setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoes);
+    } catch (error) {
+      console.error("Failed to read solicitations from localStorage:", error);
+      setSolicitacoes(placeholderSolicitacoes);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!solicitacoes.length && !window.localStorage.getItem(SOLICITACOES_STORAGE_KEY)) return;
+
+    const activeLoanMap = new Map<string, Solicitacao['tipo']>();
+    solicitacoes.forEach(sol => {
+      if (sol.dataAtendimento && !sol.dataDevolucao) {
+        sol.documentoIds.forEach(docId => activeLoanMap.set(docId, sol.tipo));
+      }
+    });
+
     const processedDocs = placeholderDocumentos.map(originalDoc => {
-      let doc = {...originalDoc}; // Create a mutable copy
-      let currentDocStatus = doc.status;
-      let updatedCodigosCaixa = doc.codigosCaixa;
+      let doc = { ...originalDoc };
+      let finalStatus = doc.status;
+      let isEliminated = false;
 
       if (doc.numeroListagemEliminacao) {
-        const listagem = simulatedListagensData.find(
-          l => l.numeroListagem === doc.numeroListagemEliminacao
-        );
-
-        if (listagem && listagem.documentoIds && listagem.documentoIds.includes(doc.id)) {
-          if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
-            currentDocStatus = "Aguardando prazo para eliminação";
-          }
-          if (listagem.dataProducaoTermoEliminacao && currentDocStatus === "Aguardando prazo para eliminação") {
-            currentDocStatus = "Eliminado";
+        const listagem = simulatedListagensData.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
+        if (listagem?.documentoIds?.includes(doc.id)) {
+          if (listagem.dataProducaoTermoEliminacao) {
+            finalStatus = "Eliminado";
+            isEliminated = true;
+          } else if (listagem.dataPublicacaoEdital && finalStatus === "Arquivado") {
+            finalStatus = "Aguardando prazo para eliminação";
           }
         }
       }
-      
-      if (currentDocStatus === "Eliminado") {
-        updatedCodigosCaixa = ""; 
+
+      if (!isEliminated && finalStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
+        const tipoSolicitacao = activeLoanMap.get(doc.id);
+        finalStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
       }
 
-      return { ...doc, status: currentDocStatus as Documento['status'], codigosCaixa: updatedCodigosCaixa };
+      doc.status = finalStatus as Documento['status'];
+
+      if (doc.status === "Eliminado") {
+        doc.codigosCaixa = "";
+      }
+
+      return doc;
     });
+
     setMasterDocumentList(processedDocs);
-  }, []);
+  }, [solicitacoes]);
 
 
   React.useEffect(() => {
@@ -1657,6 +1690,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
