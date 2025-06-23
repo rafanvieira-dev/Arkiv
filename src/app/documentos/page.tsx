@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -150,7 +151,7 @@ const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
-  const caixaIdFromUrl = searchParams.get('caixaId');
+  const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
   const numeroListagemFromQuery = searchParams.get('numeroListagem');
 
@@ -551,8 +552,8 @@ export default function DocumentosPage() {
     let newFilteredDocumentos = processedDocumentos.filter(doc => {
       let passesAll = true;
 
-      if (caixaIdFromUrl) {
-        if (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(caixaIdFromUrl)) {
+      if (codigoCaixaFromUrl) {
+        if (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(codigoCaixaFromUrl)) {
           passesAll = false;
         }
       }
@@ -602,7 +603,7 @@ export default function DocumentosPage() {
       if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) passesAll = false;
       if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) passesAll = false;
       
-      if (!caixaIdFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
+      if (!codigoCaixaFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
       
 
       if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) passesAll = false;
@@ -653,7 +654,7 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting, caixaIdFromUrl, searchParams, processedDocumentos, classificacoes, getSortableValue]);
+  }, [filters, sorting, codigoCaixaFromUrl, searchParams, processedDocumentos, classificacoes, getSortableValue]);
 
   React.useEffect(() => {
     if (isDataLoaded) { 
@@ -734,9 +735,9 @@ export default function DocumentosPage() {
       ? `Documentos da Listagem de Eliminação nº ${numeroListagemFromQuery}`
       : "Documentos da Listagem de Eliminação";
     pageDescription = "Documentos incluídos na listagem de eliminação selecionada.";
-  } else if (caixaIdFromUrl) {
-    pageTitle = `Documentos na Caixa: ${caixaIdFromUrl}`;
-    pageDescription = `Documentos pertencentes à caixa ${caixaIdFromUrl}.`;
+  } else if (codigoCaixaFromUrl) {
+    pageTitle = `Documentos na Caixa: ${codigoCaixaFromUrl}`;
+    pageDescription = `Documentos pertencentes à caixa ${codigoCaixaFromUrl}.`;
   }
 
 
@@ -1159,7 +1160,7 @@ export default function DocumentosPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
-                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." disabled={!!caixaIdFromUrl} />
+                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." disabled={!!codigoCaixaFromUrl} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="filterGeneroDocumental">Gênero Documental</Label>
@@ -1391,7 +1392,7 @@ export default function DocumentosPage() {
           </ScrollArea>
            {displayedDocumentos.length === 0 && (
             <p className="text-center text-muted-foreground py-4">
-              {isFilteredByListagem ? `Nenhum documento encontrado na listagem de eliminação.` : (caixaIdFromUrl ? `Nenhum documento encontrado na caixa ${caixaIdFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados.")}
+              {isFilteredByListagem ? `Nenhum documento encontrado na listagem de eliminação.` : (codigoCaixaFromUrl ? `Nenhum documento encontrado na caixa ${codigoCaixaFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados.")}
             </p>
           )}
         </CardContent>

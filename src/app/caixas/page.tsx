@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -79,7 +80,7 @@ const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
     defaultVisible: true,
     enableSorting: true,
     cellFormatter: (value, caixa) => (
-      <Link href={`/documentos?caixaId=${caixa.id}`} passHref>
+      <Link href={`/documentos?codigoCaixa=${encodeURIComponent(caixa.codigoCaixa)}`} passHref>
         <span className="text-primary hover:underline cursor-pointer font-medium">
           {value}
         </span>
