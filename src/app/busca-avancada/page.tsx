@@ -96,7 +96,7 @@ export default function BuscaAvancadaPage() {
       defaultVisible: true, 
       enableSorting: true,
       cellFormatter: (value, doc) => (
-        <Link href={`/documentos?edit=${doc.id}`} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+        <Link href={`/documentos?edit=${doc.id}`} className="text-primary hover:underline">
             {value || 'N/A'}
         </Link>
       )
