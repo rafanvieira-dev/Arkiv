@@ -155,6 +155,7 @@ export default function DocumentosPage() {
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
   const numeroListagemFromQuery = searchParams.get('numeroListagem');
   const editDocIdFromUrl = searchParams.get('edit');
+  const isFilteredByListagem = !!listagemDocIdsParam;
 
   const [documentos, setDocumentos] = React.useState<Documento[]>([]);
   const [processedDocumentos, setProcessedDocumentos] = React.useState<Documento[]>([]);
