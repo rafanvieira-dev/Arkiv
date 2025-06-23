@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -24,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/date-picker";
+import { DateInputPicker } from "@/components/date-input-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
@@ -106,11 +107,12 @@ export default function SolicitacoesPage() {
     if (isDataLoaded) {
       try {
           window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
+          window.localStorage.setItem(DOCUMENTOS_STORAGE_KEY, JSON.stringify(acervoDocs));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [solicitacoes, isDataLoaded]);
+  }, [solicitacoes, acervoDocs, isDataLoaded]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -133,13 +135,13 @@ export default function SolicitacoesPage() {
           if (listagem.dataProducaoTermoEliminacao) {
             currentDocStatus = "Eliminado";
             isEliminated = true;
-          } else if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
+          } else if (listagem.dataPublicacaoEdital && currentDocStatus !== "Emprestado" && currentDocStatus !== "Desarquivado") {
             currentDocStatus = "Aguardando prazo para eliminação";
           }
         }
       }
   
-      if (!isEliminated && currentDocStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
+      if (!isEliminated && (currentDocStatus === 'Arquivado' || currentDocStatus === 'Aguardando prazo para eliminação') && activeLoanMap.has(doc.id)) {
         const tipoSolicitacao = activeLoanMap.get(doc.id);
         currentDocStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
       }
@@ -428,23 +430,26 @@ export default function SolicitacoesPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="dataSolicitacao">Data da Solicitação*</Label>
-                  <DatePicker 
-                    date={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
-                    setDate={(date) => handleDateChange('dataSolicitacao')(date)}
+                  <DateInputPicker 
+                    value={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
+                    onChange={(date) => handleDateChange('dataSolicitacao')(date)}
+                    placeholder="dd/mm/aaaa"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dataAtendimento">Data de Atendimento</Label>
-                  <DatePicker 
-                    date={formState.dataAtendimento ? parseISO(formState.dataAtendimento) : undefined}
-                    setDate={(date) => handleDateChange('dataAtendimento')(date)}
+                  <DateInputPicker 
+                    value={formState.dataAtendimento ? parseISO(formState.dataAtendimento) : undefined}
+                    onChange={(date) => handleDateChange('dataAtendimento')(date)}
+                    placeholder="dd/mm/aaaa"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dataDevolucao">Data de Devolução</Label>
-                  <DatePicker 
-                    date={formState.dataDevolucao ? parseISO(formState.dataDevolucao) : undefined}
-                    setDate={(date) => handleDateChange('dataDevolucao')(date)}
+                  <DateInputPicker 
+                    value={formState.dataDevolucao ? parseISO(formState.dataDevolucao) : undefined}
+                    onChange={(date) => handleDateChange('dataDevolucao')(date)}
+                    placeholder="dd/mm/aaaa"
                   />
                 </div>
 

@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/date-picker";
+import { DateInputPicker } from "@/components/date-input-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -57,6 +57,8 @@ type SimulatedDocumentForDialog = Pick<
 >;
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
+
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
@@ -164,7 +166,7 @@ export default function ListagensEliminacaoPage() {
     ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
 
-  const [simulatedDocuments, setSimulatedDocuments] = React.useState<SimulatedDocumentForDialog[]>(placeholderDocumentos.map(doc => ({ ...doc })));
+  const [simulatedDocuments, setSimulatedDocuments] = React.useState<SimulatedDocumentForDialog[]>([]);
   const [documentsForDialog, setDocumentsForDialog] = React.useState<SimulatedDocumentForDialog[]>([]);
   const [selectedDialogDocIds, setSelectedDialogDocIds] = React.useState<string[]>([]);
   const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ anoEliminacaoPrevisto: "" });
@@ -260,9 +262,14 @@ export default function ListagensEliminacaoPage() {
     try {
       const stored = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
       setListagens(stored ? JSON.parse(stored) : simulatedListagensData);
+
+      const docsStored = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+      setSimulatedDocuments(docsStored ? JSON.parse(docsStored) : placeholderDocumentos);
+
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setListagens(simulatedListagensData);
+      setSimulatedDocuments(placeholderDocumentos);
     }
     setIsDataLoaded(true);
   }, []);
@@ -271,11 +278,12 @@ export default function ListagensEliminacaoPage() {
     if (isDataLoaded) {
       try {
         window.localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(listagens));
+        window.localStorage.setItem(DOCUMENTOS_STORAGE_KEY, JSON.stringify(simulatedDocuments));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [listagens, isDataLoaded]);
+  }, [listagens, simulatedDocuments, isDataLoaded]);
 
   React.useEffect(() => {
     let filteredDocs = simulatedDocuments.filter(doc => {
@@ -352,7 +360,6 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
-    setSimulatedDocuments(placeholderDocumentos.map(doc => ({ ...doc })));
   };
 
   const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
@@ -676,10 +683,10 @@ export default function ListagensEliminacaoPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
-                      <DatePicker
-                        date={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
-                        setDate={(date) => handleDateChange('dataProducaoListagem')(date)}
-                        placeholder="Selecione a data"
+                      <DateInputPicker
+                        value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
+                        onChange={(date) => handleDateChange('dataProducaoListagem')(date)}
+                        placeholder="dd/mm/aaaa"
                       />
                     </div>
                     <div className="space-y-2">
@@ -688,10 +695,10 @@ export default function ListagensEliminacaoPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
-                      <DatePicker
-                        date={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
-                        setDate={(date) => handleDateChange('dataPublicacaoEdital')(date)}
-                        placeholder="Selecione a data"
+                      <DateInputPicker
+                        value={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
+                        onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)}
+                        placeholder="dd/mm/aaaa"
                       />
                     </div>
                     <div className="space-y-2">
@@ -700,10 +707,10 @@ export default function ListagensEliminacaoPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
-                      <DatePicker
-                        date={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
-                        setDate={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
-                        placeholder="Selecione a data"
+                      <DateInputPicker
+                        value={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
+                        onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
+                        placeholder="dd/mm/aaaa"
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
@@ -927,5 +934,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-
-    

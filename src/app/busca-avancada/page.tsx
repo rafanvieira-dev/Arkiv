@@ -1,3 +1,7 @@
+
+"use client";
+
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,9 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { Search, RotateCcw } from "lucide-react";
-import { DatePicker } from "@/components/date-picker"; // Assuming a DatePicker component exists or will be created
+import { DateInputPicker } from "@/components/date-input-picker";
 
 export default function BuscaAvancadaPage() {
+  const [dataDe, setDataDe] = React.useState<Date | undefined>();
+  const [dataAte, setDataAte] = React.useState<Date | undefined>();
+
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Busca Avançada" description="Encontre documentos utilizando múltiplos critérios de pesquisa." />
@@ -33,11 +40,11 @@ export default function BuscaAvancadaPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="dataDocumentoDe">Data do Documento (De)</Label>
-            <DatePicker placeholder="Selecione a data inicial" />
+            <DateInputPicker value={dataDe} onChange={setDataDe} placeholder="dd/mm/aaaa" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="dataDocumentoAte">Data do Documento (Até)</Label>
-            <DatePicker placeholder="Selecione a data final" />
+            <DateInputPicker value={dataAte} onChange={setDataAte} placeholder="dd/mm/aaaa" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="partes">Partes Envolvidas</Label>

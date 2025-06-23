@@ -47,7 +47,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DatePicker } from "@/components/date-picker";
 import { DateInputPicker } from "@/components/date-input-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -303,7 +302,7 @@ export default function DocumentosPage() {
         );
       }
     },
-  ], [classificacoes, listagens]);
+  ], [classificacoes, listagens, handleOpenDialog]);
   
   React.useEffect(() => {
     setColumnVisibility(
@@ -338,8 +337,11 @@ export default function DocumentosPage() {
   React.useEffect(() => {
     if (isDataLoaded) {
       window.localStorage.setItem(DOCUMENTOS_STORAGE_KEY, JSON.stringify(documentos));
+      window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(classificacoes));
+      window.localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(listagens));
+      window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
     }
-  }, [documentos, isDataLoaded]);
+  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -362,13 +364,13 @@ export default function DocumentosPage() {
           if (listagem.dataProducaoTermoEliminacao) {
             currentDocStatus = "Eliminado";
             isEliminated = true;
-          } else if (listagem.dataPublicacaoEdital && currentDocStatus === "Arquivado") {
+          } else if (listagem.dataPublicacaoEdital && currentDocStatus !== "Emprestado" && currentDocStatus !== "Desarquivado") {
             currentDocStatus = "Aguardando prazo para eliminação";
           }
         }
       }
 
-      if (!isEliminated && currentDocStatus === 'Arquivado' && activeLoanMap.has(doc.id)) {
+      if (!isEliminated && (currentDocStatus === 'Arquivado' || currentDocStatus === 'Aguardando prazo para eliminação') && activeLoanMap.has(doc.id)) {
         const tipoSolicitacao = activeLoanMap.get(doc.id);
         currentDocStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
       }
@@ -482,7 +484,7 @@ export default function DocumentosPage() {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
     if (codigoInput) {
       const foundClassification = classificacoes.find(
-        c => c.codigo === codigoInput
+        c => c.codigo === codigoInput && !c.inativo
       );
       if (foundClassification) {
         setFormState(prev => ({
@@ -493,7 +495,7 @@ export default function DocumentosPage() {
         setFormState(prev => ({
           ...prev,
           classificacaoArquivisticaId: "",
-          assuntoClassificacaoDisplay: "Código não encontrado.",
+          assuntoClassificacaoDisplay: "Código não encontrado ou inativo.",
         }));
       }
     } else {
@@ -1006,10 +1008,10 @@ export default function DocumentosPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="dataBaixa">Data da Baixa</Label>
-                <DatePicker 
-                  date={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
-                  setDate={(date) => handleDateChange('dataBaixa')(date)} 
-                  placeholder="Selecione a data"
+                <DateInputPicker 
+                  value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
+                  onChange={(date) => handleDateChange('dataBaixa')(date)} 
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
               
