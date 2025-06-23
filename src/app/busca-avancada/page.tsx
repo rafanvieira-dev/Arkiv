@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -354,7 +355,11 @@ export default function BuscaAvancadaPage() {
                 <TableBody>
                   {results.map((doc) => (
                     <TableRow key={doc.id}>
-                      <TableCell className="font-medium">{doc.numeroDocumento || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link href={`/documentos?edit=${doc.id}`} className="text-primary hover:underline">
+                          {doc.numeroDocumento || 'N/A'}
+                        </Link>
+                      </TableCell>
                       <TableCell>{doc.tipoDocumento || 'N/A'}</TableCell>
                       <TableCell className="max-w-sm truncate" title={doc.descricaoDocumento}>{doc.descricaoDocumento || 'N/A'}</TableCell>
                       <TableCell>
@@ -381,4 +386,3 @@ export default function BuscaAvancadaPage() {
     </div>
   );
 }
-

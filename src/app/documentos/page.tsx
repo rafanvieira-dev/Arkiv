@@ -154,9 +154,7 @@ export default function DocumentosPage() {
   const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
   const numeroListagemFromQuery = searchParams.get('numeroListagem');
-
-  const docIdsFromListagemForTitle = listagemDocIdsParam ? listagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
-  const isFilteredByListagem = !!listagemDocIdsParam && docIdsFromListagemForTitle.length > 0;
+  const editDocIdFromUrl = searchParams.get('edit');
 
   const [documentos, setDocumentos] = React.useState<Documento[]>([]);
   const [processedDocumentos, setProcessedDocumentos] = React.useState<Documento[]>([]);
@@ -341,6 +339,15 @@ export default function DocumentosPage() {
     }
     setIsDataLoaded(true);
   }, []);
+
+  React.useEffect(() => {
+    if (editDocIdFromUrl && documentos.length > 0) {
+      const docToEdit = documentos.find(d => d.id === editDocIdFromUrl);
+      if (docToEdit) {
+        handleOpenDialog(docToEdit);
+      }
+    }
+  }, [editDocIdFromUrl, documentos, handleOpenDialog]);
 
   React.useEffect(() => {
     if (isDataLoaded) {
