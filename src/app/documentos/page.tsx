@@ -148,6 +148,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
@@ -179,9 +180,50 @@ export default function DocumentosPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
+  const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
+
+  const handleOpenDialog = (doc?: Documento) => {
+    if (doc) {
+      const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
+      setFormState({
+        ...initialFormState, 
+        ...doc,
+        codigoClassificacaoArquivisticaInput: existingClassification ? existingClassification.codigo : "",
+        assuntoClassificacaoDisplay: existingClassification ? (existingClassification.inativo ? `${existingClassification.descricao} (INATIVO)`: existingClassification.descricao) : "Não encontrado",
+        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
+        dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
+        dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
+        quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
+        quantidadeApensos: doc.quantidadeApensos ?? undefined,
+        totalMidias: doc.totalMidias ?? undefined,
+      });
+      setDocumentIdToDisplay(doc.id);
+      setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
+      setOutroTipoMidia(doc.tipoMidiaDetalhe && !['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'].includes(doc.tipoMidiaDetalhe) ? doc.tipoMidiaDetalhe : "");
+      setOutroTipoParte(doc.tipoPartePrincipal && !tiposParteOpcoes.slice(0,-1).includes(doc.tipoPartePrincipal) ? doc.tipoPartePrincipal : "");
+    } else {
+      resetForm(); 
+    }
+    setIsDialogOpen(true);
+  };
 
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
-    { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
+    { 
+      id: 'id', 
+      header: 'ID Interno', 
+      accessorKey: 'id', 
+      defaultVisible: true, 
+      enableSorting: true,
+      cellFormatter: (value, doc) => (
+        <Button
+          variant="link"
+          className="p-0 h-auto font-medium"
+          onClick={() => handleOpenDialog(doc)}
+        >
+          {value}
+        </Button>
+      )
+    },
     { 
       id: 'status', 
       header: 'Status', 
@@ -244,9 +286,9 @@ export default function DocumentosPage() {
       accessorKey: 'numeroListagemEliminacao', 
       defaultVisible: true, 
       enableSorting: true, 
-      cellFormatter: (value, doc) => {
+      cellFormatter: (value) => {
         if (!value) return "N/A";
-        const listagem = simulatedListagensData.find(l => l.numeroListagem === value);
+        const listagem = listagens.find(l => l.numeroListagem === value);
         if (!listagem || !listagem.documentoIds) return value; 
   
         return (
@@ -261,7 +303,7 @@ export default function DocumentosPage() {
         );
       }
     },
-  ], [classificacoes]);
+  ], [classificacoes, listagens]);
   
   React.useEffect(() => {
     setColumnVisibility(
@@ -279,12 +321,16 @@ export default function DocumentosPage() {
 
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesSimulado);
+      
+      const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
+      setListagens(storedListagens ? JSON.parse(storedListagens) : simulatedListagensData);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setDocumentos(placeholderDocumentos);
       setSolicitacoes(placeholderSolicitacoesInitial);
       setClassificacoes(placeholderClassificacoesSimulado);
+      setListagens(simulatedListagensData);
     }
     setIsDataLoaded(true);
   }, []);
@@ -311,7 +357,7 @@ export default function DocumentosPage() {
       let isEliminated = false;
 
       if (doc.numeroListagemEliminacao) {
-        const listagem = simulatedListagensData.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
+        const listagem = listagens.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
         if (listagem?.documentoIds?.includes(doc.id)) {
           if (listagem.dataProducaoTermoEliminacao) {
             currentDocStatus = "Eliminado";
@@ -337,12 +383,25 @@ export default function DocumentosPage() {
     });
 
     setProcessedDocumentos(processed);
-  }, [documentos, solicitacoes, isDataLoaded]);
+  }, [documentos, solicitacoes, listagens, isDataLoaded]);
 
 
   React.useEffect(() => {
-    const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
+    const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId);
+    
     if (classification) {
+       if (classification.inativo) {
+         setFormState(prev => ({
+          ...prev,
+          assuntoClassificacaoDisplay: `${classification.descricao} (INATIVO)`,
+          prazoArquivoCorrenteDisplay: "",
+          prazoArquivoIntermediarioDisplay: "",
+          destinacaoFinalDisplay: undefined,
+          anoEliminacaoPrevisto: ""
+        }));
+        return;
+      }
+      
       let prazoCorrente = "";
       if (classification.tipoPrazoFaseCorrente === "Anos" && typeof classification.prazoGuardaFaseCorrenteAnos === 'number') {
         prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
@@ -423,7 +482,7 @@ export default function DocumentosPage() {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
     if (codigoInput) {
       const foundClassification = classificacoes.find(
-        c => c.codigo === codigoInput && !c.inativo
+        c => c.codigo === codigoInput
       );
       if (foundClassification) {
         setFormState(prev => ({
@@ -431,11 +490,10 @@ export default function DocumentosPage() {
           classificacaoArquivisticaId: foundClassification.id,
         }));
       } else {
-        const existingButInactive = classificacoes.find(c => c.codigo === codigoInput && c.inativo);
         setFormState(prev => ({
           ...prev,
-          classificacaoArquivisticaId: existingButInactive ? existingButInactive.id : "",
-          assuntoClassificacaoDisplay: existingButInactive ? `${existingButInactive.descricao} (INATIVO)` : "Código não encontrado.",
+          classificacaoArquivisticaId: "",
+          assuntoClassificacaoDisplay: "Código não encontrado.",
         }));
       }
     } else {
@@ -487,31 +545,6 @@ export default function DocumentosPage() {
     });
     setSelectedRowIds([]); 
     setIsDialogOpen(false);
-  };
-
-  const handleOpenDialog = (doc?: Documento) => {
-    if (doc) {
-      const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
-      setFormState({
-        ...initialFormState, 
-        ...doc,
-        codigoClassificacaoArquivisticaInput: existingClassification ? existingClassification.codigo : "",
-        assuntoClassificacaoDisplay: existingClassification ? (existingClassification.inativo ? `${existingClassification.descricao} (INATIVO)`: existingClassification.descricao) : "Não encontrado",
-        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
-        dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
-        dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
-        quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
-        quantidadeApensos: doc.quantidadeApensos ?? undefined,
-        totalMidias: doc.totalMidias ?? undefined,
-      });
-      setDocumentIdToDisplay(doc.id);
-      setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
-      setOutroTipoMidia(doc.tipoMidiaDetalhe && !['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'].includes(doc.tipoMidiaDetalhe) ? doc.tipoMidiaDetalhe : "");
-      setOutroTipoParte(doc.tipoPartePrincipal && !tiposParteOpcoes.slice(0,-1).includes(doc.tipoPartePrincipal) ? doc.tipoPartePrincipal : "");
-    } else {
-      resetForm(); 
-    }
-    setIsDialogOpen(true);
   };
 
   const handleDelete = (docId: string) => {
