@@ -184,6 +184,10 @@ export default function BuscaAvancadaPage() {
             <Label htmlFor="codigoClasseJudicial">Código da Classe Judicial</Label>
             <Input id="codigoClasseJudicial" placeholder="Contém..." />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="numeroListagemEliminacao">Nº da Listagem de Eliminação</Label>
+            <Input id="numeroListagemEliminacao" placeholder="Contém..." />
+          </div>
           <div className="flex items-center space-x-2 pt-6">
             <Checkbox id="segredoJustica" />
             <Label htmlFor="segredoJustica">Segredo de Justiça</Label>
