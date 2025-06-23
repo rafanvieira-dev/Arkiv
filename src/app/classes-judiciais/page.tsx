@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -33,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const placeholderClassesJudiciais: ClasseJudicial[] = [
+const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
   { id: "CJ002", codigo: "22", descricao: "Ação Penal - Procedimento Ordinário", prazoGuardaAnos: 5, destinacaoFinal: "Guarda Permanente", inativo: false },
   { id: "CJ003", codigo: "12078", descricao: "Cumprimento de Sentença", prazoGuardaAnos: 0, destinacaoFinal: "Vide Guia de Aplicação", inativo: true, observacoes: "Arquivar processo principal junto." },
@@ -65,10 +64,10 @@ export default function ClassesJudiciaisPage() {
   React.useEffect(() => {
     try {
       const stored = window.localStorage.getItem(CLASSES_JUDICIAIS_STORAGE_KEY);
-      setClassesJudiciais(stored ? JSON.parse(stored) : placeholderClassesJudiciais);
+      setClassesJudiciais(stored ? JSON.parse(stored) : initialClassesJudiciais);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
-      setClassesJudiciais(placeholderClassesJudiciais);
+      setClassesJudiciais(initialClassesJudiciais);
     }
     setIsDataLoaded(true);
   }, []);

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -57,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesInitial } from "@/lib/mock-data";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -145,14 +144,9 @@ type ColumnConfig = {
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
-
-const placeholderClassificacoesInitial: Classificacao[] = [
-  { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
-  { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", inativo: true },
-  { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
-];
 
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
@@ -163,7 +157,10 @@ export default function DocumentosPage() {
   const docIdsFromListagemForTitle = listagemDocIdsParam ? listagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
   const isFilteredByListagem = !!listagemDocIdsParam && docIdsFromListagemForTitle.length > 0;
 
-  const [masterDocumentList, setMasterDocumentList] = React.useState<Documento[]>([]);
+  const [documentos, setDocumentos] = React.useState<Documento[]>([]);
+  const [processedDocumentos, setProcessedDocumentos] = React.useState<Documento[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+  
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
@@ -273,6 +270,9 @@ export default function DocumentosPage() {
 
   React.useEffect(() => {
     try {
+      const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+      setDocumentos(storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos);
+
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
 
@@ -281,13 +281,21 @@ export default function DocumentosPage() {
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
+      setDocumentos(placeholderDocumentos);
       setSolicitacoes(placeholderSolicitacoesInitial);
       setClassificacoes(placeholderClassificacoesInitial);
     }
+    setIsDataLoaded(true);
   }, []);
 
   React.useEffect(() => {
-    if (!solicitacoes.length && !window.localStorage.getItem(SOLICITACOES_STORAGE_KEY)) return;
+    if (isDataLoaded) {
+      window.localStorage.setItem(DOCUMENTOS_STORAGE_KEY, JSON.stringify(documentos));
+    }
+  }, [documentos, isDataLoaded]);
+
+  React.useEffect(() => {
+    if (!isDataLoaded) return;
 
     const activeLoanMap = new Map<string, Solicitacao['tipo']>();
     solicitacoes.forEach(sol => {
@@ -296,7 +304,7 @@ export default function DocumentosPage() {
       }
     });
 
-    const processedDocs = placeholderDocumentos.map(originalDoc => {
+    const processed = documentos.map(originalDoc => {
       let doc = { ...originalDoc };
       let currentDocStatus = doc.status;
       let isEliminated = false;
@@ -327,8 +335,8 @@ export default function DocumentosPage() {
       return doc;
     });
 
-    setMasterDocumentList(processedDocs);
-  }, [solicitacoes]);
+    setProcessedDocumentos(processed);
+  }, [documentos, solicitacoes, isDataLoaded]);
 
 
   React.useEffect(() => {
@@ -422,10 +430,11 @@ export default function DocumentosPage() {
           classificacaoArquivisticaId: foundClassification.id,
         }));
       } else {
+        const existingButInactive = classificacoes.find(c => c.codigo === codigoInput && c.inativo);
         setFormState(prev => ({
           ...prev,
-          classificacaoArquivisticaId: "",
-          assuntoClassificacaoDisplay: "Código não encontrado ou inativo.",
+          classificacaoArquivisticaId: existingButInactive ? existingButInactive.id : "",
+          assuntoClassificacaoDisplay: existingButInactive ? `${existingButInactive.descricao} (INATIVO)` : "Código não encontrado.",
         }));
       }
     } else {
@@ -465,7 +474,7 @@ export default function DocumentosPage() {
       numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, 
     };
     
-    setMasterDocumentList(prevDocs => {
+    setDocumentos(prevDocs => {
       const docIndex = prevDocs.findIndex(d => d.id === finalFormState.id);
       if (docIndex > -1) {
         const updatedDocs = [...prevDocs];
@@ -486,7 +495,7 @@ export default function DocumentosPage() {
         ...initialFormState, 
         ...doc,
         codigoClassificacaoArquivisticaInput: existingClassification ? existingClassification.codigo : "",
-        assuntoClassificacaoDisplay: existingClassification ? existingClassification.descricao : "",
+        assuntoClassificacaoDisplay: existingClassification ? (existingClassification.inativo ? `${existingClassification.descricao} (INATIVO)`: existingClassification.descricao) : "Não encontrado",
         classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
@@ -504,6 +513,10 @@ export default function DocumentosPage() {
     setIsDialogOpen(true);
   };
 
+  const handleDelete = (docId: string) => {
+    setDocumentos(prev => prev.filter(d => d.id !== docId));
+  };
+  
   const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -535,7 +548,7 @@ export default function DocumentosPage() {
     const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
     const docIdsFromListagem = currentListagemDocIdsParam ? currentListagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
 
-    let newFilteredDocumentos = masterDocumentList.filter(doc => {
+    let newFilteredDocumentos = processedDocumentos.filter(doc => {
       let passesAll = true;
 
       if (caixaIdFromUrl) {
@@ -640,13 +653,13 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting, caixaIdFromUrl, searchParams, masterDocumentList, classificacoes, getSortableValue]);
+  }, [filters, sorting, caixaIdFromUrl, searchParams, processedDocumentos, classificacoes, getSortableValue]);
 
   React.useEffect(() => {
-    if (masterDocumentList.length > 0) { 
+    if (isDataLoaded) { 
       applyFiltersAndSorting();
     }
-  }, [applyFiltersAndSorting, masterDocumentList]);
+  }, [applyFiltersAndSorting, isDataLoaded]);
 
 
   const clearFilters = () => {
@@ -1362,7 +1375,7 @@ export default function DocumentosPage() {
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento">
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" onClick={() => handleDelete(doc.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
@@ -1387,42 +1400,3 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

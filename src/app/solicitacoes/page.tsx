@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -58,7 +57,7 @@ type DialogDocSortConfig = { id: keyof SimulatedDocumentForSolicitacaoDialog | s
 type DialogDocFilters = { searchTerm: string; };
 
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
-const ACERVO_SOL_STORAGE_KEY = 'arquivocentral_acervo_sol';
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 
 
 export default function SolicitacoesPage() {
@@ -90,18 +89,32 @@ export default function SolicitacoesPage() {
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
 
-      // We no longer load acervo from local storage, we calculate it.
+      const storedDocumentos = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+      const baseDocs = storedDocumentos ? JSON.parse(storedDocumentos) : placeholderDocumentos;
+      // We don't need to persist the acervo state separately, we calculate it on load.
+      setAcervoDocs(baseDocs);
+
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setSolicitacoes(placeholderSolicitacoesInitial);
+      setAcervoDocs(placeholderDocumentos);
     }
     setIsDataLoaded(true);
   }, []);
 
   React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+          window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [solicitacoes, isDataLoaded]);
+
+  React.useEffect(() => {
     if (!isDataLoaded) return;
   
-    // Calculate definitive document statuses
     const activeLoanMap = new Map<string, Solicitacao['tipo']>();
     solicitacoes.forEach(sol => {
       if (sol.dataAtendimento && !sol.dataDevolucao) {
@@ -109,12 +122,12 @@ export default function SolicitacoesPage() {
       }
     });
   
-    const processedDocs = placeholderDocumentos.map(originalDoc => {
+    const processedDocs = acervoDocs.map(originalDoc => {
       let doc = { ...originalDoc };
       let currentDocStatus = doc.status;
       let isEliminated = false;
   
-      if (doc.numeroListagemEliminacao) {
+      if ('numeroListagemEliminacao' in doc && doc.numeroListagemEliminacao) {
         const listagem = simulatedListagensData.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
         if (listagem?.documentoIds?.includes(doc.id)) {
           if (listagem.dataProducaoTermoEliminacao) {
@@ -139,22 +152,7 @@ export default function SolicitacoesPage() {
       return doc;
     });
   
-    const condensedDocs: SimulatedDocumentForSolicitacaoDialog[] = processedDocs.map(doc => ({
-      id: doc.id,
-      numeroDocumento: doc.numeroDocumento,
-      tipoDocumento: doc.tipoDocumento,
-      descricaoDocumento: doc.descricaoDocumento,
-      status: doc.status,
-      codigosCaixa: doc.codigosCaixa,
-    }));
-  
-    setAcervoDocs(condensedDocs);
-    try {
-        window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
-    } catch (error) {
-      console.error("Failed to write to localStorage:", error);
-    }
-  
+    setAcervoDocs(processedDocs);
   }, [solicitacoes, isDataLoaded]);
 
   React.useEffect(() => {
@@ -167,20 +165,10 @@ export default function SolicitacoesPage() {
     let filteredDocs = acervoDocs.filter(doc => {
       const isAlreadySelectedInThisSolicitation = selectedDocIdsInDialog.includes(doc.id);
 
-      // A document should appear in the dialog's list if:
-      // 1. It's already part of the solicitation being edited (regardless of its status).
-      // OR
-      // 2. It's available for loan (status is 'Arquivado').
       const isVisible = isAlreadySelectedInThisSolicitation || doc.status === 'Arquivado';
-
-      if (!isVisible) {
-        return false;
-      }
+      if (!isVisible) return false;
       
-      // If it's visible, then apply the search term filter if one exists.
-      if (!lowerSearchTerm) {
-        return true; // No search term, so it's included.
-      }
+      if (!lowerSearchTerm) return true;
 
       const numeroMatch = doc.numeroDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
       const tipoMatch = doc.tipoDocumento?.toLowerCase().includes(lowerSearchTerm) ?? false;
@@ -208,30 +196,35 @@ export default function SolicitacoesPage() {
   }, [dialogDocFilters, dialogDocSortConfig, acervoDocs, selectedDocIdsInDialog]);
 
 
+  const updateDocStatusOnDateChange = React.useCallback(() => {
+    if (!isDialogOpen) return;
+
+    const newDocStatusOnAttend = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
+    
+    setAcervoDocs(prevDocs =>
+      prevDocs.map(doc => {
+        if (selectedDocIdsInDialog.includes(doc.id)) {
+          if (formState.dataDevolucao) {
+            return { ...doc, status: 'Arquivado' };
+          }
+          if (formState.dataAtendimento) {
+            return { ...doc, status: newDocStatusOnAttend as Documento['status'] };
+          }
+        }
+        return doc;
+      })
+    );
+  }, [isDialogOpen, formState.dataAtendimento, formState.dataDevolucao, formState.tipo, selectedDocIdsInDialog]);
+
   React.useEffect(() => {
-    if (isDialogOpen && formState.dataAtendimento && formState.dataAtendimento !== previousDataAtendimentoRef.current) {
-      const newDocStatus = formState.tipo === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
-      setAcervoDocs(prevDocs =>
-        prevDocs.map(doc =>
-          selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: newDocStatus as Documento['status'] } : doc
-        )
-      );
-      toast({ title: "Status dos Documentos Atualizado", description: `Status dos documentos selecionados na lista do acervo foi atualizado.` });
+    if (isDialogOpen) {
+      if (formState.dataAtendimento !== previousDataAtendimentoRef.current || formState.dataDevolucao !== previousDataDevolucaoRef.current) {
+        updateDocStatusOnDateChange();
+        previousDataAtendimentoRef.current = formState.dataAtendimento;
+        previousDataDevolucaoRef.current = formState.dataDevolucao;
+      }
     }
-    previousDataAtendimentoRef.current = formState.dataAtendimento;
-  }, [formState.dataAtendimento, formState.tipo, selectedDocIdsInDialog, isDialogOpen, toast, setAcervoDocs]);
-  
-  React.useEffect(() => {
-    if (isDialogOpen && formState.dataDevolucao && formState.dataDevolucao !== previousDataDevolucaoRef.current) {
-      setAcervoDocs(prevDocs =>
-        prevDocs.map(doc =>
-          selectedDocIdsInDialog.includes(doc.id) ? { ...doc, status: 'Arquivado' } : doc
-        )
-      );
-      toast({ title: "Status dos Documentos Atualizado", description: `Status dos documentos selecionados na lista do acervo foi atualizado para "Arquivado".` });
-    }
-    previousDataDevolucaoRef.current = formState.dataDevolucao;
-  }, [formState.dataDevolucao, selectedDocIdsInDialog, isDialogOpen, toast, setAcervoDocs]);
+  }, [isDialogOpen, formState.dataAtendimento, formState.dataDevolucao, updateDocStatusOnDateChange]);
 
 
   const resetFormAndDialogState = () => {

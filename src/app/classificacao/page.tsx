@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -42,7 +41,7 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
-const placeholderClassificacoesInitial: Classificacao[] = [
+const initialClassificacoes: Classificacao[] = [
   { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
   { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", inativo: true },
   { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
@@ -225,7 +224,7 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
 export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
-  const [placeholderClassificacoes, setPlaceholderClassificacoes] = React.useState<Classificacao[]>([]);
+  const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
   const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
@@ -242,10 +241,10 @@ export default function ClassificacaoPage() {
   React.useEffect(() => {
     try {
       const stored = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
-      setPlaceholderClassificacoes(stored ? JSON.parse(stored) : placeholderClassificacoesInitial);
+      setClassificacoes(stored ? JSON.parse(stored) : initialClassificacoes);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
-      setPlaceholderClassificacoes(placeholderClassificacoesInitial);
+      setClassificacoes(initialClassificacoes);
     }
     setIsDataLoaded(true);
   }, []);
@@ -253,12 +252,12 @@ export default function ClassificacaoPage() {
   React.useEffect(() => {
     if (isDataLoaded) {
       try {
-        window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(placeholderClassificacoes));
+        window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(classificacoes));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [placeholderClassificacoes, isDataLoaded]);
+  }, [classificacoes, isDataLoaded]);
 
 
   const resetForm = React.useCallback(() => {
@@ -331,13 +330,13 @@ export default function ClassificacaoPage() {
 
     let updatedClassificacoes;
     if (isEditing && editingClassificacaoId) {
-      updatedClassificacoes = placeholderClassificacoes.map(c =>
+      updatedClassificacoes = classificacoes.map(c =>
         c.id === editingClassificacaoId ? classificacaoDataToSave : c
       );
     } else {
-      updatedClassificacoes = [...placeholderClassificacoes, classificacaoDataToSave];
+      updatedClassificacoes = [...classificacoes, classificacaoDataToSave];
     }
-    setPlaceholderClassificacoes(updatedClassificacoes);
+    setClassificacoes(updatedClassificacoes);
     setSelectedRowIds([]);
 
     setIsDialogOpen(false);
@@ -358,7 +357,7 @@ export default function ClassificacaoPage() {
   };
 
   React.useEffect(() => {
-    let sortedClassificacoes = [...placeholderClassificacoes];
+    let sortedClassificacoes = [...classificacoes];
     if (sortingClassificacoes.length > 0) {
       sortedClassificacoes.sort((a, b) => {
         for (const sortConfig of sortingClassificacoes) {
@@ -385,7 +384,7 @@ export default function ClassificacaoPage() {
       });
     }
     setDisplayedClassificacoes(sortedClassificacoes);
-  }, [sortingClassificacoes, placeholderClassificacoes]);
+  }, [sortingClassificacoes, classificacoes]);
 
 
   const handleSortClassificacoes = (columnId: string) => {
@@ -446,7 +445,7 @@ export default function ClassificacaoPage() {
   }, []);
 
   const handleDeleteRow = React.useCallback((itemId: string) => {
-    setPlaceholderClassificacoes(prev => prev.filter(item => item.id !== itemId));
+    setClassificacoes(prev => prev.filter(item => item.id !== itemId));
   }, []);
   
   const visibleColumnsForMemo = React.useMemo(() => {

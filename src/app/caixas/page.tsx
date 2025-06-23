@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -46,7 +45,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 
 const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
 
-const placeholderCaixasInitial: Caixa[] = [
+const initialCaixas: Caixa[] = [
   { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
   { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
   { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
@@ -104,7 +103,7 @@ export default function CaixasPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
-  const [placeholderCaixas, setPlaceholderCaixas] = React.useState<Caixa[]>([]);
+  const [caixas, setCaixas] = React.useState<Caixa[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
@@ -118,10 +117,10 @@ export default function CaixasPage() {
   React.useEffect(() => {
     try {
       const stored = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
-      setPlaceholderCaixas(stored ? JSON.parse(stored) : placeholderCaixasInitial);
+      setCaixas(stored ? JSON.parse(stored) : initialCaixas);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
-      setPlaceholderCaixas(placeholderCaixasInitial);
+      setCaixas(initialCaixas);
     }
     setIsDataLoaded(true);
   }, []);
@@ -129,12 +128,12 @@ export default function CaixasPage() {
   React.useEffect(() => {
     if (isDataLoaded) {
       try {
-        window.localStorage.setItem(CAIXAS_STORAGE_KEY, JSON.stringify(placeholderCaixas));
+        window.localStorage.setItem(CAIXAS_STORAGE_KEY, JSON.stringify(caixas));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [placeholderCaixas, isDataLoaded]);
+  }, [caixas, isDataLoaded]);
 
 
   const resetFormAndDialogState = () => {
@@ -187,18 +186,18 @@ export default function CaixasPage() {
 
     let updatedCaixas;
     if (isEditing && editingCaixaId) {
-      updatedCaixas = placeholderCaixas.map(c => c.id === editingCaixaId ? caixaDataToSave : c);
+      updatedCaixas = caixas.map(c => c.id === editingCaixaId ? caixaDataToSave : c);
     } else {
-      updatedCaixas = [...placeholderCaixas, caixaDataToSave];
+      updatedCaixas = [...caixas, caixaDataToSave];
     }
-    setPlaceholderCaixas(updatedCaixas);
+    setCaixas(updatedCaixas);
     setSelectedRowIds([]); // Clear selection after save
 
     setIsDialogOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    setPlaceholderCaixas(prev => prev.filter(c => c.id !== id));
+    setCaixas(prev => prev.filter(c => c.id !== id));
   };
 
 
@@ -210,7 +209,7 @@ export default function CaixasPage() {
   };
 
   React.useEffect(() => {
-    let sortedCaixas = [...placeholderCaixas];
+    let sortedCaixas = [...caixas];
     if (sortingCaixas.length > 0) {
       sortedCaixas.sort((a, b) => {
         for (const sortConfig of sortingCaixas) {
@@ -232,7 +231,7 @@ export default function CaixasPage() {
       });
     }
     setDisplayedCaixas(sortedCaixas);
-  }, [sortingCaixas, placeholderCaixas]);
+  }, [sortingCaixas, caixas]);
 
 
   const handleSortCaixas = (columnId: string) => {

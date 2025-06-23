@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -38,6 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { placeholderDocumentos, placeholderListagensInitial, simulatedClassificacoesData, simulatedListagensData } from "@/lib/mock-data";
+
 
 type SimulatedDocumentForDialog = Pick<
   Documento,
@@ -54,28 +55,7 @@ type SimulatedDocumentForDialog = Pick<
   'alteracaoDestinacaoFinal'
 >;
 
-const initialSimulatedFullDocumentData: SimulatedDocumentForDialog[] = [
-  { id: "DOC001", numeroDocumento: "PRC-2023-001", tipoDocumento: "Ação Ordinária", descricaoDocumento: "Processo contratual A referente a uma longa disputa sobre patentes de software.", nomePartePrincipal: "Empresa Exemplo Ltda, Outra Parte Interessada SA", dataAbrangente: "01/2023-03/2023", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2030", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC002", numeroDocumento: "OFC-2023-045", tipoDocumento: "Ofício", descricaoDocumento: "Ofício sobre projeto B, solicitando informações adicionais.", nomePartePrincipal: "Maria Santos", dataAbrangente: "20/03/2023", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2028", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC003", numeroDocumento: "MEM-2022-112", tipoDocumento: "Memorando", descricaoDocumento: "Memorando política interna de segurança da informação.", nomePartePrincipal: "João da Silva (Departamento TI)", dataAbrangente: "05/11/2022", classificacaoArquivisticaId: "CLA003", status: "Emprestado", anoEliminacaoPrevisto: "2040", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC004", numeroDocumento: "REQ-2014-001", tipoDocumento: "Requerimento", descricaoDocumento: "Requerimento antigo C, referente a pedido de vista.", nomePartePrincipal: "Empresa XYZ", dataAbrangente: "10/06/2014", classificacaoArquivisticaId: "CLA002", status: "Eliminado", anoEliminacaoPrevisto: "2018", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC005", numeroDocumento: "PET-2010-555", tipoDocumento: "Petição", descricaoDocumento: "Petição inicial D, processo de longa tramitação.", nomePartePrincipal: "Consumidor Teste Primeiro Nome Longo Sobrenome Composto", dataAbrangente: "15/08/2010", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2026", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC006", numeroDocumento: "CTR-2015-080", tipoDocumento: "Contrato", descricaoDocumento: "Contrato de serviço E para desenvolvimento de software.", nomePartePrincipal: "Serviços de Consultoria Avançada Ltda", dataAbrangente: "10/01/2015-10/01/2020", classificacaoArquivisticaId: "CLA001", status: "Arquivado", anoEliminacaoPrevisto: "2035", destinacaoFinalDisplay: "Guarda Permanente", alteracaoDestinacaoFinal: "Guarda Permanente – Decisão da CPAD" },
-  { id: "DOC007", numeroDocumento: "PA-2019-721", tipoDocumento: "Processo Administrativo", descricaoDocumento: "Processo administrativo F sobre licitação pública complexa.", nomePartePrincipal: "Autarquia Modelo Federal", dataAbrangente: "12/2019", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2025", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-  { id: "DOC008", numeroDocumento: "AJ-2005-001", tipoDocumento: "Ajuste de Contas", descricaoDocumento: "Ajuste de contas G entre fornecedor e cliente.", nomePartePrincipal: "Fornecedor Global Peças e Serviços", dataAbrangente: "03/2005", classificacaoArquivisticaId: "CLA002", status: "Arquivado", anoEliminacaoPrevisto: "2015", destinacaoFinalDisplay: "Eliminação", alteracaoDestinacaoFinal: "Não Alterar" },
-];
-
-const simulatedClassificacoesData = [
-  { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis" },
-  { id: "CLA002", codigo: "030.5", descricao: "Correspondências Recebidas e Expedidas" },
-  { id: "CLA003", codigo: "045.2", descricao: "Relatórios Anuais de Atividades" },
-];
-
-
-const placeholderListagensInitial: ListagemEliminacao[] = [
-  { id: "LE001", numeroListagem: "LE-2023-001", documentoIds: ["DOC001", "DOC007"], numeroEditalCiencia: "EDITAL-005/2023", dataPublicacaoEdital: new Date("2023-10-15").toISOString(), dataProducaoListagem: new Date("2023-09-30").toISOString(), numeroTermoEliminacao: "TE-2023-001", dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(), observacoes: "Primeira listagem do ano, documentos de processos judiciais e administrativos." },
-  { id: "LE002", numeroListagem: "LE-2024-001", documentoIds: ["DOC008"], dataProducaoListagem: new Date("2024-02-10").toISOString(), observacoes: "Listagem de teste com documentos financeiros específicos." },
-];
+const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
@@ -168,8 +148,10 @@ type DialogDocumentColumn = {
 
 export default function ListagensEliminacaoPage() {
   const { toast } = useToast();
-  const [listagens, setListagens] = React.useState<ListagemEliminacao[]>(placeholderListagensInitial);
-  const [displayedListagens, setDisplayedListagens] = React.useState<ListagemEliminacao[]>(placeholderListagensInitial);
+  const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
+  const [displayedListagens, setDisplayedListagens] = React.useState<ListagemEliminacao[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<ListagemEliminacao>>(initialFormState);
@@ -181,7 +163,7 @@ export default function ListagensEliminacaoPage() {
     ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
   );
 
-  const [simulatedDocuments, setSimulatedDocuments] = React.useState<SimulatedDocumentForDialog[]>(initialSimulatedFullDocumentData.map(doc => ({ ...doc })));
+  const [simulatedDocuments, setSimulatedDocuments] = React.useState<SimulatedDocumentForDialog[]>(placeholderDocumentos.map(doc => ({ ...doc })));
   const [documentsForDialog, setDocumentsForDialog] = React.useState<SimulatedDocumentForDialog[]>([]);
   const [selectedDialogDocIds, setSelectedDialogDocIds] = React.useState<string[]>([]);
   const [dialogTableFilters, setDialogTableFilters] = React.useState<DialogTableFilters>({ anoEliminacaoPrevisto: "" });
@@ -271,8 +253,28 @@ export default function ListagensEliminacaoPage() {
         </Badge>
       )
     },
-  ], [documentsForDialog, selectedDialogDocIds]);
+  ], [documentsForDialog]);
 
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
+      setListagens(stored ? JSON.parse(stored) : placeholderListagensInitial);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setListagens(placeholderListagensInitial);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+        window.localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(listagens));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [listagens, isDataLoaded]);
 
   React.useEffect(() => {
     let filteredDocs = simulatedDocuments.filter(doc => {
@@ -349,11 +351,11 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDocumentTableVisible(false);
-    setSimulatedDocuments(initialSimulatedFullDocumentData.map(doc => ({ ...doc })));
+    setSimulatedDocuments(placeholderDocumentos.map(doc => ({ ...doc })));
   };
 
   const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
-    let processedDocsInit = initialSimulatedFullDocumentData.map(doc => ({ ...doc }));
+    let processedDocsInit = placeholderDocumentos.map(doc => ({ ...doc }));
 
     if (listagem) {
       setIsEditing(true);
@@ -610,11 +612,10 @@ export default function ListagensEliminacaoPage() {
   };
 
   const handleDelete = (listagemId: string) => {
-    console.log("Excluir listagem:", listagemId);
+    setListagens(prev => prev.filter(item => item.id !== listagemId));
     toast({
-        title: "Funcionalidade de Exclusão Pendente",
-        description: `A exclusão da listagem ${listagemId} não está implementada nesta simulação.`,
-        variant: "default"
+        title: "Listagem Excluída",
+        description: `A listagem ${listagemId} foi excluída com sucesso.`,
     });
   };
 
@@ -925,4 +926,3 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
-
