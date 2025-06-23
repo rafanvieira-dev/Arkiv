@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DatePicker } from "@/components/date-picker";
+import { DateInputPicker } from "@/components/date-input-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Accordion,
@@ -862,10 +863,10 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="dataArquivamento">Data de Arquivamento</Label>
-                 <DatePicker 
-                  date={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
-                  setDate={(date) => handleDateChange('dataArquivamento')(date)} 
-                  placeholder="Selecione a data"
+                 <DateInputPicker 
+                  value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
+                  onChange={(date) => handleDateChange('dataArquivamento')(date)} 
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
 
@@ -1372,6 +1373,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
