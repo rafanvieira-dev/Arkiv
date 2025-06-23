@@ -21,9 +21,10 @@ interface DateInputPickerProps {
   onChange?: (date?: Date) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-export function DateInputPicker({ value: propValue, onChange, placeholder, className }: DateInputPickerProps) {
+export function DateInputPicker({ value: propValue, onChange, placeholder, className, disabled }: DateInputPickerProps) {
   const [inputValue, setInputValue] = React.useState<string>("");
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
@@ -102,6 +103,7 @@ export function DateInputPicker({ value: propValue, onChange, placeholder, class
             onBlur={handleInputBlur}
             placeholder={placeholder || "dd/mm/aaaa"}
             className="pr-10"
+            disabled={disabled}
         />
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
@@ -110,6 +112,7 @@ export function DateInputPicker({ value: propValue, onChange, placeholder, class
                     size="icon"
                     className="absolute right-1 h-8 w-8 text-muted-foreground hover:text-foreground"
                     aria-label="Abrir calendário"
+                    disabled={disabled}
                 >
                     <CalendarIcon className="h-4 w-4" />
                 </Button>
@@ -121,6 +124,7 @@ export function DateInputPicker({ value: propValue, onChange, placeholder, class
                     onSelect={handleDateSelect}
                     initialFocus
                     locale={ptBR}
+                    disabled={disabled}
                 />
             </PopoverContent>
         </Popover>

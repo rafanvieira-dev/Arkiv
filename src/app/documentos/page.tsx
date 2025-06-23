@@ -179,6 +179,7 @@ export default function DocumentosPage() {
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
+  const [isFormDisabled, setIsFormDisabled] = React.useState(false);
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -186,6 +187,7 @@ export default function DocumentosPage() {
     setOutroGeneroDocumental("");
     setOutroTipoMidia("");
     setOutroTipoParte("");
+    setIsFormDisabled(false);
   }, []);
 
   const handleOpenDialog = React.useCallback((doc?: Documento) => {
@@ -207,6 +209,7 @@ export default function DocumentosPage() {
       setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
       setOutroTipoMidia(doc.tipoMidiaDetalhe && !['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'].includes(doc.tipoMidiaDetalhe) ? doc.tipoMidiaDetalhe : "");
       setOutroTipoParte(doc.tipoPartePrincipal && !tiposParteOpcoes.slice(0,-1).includes(doc.tipoPartePrincipal) ? doc.tipoPartePrincipal : "");
+      setIsFormDisabled(doc.status === 'Eliminado');
     } else {
       resetForm(); 
     }
@@ -805,9 +808,14 @@ export default function DocumentosPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
-              <DialogTitle className="font-headline text-primary">Adicionar/Editar Item ao Acervo</DialogTitle>
+              <DialogTitle className="font-headline text-primary">
+                {isFormDisabled ? "Visualizar Documento (Eliminado)" : "Adicionar/Editar Item ao Acervo"}
+              </DialogTitle>
               <DialogDescription>
-                Preencha as informações abaixo. Campos com * são obrigatórios.
+                {isFormDisabled 
+                  ? "Este documento foi eliminado e não pode mais ser alterado. Os dados são somente para consulta." 
+                  : "Preencha as informações abaixo. Campos com * são obrigatórios."
+                }
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[75vh] pr-6">
@@ -820,7 +828,7 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status*</Label>
-                <Select onValueChange={handleSelectChange('status')} value={formState.status}>
+                <Select onValueChange={handleSelectChange('status')} value={formState.status} disabled={isFormDisabled}>
                   <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Arquivado">Arquivado</SelectItem>
@@ -834,7 +842,7 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="orgao">Órgão*</Label>
-                <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao}>
+                <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao} disabled={isFormDisabled}>
                   <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="TRF2">TRF2</SelectItem>
@@ -846,12 +854,12 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="origem">Origem</Label>
-                <Input id="origem" value={formState.origem || ""} onChange={handleInputChange} placeholder="Ex: Tribunal de Justiça" />
+                <Input id="origem" value={formState.origem || ""} onChange={handleInputChange} placeholder="Ex: Tribunal de Justiça" disabled={isFormDisabled} />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="tipoMeio">Tipo de Meio*</Label>
-                <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio}>
+                <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio} disabled={isFormDisabled}>
                   <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Não digital">Não digital</SelectItem>
@@ -863,7 +871,7 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="generoDocumental">Gênero Documental*</Label>
-                <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental}>
+                <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
                   <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Textual">Textual</SelectItem>
@@ -876,13 +884,13 @@ export default function DocumentosPage() {
                   </SelectContent>
                 </Select>
                 {formState.generoDocumental === 'Outro' && (
-                  <Input id="outroGeneroDocumentalInput" value={outroGeneroDocumental} onChange={(e) => setOutroGeneroDocumental(e.target.value)} placeholder="Especifique o gênero" className="mt-2" />
+                  <Input id="outroGeneroDocumentalInput" value={outroGeneroDocumental} onChange={(e) => setOutroGeneroDocumental(e.target.value)} placeholder="Especifique o gênero" className="mt-2" disabled={isFormDisabled} />
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="categoria">Categoria*</Label>
-                <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria}>
+                <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria} disabled={isFormDisabled}>
                   <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Documento">Documento</SelectItem>
@@ -895,43 +903,43 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="tipoDocumento">Tipo de Documento</Label>
-                <Input id="tipoDocumento" value={formState.tipoDocumento || ""} onChange={handleInputChange} placeholder="Ex: Ação Ordinária" />
+                <Input id="tipoDocumento" value={formState.tipoDocumento || ""} onChange={handleInputChange} placeholder="Ex: Ação Ordinária" disabled={isFormDisabled} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" />
+                <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="dataAbrangente">Data Abrangente do Documento</Label>
-                <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" />
+                <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
               </div>
 
               <div className="space-y-2 sm:col-span-2 xl:col-span-3">
                 <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" />
+                <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nomePartePrincipal">Nome da Parte Principal</Label>
-                <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" />
+                <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" disabled={isFormDisabled} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tipoPartePrincipal">Tipo da Parte Principal</Label>
-                <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal}>
+                <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal} disabled={isFormDisabled}>
                   <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                   <SelectContent>
                     {tiposParteOpcoes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {formState.tipoPartePrincipal === 'Outro' && (
-                  <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" />
+                  <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" disabled={isFormDisabled} />
                 )}
               </div>
                <div className="space-y-2">
                 <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados (IDs)</Label>
-                <Input id="documentosRelacionadosIds" value={formState.documentosRelacionadosIds || ""} onChange={handleInputChange} placeholder="IDs separados por vírgula" />
+                <Input id="documentosRelacionadosIds" value={formState.documentosRelacionadosIds || ""} onChange={handleInputChange} placeholder="IDs separados por vírgula" disabled={isFormDisabled} />
               </div>
 
 
@@ -941,36 +949,37 @@ export default function DocumentosPage() {
                   value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
                   onChange={(date) => handleDateChange('dataArquivamento')(date)} 
                   placeholder="dd/mm/aaaa"
+                  disabled={isFormDisabled}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
-                <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" />
+                <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" disabled={isFormDisabled} />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
-                <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" />
+                <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
               </div>
 
               { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
                 <div className="space-y-2">
                   <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
-                  <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" />
+                  <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="totalMidias">Total de Mídias</Label>
-                <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" />
+                <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
               </div>
               
               {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
-                    <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe}>
+                    <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
                       <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CD-R">CD-R</SelectItem>
@@ -984,23 +993,23 @@ export default function DocumentosPage() {
                       </SelectContent>
                     </Select>
                     {formState.tipoMidiaDetalhe === 'Outro' && (
-                      <Input id="outroTipoMidiaInput" value={outroTipoMidia} onChange={(e) => setOutroTipoMidia(e.target.value)} placeholder="Especifique o tipo de mídia" className="mt-2" />
+                      <Input id="outroTipoMidiaInput" value={outroTipoMidia} onChange={(e) => setOutroTipoMidia(e.target.value)} placeholder="Especifique o tipo de mídia" className="mt-2" disabled={isFormDisabled} />
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
-                    <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} />
+                    <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
-                    <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} />
+                    <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
                   </div>
                 </>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="digitalizado">Digitalizado?*</Label>
-                <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado}>
+                <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
                   <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Sim">Sim</SelectItem>
@@ -1011,7 +1020,7 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} />
+                <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
               </div>
               
               <div className="space-y-2">
@@ -1020,6 +1029,7 @@ export default function DocumentosPage() {
                   value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
                   onChange={(date) => handleDateChange('dataBaixa')(date)} 
                   placeholder="dd/mm/aaaa"
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -1032,6 +1042,7 @@ export default function DocumentosPage() {
                   onChange={handleInputChange}
                   onBlur={handleCodigoClassificacaoBlur}
                   placeholder="Digite o código (ex: 020.1)"
+                  disabled={isFormDisabled}
                 />
               </div>
                <div className="space-y-2">
@@ -1052,7 +1063,7 @@ export default function DocumentosPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final*</Label>
-                <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal}>
+                <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
                   <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Não Alterar">Não Alterar</SelectItem>
@@ -1069,7 +1080,7 @@ export default function DocumentosPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
-                <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica}>
+                <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica} disabled={isFormDisabled}>
                   <SelectTrigger id="segredoJustica"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Sim">Sim</SelectItem>
@@ -1080,7 +1091,7 @@ export default function DocumentosPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)*</Label>
-                 <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo}>
+                 <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo} disabled={isFormDisabled}>
                   <SelectTrigger id="grauSigilo"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Ostensivo">Ostensivo</SelectItem>
@@ -1093,16 +1104,16 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="codigosCaixa">Código(s) da(s) Caixa(s)</Label>
-                <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" />
+                <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" disabled={isFormDisabled} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="codigoAtoM">Código do AtoM</Label>
-                <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" />
+                <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" disabled={isFormDisabled} />
               </div>
               
               <div className="space-y-2 sm:col-span-2 xl:col-span-3">
                 <Label htmlFor="observacoesGerais">Observações Gerais</Label>
-                <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" />
+                <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
               </div>
 
               <div className="space-y-2">
@@ -1112,7 +1123,7 @@ export default function DocumentosPage() {
                   value={formState.codigoClassificacaoJudicialId || ""} 
                   onChange={handleInputChange} 
                   placeholder="ID da Classe Judicial" 
-                  disabled={formState.categoria !== "Processo Judicial"}
+                  disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
                   className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
                 />
               </div>
@@ -1120,11 +1131,11 @@ export default function DocumentosPage() {
             </div>
             </ScrollArea>
             <DialogFooter className="pt-4">
-              <Button variant="outline" onClick={resetForm}>Limpar</Button>
+              <Button variant="outline" onClick={resetForm} disabled={isFormDisabled}>Limpar</Button>
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
-              <Button type="button" onClick={handleSaveChanges}>Salvar Documento</Button>
+              <Button type="button" onClick={handleSaveChanges} disabled={isFormDisabled}>Salvar Documento</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1415,11 +1426,11 @@ export default function DocumentosPage() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Editar Documento</p></TooltipContent>
+                            <TooltipContent><p>{doc.status === 'Eliminado' ? 'Visualizar Documento' : 'Editar Documento'}</p></TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" onClick={() => handleDelete(doc.id)}>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" onClick={() => handleDelete(doc.id)} disabled={doc.status === 'Eliminado'}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
