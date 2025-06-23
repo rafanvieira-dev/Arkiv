@@ -181,7 +181,15 @@ export default function DocumentosPage() {
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
 
-  const handleOpenDialog = (doc?: Documento) => {
+  const resetForm = React.useCallback(() => {
+    setFormState(initialFormState);
+    setDocumentIdToDisplay("(Automático após salvar)");
+    setOutroGeneroDocumental("");
+    setOutroTipoMidia("");
+    setOutroTipoParte("");
+  }, []);
+
+  const handleOpenDialog = React.useCallback((doc?: Documento) => {
     if (doc) {
       const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
       setFormState({
@@ -204,7 +212,7 @@ export default function DocumentosPage() {
       resetForm(); 
     }
     setIsDialogOpen(true);
-  };
+  }, [classificacoes, resetForm]);
 
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
     { 
@@ -507,14 +515,6 @@ export default function DocumentosPage() {
     }
   };
   
-  const resetForm = () => {
-    setFormState(initialFormState);
-    setDocumentIdToDisplay("(Automático após salvar)");
-    setOutroGeneroDocumental("");
-    setOutroTipoMidia("");
-    setOutroTipoParte("");
-  };
-
   const handleSaveChanges = () => {
     const finalFormState: Documento = {
       ...initialFormState, 
