@@ -13,8 +13,10 @@ import { Search, RotateCcw } from "lucide-react";
 import { DateInputPicker } from "@/components/date-input-picker";
 
 export default function BuscaAvancadaPage() {
-  const [dataDe, setDataDe] = React.useState<Date | undefined>();
-  const [dataAte, setDataAte] = React.useState<Date | undefined>();
+  const [dataDocumentoDe, setDataDocumentoDe] = React.useState<Date | undefined>();
+  const [dataDocumentoAte, setDataDocumentoAte] = React.useState<Date | undefined>();
+  const [dataArquivamentoDe, setDataArquivamentoDe] = React.useState<Date | undefined>();
+  const [dataArquivamentoAte, setDataArquivamentoAte] = React.useState<Date | undefined>();
 
   return (
     <div className="container mx-auto py-2">
@@ -25,10 +27,10 @@ export default function BuscaAvancadaPage() {
           <CardTitle className="font-headline text-primary">Critérios de Busca</CardTitle>
           <CardDescription>Preencha os campos abaixo para refinar sua busca.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="identificador">Identificador do Documento</Label>
-            <Input id="identificador" placeholder="Ex: PRC-2023-001" />
+            <Label htmlFor="numeroDocumento">Número do Documento</Label>
+            <Input id="numeroDocumento" placeholder="Ex: PRC-2023-001" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="origem">Origem</Label>
@@ -39,13 +41,27 @@ export default function BuscaAvancadaPage() {
             <Input id="tipoDocumento" placeholder="Ex: Ação Ordinária" />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
+            <Input id="descricaoDocumento" placeholder="Contém..." />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="dataDocumentoDe">Data do Documento (De)</Label>
-            <DateInputPicker value={dataDe} onChange={setDataDe} placeholder="dd/mm/aaaa" />
+            <DateInputPicker value={dataDocumentoDe} onChange={setDataDocumentoDe} placeholder="dd/mm/aaaa" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="dataDocumentoAte">Data do Documento (Até)</Label>
-            <DateInputPicker value={dataAte} onChange={setDataAte} placeholder="dd/mm/aaaa" />
+            <DateInputPicker value={dataDocumentoAte} onChange={setDataDocumentoAte} placeholder="dd/mm/aaaa" />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="dataArquivamentoDe">Data de Arquivamento (De)</Label>
+            <DateInputPicker value={dataArquivamentoDe} onChange={setDataArquivamentoDe} placeholder="dd/mm/aaaa" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dataArquivamentoAte">Data de Arquivamento (Até)</Label>
+            <DateInputPicker value={dataArquivamentoAte} onChange={setDataArquivamentoAte} placeholder="dd/mm/aaaa" />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="partes">Partes Envolvidas</Label>
             <Input id="partes" placeholder="Ex: João da Silva" />
@@ -78,8 +94,95 @@ export default function BuscaAvancadaPage() {
                 <SelectItem value="Emprestado">Emprestado</SelectItem>
                 <SelectItem value="Desarquivado">Desarquivado</SelectItem>
                 <SelectItem value="Eliminado">Eliminado</SelectItem>
+                <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="orgao">Órgão</Label>
+            <Select>
+                <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="TRF2">TRF2</SelectItem>
+                    <SelectItem value="SJRJ">SJRJ</SelectItem>
+                    <SelectItem value="SJES">SJES</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tipoMeio">Tipo de Meio</Label>
+            <Select>
+                <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Não digital">Não digital</SelectItem>
+                    <SelectItem value="Digital">Digital</SelectItem>
+                    <SelectItem value="Híbrido">Híbrido</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="generoDocumental">Gênero Documental</Label>
+            <Select>
+                <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Textual">Textual</SelectItem>
+                    <SelectItem value="Iconográfico">Iconográfico</SelectItem>
+                    <SelectItem value="Cartográfico">Cartográfico</SelectItem>
+                    <SelectItem value="Sonoro">Sonoro</SelectItem>
+                    <SelectItem value="Filmográfico">Filmográfico</SelectItem>
+                    <SelectItem value="Audiovisual">Audiovisual</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="categoria">Categoria</Label>
+            <Select>
+                <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Documento">Documento</SelectItem>
+                    <SelectItem value="Dossiê">Dossiê</SelectItem>
+                    <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                    <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="destinacaoFinal">Destinação Final</Label>
+            <Select>
+                <SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Selecione a destinação" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
+            <Input id="anoEliminacaoPrevisto" type="number" placeholder="AAAA" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)</Label>
+            <Select>
+              <SelectTrigger id="grauSigilo"><SelectValue placeholder="Selecione o grau de sigilo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Ostensivo">Ostensivo</SelectItem>
+                <SelectItem value="Reservado">Reservado</SelectItem>
+                <SelectItem value="Secreto">Secreto</SelectItem>
+                <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="codigoAtoM">Código do AtoM</Label>
+            <Input id="codigoAtoM" placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="observacoesGerais">Observações Gerais</Label>
+            <Input id="observacoesGerais" placeholder="Contém..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="codigoClasseJudicial">Código da Classe Judicial</Label>
+            <Input id="codigoClasseJudicial" placeholder="Contém..." />
           </div>
           <div className="flex items-center space-x-2 pt-6">
             <Checkbox id="segredoJustica" />
