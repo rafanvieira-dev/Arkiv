@@ -1,5 +1,6 @@
 
 
+
 export interface ParteDocumento {
   id: string; // UUID for the part entry itself
   nome: string;
@@ -133,6 +134,18 @@ export interface Caixa {
   situacao: 'Completa' | 'Incompleta';
   documentoIds?: string[];
 }
+
+export interface Usuario {
+  id: string;
+  nomeCompleto: string;
+  email: string; // Used as login
+  senhaHash: string; // Not the actual password
+  sigla?: string;
+  setor?: string;
+  statusAprovacao: 'Aprovado' | 'Pendente' | 'Reprovado';
+  permissoes: Record<string, boolean>; // e.g., { acervo: true, usuarios: false }
+}
+
 
 export type DataTableColumn<T> = {
   accessorKey: keyof T | string;

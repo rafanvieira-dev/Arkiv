@@ -1,26 +1,360 @@
-import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/page-header";
+import type { Usuario } from "@/types";
+import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+
+
+const initialUsers: Usuario[] = [
+  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true } },
+  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: false, configuracoes: false } },
+  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} },
+];
+
+const allPermissions: { id: string; label: string; description: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', description: 'Permite visualizar a tela principal com estatísticas e atalhos.' },
+  { id: 'acervo', label: 'Acervo', description: 'Permite cadastrar, editar e excluir documentos do acervo.' },
+  { id: 'caixas', label: 'Caixas', description: 'Permite gerenciar as caixas de arquivamento.' },
+  { id: 'classificacao', label: 'Classificação', description: 'Permite gerenciar os códigos de classificação arquivística.' },
+  { id: 'classesJudiciais', label: 'Classes Judiciais', description: 'Permite gerenciar as classes judiciais e seus prazos.' },
+  { id: 'listagens', label: 'Listagens de Eliminação', description: 'Permite criar e gerenciar listagens de eliminação.' },
+  { id: 'solicitacoes', label: 'Solicitações', description: 'Permite gerenciar solicitações de empréstimo e desarquivamento.' },
+  { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
+  { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
+  { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
+];
+
+const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
+
+type UserFormState = Partial<Omit<Usuario, 'senhaHash'>> & {
+  senha?: string;
+  confirmarSenha?: string;
+};
+
+const initialFormState: UserFormState = {
+  nomeCompleto: "",
+  email: "",
+  senha: "",
+  confirmarSenha: "",
+  sigla: "",
+  setor: "",
+  statusAprovacao: "Pendente",
+  permissoes: Object.fromEntries(allPermissions.map(p => [p.id, false])),
+};
+
 
 export default function UsuariosPage() {
+  const { toast } = useToast();
+  const [users, setUsers] = React.useState<Usuario[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [formState, setFormState] = React.useState<UserFormState>(initialFormState);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
+      setUsers(stored ? JSON.parse(stored) : initialUsers);
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error);
+      setUsers(initialUsers);
+    }
+    setIsDataLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isDataLoaded) {
+      try {
+        window.localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(users));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+    }
+  }, [users, isDataLoaded]);
+
+  const resetForm = () => {
+    setFormState(initialFormState);
+    setIsEditing(false);
+    setEditingUserId(null);
+  };
+
+  const handleOpenDialog = (user?: Usuario) => {
+    if (user) {
+      setIsEditing(true);
+      setEditingUserId(user.id);
+      // We don't load the password fields for editing
+      setFormState({
+        ...user,
+        senha: "",
+        confirmarSenha: "",
+      });
+    } else {
+      resetForm();
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormState(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSelectChange = (value: Usuario['statusAprovacao']) => {
+    setFormState(prev => ({ ...prev, statusAprovacao: value }));
+  };
+
+  const handlePermissionChange = (permissionId: string) => (checked: boolean | 'indeterminate') => {
+    setFormState(prev => ({
+      ...prev,
+      permissoes: {
+        ...prev.permissoes,
+        [permissionId]: !!checked,
+      },
+    }));
+  };
+
+  const handleDelete = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    toast({ title: "Sucesso", description: "Usuário excluído com sucesso." });
+  };
+
+  const handleSaveChanges = () => {
+    if (!formState.nomeCompleto || !formState.email) {
+      toast({ variant: "destructive", title: "Erro", description: "Nome completo e e-mail são obrigatórios." });
+      return;
+    }
+    if (!isEditing && !formState.senha) {
+      toast({ variant: "destructive", title: "Erro", description: "A senha é obrigatória para novos usuários." });
+      return;
+    }
+    if (formState.senha !== formState.confirmarSenha) {
+      toast({ variant: "destructive", title: "Erro", description: "As senhas não coincidem." });
+      return;
+    }
+
+    const userData: Omit<Usuario, 'id' | 'senhaHash'> & { senhaHash?: string } = {
+        nomeCompleto: formState.nomeCompleto!,
+        email: formState.email!,
+        sigla: formState.sigla,
+        setor: formState.setor,
+        statusAprovacao: formState.statusAprovacao!,
+        permissoes: formState.permissoes!,
+    };
+
+    if (formState.senha) {
+        userData.senhaHash = `hashed_${formState.senha}`;
+    }
+
+    if (isEditing && editingUserId) {
+      const existingUser = users.find(u => u.id === editingUserId)!;
+      const updatedUser: Usuario = {
+          ...existingUser,
+          ...userData,
+          senhaHash: userData.senhaHash || existingUser.senhaHash,
+      };
+      setUsers(prev => prev.map(u => (u.id === editingUserId ? updatedUser : u)));
+      toast({ title: "Sucesso", description: "Usuário atualizado com sucesso." });
+    } else {
+      const newUser: Usuario = {
+        id: `USR${Date.now()}`,
+        ...userData,
+        senhaHash: userData.senhaHash!, // Mandatory for new users
+      };
+      setUsers(prev => [...prev, newUser]);
+      toast({ title: "Sucesso", description: "Usuário criado com sucesso." });
+    }
+
+    setIsDialogOpen(false);
+  };
+
+
+  const getStatusIcon = (status: Usuario['statusAprovacao']) => {
+    switch (status) {
+      case 'Aprovado':
+        return <ShieldCheck className="h-5 w-5 text-green-500" />;
+      case 'Reprovado':
+        return <ShieldX className="h-5 w-5 text-red-500" />;
+      case 'Pendente':
+      default:
+        return <ShieldQuestion className="h-5 w-5 text-yellow-500" />;
+    }
+  };
+
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-2">
-      <PageHeader title="Gerenciamento de Usuários" description="Adicione, edite e gerencie os usuários do sistema.">
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
+      <PageHeader title="Gerenciamento de Usuários" description="Adicione, edite e gerencie os usuários e suas permissões no sistema.">
+        <Dialog open={isDialogOpen} onOpenChange={isOpen => {
+          setIsDialogOpen(isOpen);
+          if (!isOpen) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo Usuário
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+              <DialogDescription>
+                Preencha as informações do usuário e defina suas permissões. Campos com * são obrigatórios.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-6">
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nomeCompleto">Nome Completo*</Label>
+                    <Input id="nomeCompleto" value={formState.nomeCompleto || ""} onChange={handleInputChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Login (E-mail)*</Label>
+                    <Input id="email" type="email" value={formState.email || ""} onChange={handleInputChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="senha">Senha{isEditing ? " (Deixe em branco para não alterar)" : "*"}</Label>
+                    <Input id="senha" type="password" value={formState.senha || ""} onChange={handleInputChange} />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="confirmarSenha">Confirmar Senha{isEditing ? "" : "*"}</Label>
+                    <Input id="confirmarSenha" type="password" value={formState.confirmarSenha || ""} onChange={handleInputChange} />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="sigla">Sigla</Label>
+                    <Input id="sigla" value={formState.sigla || ""} onChange={handleInputChange} />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="setor">Setor</Label>
+                    <Input id="setor" value={formState.setor || ""} onChange={handleInputChange} />
+                  </div>
+                </div>
+
+                 <div className="space-y-2">
+                  <Label htmlFor="statusAprovacao">Status da Aprovação*</Label>
+                   <Select onValueChange={handleSelectChange} value={formState.statusAprovacao}>
+                      <SelectTrigger id="statusAprovacao">
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Aprovado">Aprovado</SelectItem>
+                        <SelectItem value="Pendente">Pendente</SelectItem>
+                        <SelectItem value="Reprovado">Reprovado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Permissões do Usuário</Label>
+                   <Card>
+                    <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {allPermissions.map((permission) => (
+                        <Tooltip key={permission.id}>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`perm-${permission.id}`}
+                                checked={formState.permissoes?.[permission.id] || false}
+                                onCheckedChange={handlePermissionChange(permission.id)}
+                              />
+                              <Label htmlFor={`perm-${permission.id}`} className="font-normal cursor-pointer">{permission.label}</Label>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start">
+                            <p>{permission.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+              <Button type="button" onClick={handleSaveChanges}>Salvar Usuário</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
-      <Card>
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="font-headline text-primary">Lista de Usuários</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Funcionalidade de gerenciamento de usuários ainda não implementada.</p>
-          {/* Placeholder for user table */}
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead>Nome Completo</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Setor</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <Badge variant={user.statusAprovacao === 'Aprovado' ? 'secondary' : user.statusAprovacao === 'Reprovado' ? 'destructive' : 'default'} className="flex items-center gap-2 w-fit">
+                        {getStatusIcon(user.statusAprovacao)}
+                        {user.statusAprovacao}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{user.nomeCompleto}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.setor || 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+           {users.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhum usuário cadastrado.</p>
+          )}
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
