@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -57,7 +57,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderClassificacoesSimulado, placeholderSolicitacoesInitial } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial } from "@/lib/mock-data";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -143,92 +143,16 @@ type ColumnConfig = {
   cellFormatter?: (value: any, doc: Documento) => React.ReactNode;
 };
 
-const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
-  { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
-  { 
-    id: 'status', 
-    header: 'Status', 
-    accessorKey: 'status', 
-    defaultVisible: true, 
-    enableSorting: true, 
-    cellFormatter: (value) => {
-      if (value === 'Aguardando prazo para eliminação') {
-        return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">{value || 'N/A'}</Badge>;
-      }
-      if (value === 'Arquivado') {
-        return <Badge className="border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80">{value || 'N/A'}</Badge>;
-      }
-      return <Badge variant={
-        value === 'Emprestado' ? 'outline' :
-        value === 'Eliminado' ? 'destructive' :
-        'default' 
-      }>{value || 'N/A'}</Badge>;
-    } 
-  },
-  { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: true, enableSorting: true },
-  { id: 'origem', header: 'Origem', accessorKey: 'origem', defaultVisible: true, enableSorting: true },
-  { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
-  { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental', defaultVisible: true, enableSorting: true },
-  { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
-  { id: 'tipoDocumento', header: 'Tipo Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
-  { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
-  { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
-  { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-  { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: true, enableSorting: true },
-  { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: true, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
-  { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-  { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: true, enableSorting: true },
-  { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: true, enableSorting: true },
-  { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: true, enableSorting: true },
-  { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias', defaultVisible: true, enableSorting: true },
-  { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true, cellFormatter: (value, doc) => doc.tipoMidiaDetalhe === 'Outro' ? doc.outroTipoMidiaDetalhe : doc.tipoMidiaDetalhe },
-  { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: true, enableSorting: true },
-  { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: true, enableSorting: true },
-  { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
-  { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: true, enableSorting: true },
-  { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-  { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: true, enableSorting: true },
-  { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: true, enableSorting: true, cellFormatter: (value) => {
-      const classif = placeholderClassificacoesSimulado.find(c => c.id === value);
-      return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
-    } 
-  },
-  { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: true, enableSorting: true },
-  { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: true, enableSorting: true },
-  { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
-  { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: true, enableSorting: true },
-  { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
-  { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
-  { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: true, enableSorting: true },
-  { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: true, enableSorting: true },
-  { 
-    id: 'numeroListagemEliminacao', 
-    header: 'Listagem Eliminação', 
-    accessorKey: 'numeroListagemEliminacao', 
-    defaultVisible: true, 
-    enableSorting: true, 
-    cellFormatter: (value, doc) => {
-      if (!value) return "N/A";
-      const listagem = simulatedListagensData.find(l => l.numeroListagem === value);
-      if (!listagem || !listagem.documentoIds) return value; 
-
-      return (
-        <Link 
-          href={`/documentos?listagemDocIds=${encodeURIComponent(listagem.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(value)}`} 
-          passHref
-        >
-          <span className="text-primary hover:underline cursor-pointer font-medium">
-            {value}
-          </span>
-        </Link>
-      );
-    }
-  },
-];
-
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
+const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+
+const placeholderClassificacoesInitial: Classificacao[] = [
+  { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
+  { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", inativo: true },
+  { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
+];
 
 export default function DocumentosPage() {
   const searchParams = useSearchParams();
@@ -252,20 +176,113 @@ export default function DocumentosPage() {
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
-  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
-    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {})
-  );
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
+  const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
+
+  const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
+    { id: 'id', header: 'ID Interno', accessorKey: 'id', defaultVisible: true, enableSorting: true },
+    { 
+      id: 'status', 
+      header: 'Status', 
+      accessorKey: 'status', 
+      defaultVisible: true, 
+      enableSorting: true, 
+      cellFormatter: (value) => {
+        if (value === 'Aguardando prazo para eliminação') {
+          return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">{value || 'N/A'}</Badge>;
+        }
+        if (value === 'Arquivado') {
+          return <Badge className="border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80">{value || 'N/A'}</Badge>;
+        }
+        return <Badge variant={
+          value === 'Emprestado' ? 'outline' :
+          value === 'Eliminado' ? 'destructive' :
+          'default' 
+        }>{value || 'N/A'}</Badge>;
+      } 
+    },
+    { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: true, enableSorting: true },
+    { id: 'origem', header: 'Origem', accessorKey: 'origem', defaultVisible: true, enableSorting: true },
+    { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
+    { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental', defaultVisible: true, enableSorting: true },
+    { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
+    { id: 'tipoDocumento', header: 'Tipo Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
+    { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
+    { id: 'nomePartePrincipal', header: 'Nome das Partes', accessorKey: 'nomePartePrincipal', defaultVisible: true, enableSorting: true },
+    { id: 'documentosRelacionadosIds', header: 'Docs Relac. (Qtd)', accessorKey: 'documentosRelacionadosIds', defaultVisible: true, enableSorting: false, cellFormatter: (value) => (value ? String(value).split(',').length : 0) },
+    { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+    { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: true, enableSorting: true },
+    { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: true, enableSorting: true },
+    { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: true, enableSorting: true },
+    { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias', defaultVisible: true, enableSorting: true },
+    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true, cellFormatter: (value, doc) => doc.tipoMidiaDetalhe === 'Outro' ? doc.outroTipoMidiaDetalhe : doc.tipoMidiaDetalhe },
+    { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: true, enableSorting: true },
+    { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: true, enableSorting: true },
+    { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
+    { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: true, enableSorting: true },
+    { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+    { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: true, enableSorting: true },
+    { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: true, enableSorting: true, cellFormatter: (value) => {
+        const classif = classificacoes.find(c => c.id === value);
+        return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
+      } 
+    },
+    { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: true, enableSorting: true },
+    { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: true, enableSorting: true },
+    { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
+    { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: true, enableSorting: true },
+    { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
+    { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
+    { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: true, enableSorting: true },
+    { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM', defaultVisible: true, enableSorting: true },
+    { 
+      id: 'numeroListagemEliminacao', 
+      header: 'Listagem Eliminação', 
+      accessorKey: 'numeroListagemEliminacao', 
+      defaultVisible: true, 
+      enableSorting: true, 
+      cellFormatter: (value, doc) => {
+        if (!value) return "N/A";
+        const listagem = simulatedListagensData.find(l => l.numeroListagem === value);
+        if (!listagem || !listagem.documentoIds) return value; 
+  
+        return (
+          <Link 
+            href={`/documentos?listagemDocIds=${encodeURIComponent(listagem.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(value)}`} 
+            passHref
+          >
+            <span className="text-primary hover:underline cursor-pointer font-medium">
+              {value}
+            </span>
+          </Link>
+        );
+      }
+    },
+  ], [classificacoes]);
+  
+  React.useEffect(() => {
+    setColumnVisibility(
+      ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+    );
+  }, [ALL_COLUMNS_CONFIG]);
 
   React.useEffect(() => {
     try {
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
+
+      const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
+      setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesInitial);
+
     } catch (error) {
-      console.error("Failed to read solicitations from localStorage:", error);
+      console.error("Failed to read from localStorage:", error);
       setSolicitacoes(placeholderSolicitacoesInitial);
+      setClassificacoes(placeholderClassificacoesInitial);
     }
   }, []);
 
@@ -315,7 +332,7 @@ export default function DocumentosPage() {
 
 
   React.useEffect(() => {
-    const classification = placeholderClassificacoesSimulado.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
+    const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId && !c.inativo);
     if (classification) {
       let prazoCorrente = "";
       if (classification.tipoPrazoFaseCorrente === "Anos" && typeof classification.prazoGuardaFaseCorrenteAnos === 'number') {
@@ -366,7 +383,7 @@ export default function DocumentosPage() {
         anoEliminacaoPrevisto: ""
       }));
     }
-  }, [formState.classificacaoArquivisticaId, formState.dataArquivamento, formState.alteracaoDestinacaoFinal]);
+  }, [formState.classificacaoArquivisticaId, formState.dataArquivamento, formState.alteracaoDestinacaoFinal, classificacoes]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -396,7 +413,7 @@ export default function DocumentosPage() {
   const handleCodigoClassificacaoBlur = () => {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
     if (codigoInput) {
-      const foundClassification = placeholderClassificacoesSimulado.find(
+      const foundClassification = classificacoes.find(
         c => c.codigo === codigoInput && !c.inativo
       );
       if (foundClassification) {
@@ -464,7 +481,7 @@ export default function DocumentosPage() {
 
   const handleOpenDialog = (doc?: Documento) => {
     if (doc) {
-      const existingClassification = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId && !c.inativo);
+      const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
       setFormState({
         ...initialFormState, 
         ...doc,
@@ -501,6 +518,18 @@ export default function DocumentosPage() {
     const matchAno = dataAbrangente.match(/\d{4}/); 
     return matchAno ? matchAno[0] : undefined;
   };
+
+  const getSortableValue = React.useCallback((doc: Documento, columnId: string): any => {
+    const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
+    if (!column) return null;
+    const value = doc[column.accessorKey as keyof Documento];
+
+    if ((column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') && value && typeof value === 'string') {
+      const parsedDate = Date.parse(value); 
+      return !isNaN(parsedDate) ? new Date(parsedDate) : null;
+    }
+    return value;
+  }, [ALL_COLUMNS_CONFIG]);
   
   const applyFiltersAndSorting = React.useCallback(() => {
     const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
@@ -533,7 +562,7 @@ export default function DocumentosPage() {
       if (filters.descricao && doc.descricaoDocumento && !doc.descricaoDocumento.toLowerCase().includes(filters.descricao.toLowerCase())) passesAll = false;
       
       if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
-        const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
+        const classificacao = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
         if (!classificacao || (classificacao.codigo && !classificacao.codigo.toLowerCase().includes(filters.codClassificacao.toLowerCase()))) {
           passesAll = false;
         }
@@ -611,7 +640,7 @@ export default function DocumentosPage() {
       });
     }
     setDisplayedDocumentos(newFilteredDocumentos);
-  }, [filters, sorting, caixaIdFromUrl, searchParams, masterDocumentList]);
+  }, [filters, sorting, caixaIdFromUrl, searchParams, masterDocumentList, classificacoes, getSortableValue]);
 
   React.useEffect(() => {
     if (masterDocumentList.length > 0) { 
@@ -670,18 +699,6 @@ export default function DocumentosPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
   
-  const getSortableValue = (doc: Documento, columnId: string): any => {
-    const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
-    if (!column) return null;
-    const value = doc[column.accessorKey as keyof Documento];
-
-    if ((column.accessorKey === 'dataArquivamento' || column.accessorKey === 'dataBaixa') && value && typeof value === 'string') {
-      const parsedDate = Date.parse(value); 
-      return !isNaN(parsedDate) ? new Date(parsedDate) : null;
-    }
-    return value;
-  };
-
   const renderSortIcon = (columnId: string) => {
     const sortConfig = sorting.find(s => s.id === columnId);
     if (!sortConfig) {
@@ -1373,6 +1390,7 @@ export default function DocumentosPage() {
     
 
     
+
 
 
 
