@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -37,7 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { placeholderDocumentos, placeholderListagensInitial, simulatedClassificacoesData, simulatedListagensData } from "@/lib/mock-data";
+import { placeholderDocumentos, placeholderClassificacoesSimulado, simulatedListagensData } from "@/lib/mock-data";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -216,7 +217,7 @@ export default function ListagensEliminacaoPage() {
       accessorKey: 'classificacaoArquivisticaId',
       enableSorting: true,
       cellFormatter: (_, doc) => {
-        const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
+        const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
         return classificacao ? classificacao.codigo : "N/A";
       }
     },
@@ -226,7 +227,7 @@ export default function ListagensEliminacaoPage() {
       accessorKey: 'classificacaoArquivisticaId',
       enableSorting: true,
       cellFormatter: (_, doc) => {
-        const classificacao = simulatedClassificacoesData.find(c => c.id === doc.classificacaoArquivisticaId);
+        const classificacao = placeholderClassificacoesSimulado.find(c => c.id === doc.classificacaoArquivisticaId);
         return classificacao ? <span className="block max-w-xs truncate" title={classificacao.descricao}>{classificacao.descricao}</span> : "N/A";
       }
     },
@@ -253,15 +254,15 @@ export default function ListagensEliminacaoPage() {
         </Badge>
       )
     },
-  ], [documentsForDialog]);
+  ], [documentsForDialog, selectedDialogDocIds]);
 
   React.useEffect(() => {
     try {
       const stored = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
-      setListagens(stored ? JSON.parse(stored) : placeholderListagensInitial);
+      setListagens(stored ? JSON.parse(stored) : simulatedListagensData);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
-      setListagens(placeholderListagensInitial);
+      setListagens(simulatedListagensData);
     }
     setIsDataLoaded(true);
   }, []);
@@ -300,8 +301,8 @@ export default function ListagensEliminacaoPage() {
         for (const sortConf of dialogTableSortConfig) {
           let valA, valB;
           if (sortConf.id === 'codigoClassificacao' || sortConf.id === 'assuntoClassificacao') {
-            const classA = simulatedClassificacoesData.find(c => c.id === a.classificacaoArquivisticaId);
-            const classB = simulatedClassificacoesData.find(c => c.id === b.classificacaoArquivisticaId);
+            const classA = placeholderClassificacoesSimulado.find(c => c.id === a.classificacaoArquivisticaId);
+            const classB = placeholderClassificacoesSimulado.find(c => c.id === b.classificacaoArquivisticaId);
             valA = sortConf.id === 'codigoClassificacao' ? classA?.codigo : classA?.descricao;
             valB = sortConf.id === 'codigoClassificacao' ? classB?.codigo : classB?.descricao;
           } else {
@@ -926,3 +927,5 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
+    

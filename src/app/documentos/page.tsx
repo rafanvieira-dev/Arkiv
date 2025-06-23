@@ -56,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesInitial } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado } from "@/lib/mock-data";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -277,13 +277,13 @@ export default function DocumentosPage() {
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
 
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
-      setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesInitial);
+      setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesSimulado);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setDocumentos(placeholderDocumentos);
       setSolicitacoes(placeholderSolicitacoesInitial);
-      setClassificacoes(placeholderClassificacoesInitial);
+      setClassificacoes(placeholderClassificacoesSimulado);
     }
     setIsDataLoaded(true);
   }, []);
