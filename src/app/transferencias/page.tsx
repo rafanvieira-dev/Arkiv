@@ -264,9 +264,11 @@ export default function TransferenciasPage() {
                             </div>
                         </ScrollArea>
                     </CardContent>
-                    <div className="flex justify-center items-center pb-4 text-muted-foreground">
-                        <ChevronDown className="h-6 w-6 animate-bounce" />
-                    </div>
+                    {documentos.length > 1 && (
+                        <div className="flex justify-center items-center pb-4 text-muted-foreground">
+                            <ChevronDown className="h-6 w-6 animate-bounce" />
+                        </div>
+                    )}
                     <CardFooter className="flex justify-end pt-0">
                         <Button onClick={handleSubmit} size="lg"><Send className="mr-2 h-4 w-4" /> Enviar Transferência</Button>
                     </CardFooter>
