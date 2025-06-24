@@ -10,6 +10,7 @@ import * as React from 'react';
 import type { Usuario } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { initialUsers } from '@/lib/mock-data';
+import Link from "next/link";
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
@@ -25,7 +26,6 @@ export default function LoginPage() {
     let allUsers: Usuario[] = [];
     try {
       const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
-      // If no users are in storage, use the initial mock data
       allUsers = storedUsers ? JSON.parse(storedUsers) : initialUsers;
     } catch {
       allUsers = initialUsers;
@@ -33,8 +33,6 @@ export default function LoginPage() {
 
     const user = allUsers.find(u => u.email === email);
 
-    // NOTE: For this prototype, we're not validating the password hash,
-    // just checking if the user exists and is approved.
     if (user) {
       if (user.statusAprovacao === 'Aprovado') {
         localStorage.setItem('currentUser', JSON.stringify(user));
@@ -140,9 +138,11 @@ export default function LoginPage() {
               <Button variant="outline" className="w-full">
                   <FileUp className="mr-2 h-4 w-4" /> Transferir Documentos
               </Button>
-               <Button variant="outline" className="w-full">
-                  <FileText className="mr-2 h-4 w-4" /> Nova Solicitação (Público)
-              </Button>
+              <Link href="/solicitacoes/publica" passHref>
+                <Button variant="outline" className="w-full">
+                    <FileText className="mr-2 h-4 w-4" /> Nova Solicitação (Público)
+                </Button>
+              </Link>
                <Button variant="outline" className="w-full">
                   <UserPlus className="mr-2 h-4 w-4" /> Registrar Nova Conta
               </Button>
