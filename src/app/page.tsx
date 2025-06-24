@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { 
     FileText, Send, ArrowRightLeft, AlertTriangle, PlusCircle, Archive, Search,
-    FileUp, Trash2, Clock, Box, ListChecks
+    FileUp, Trash2, Clock, Box, ListChecks, CalendarX
 } from "lucide-react";
 import { 
     placeholderDocumentos, 
@@ -34,6 +34,7 @@ export default function DashboardPage() {
         pendingSolicitacoes: 0,
         pendingTransferencias: 0,
         docsToExpire: 0,
+        docsExpired: 0,
         totalDocsArquivados: 0,
         totalDocsEmprestados: 0,
         totalDocsDesarquivados: 0,
@@ -69,7 +70,11 @@ export default function DashboardPage() {
         
         const currentYear = new Date().getFullYear();
         const docsToExpire = allDocs.filter(d => 
-            d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) <= currentYear + 1
+            d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) === currentYear + 1
+        ).length;
+        
+        const docsExpired = allDocs.filter(d => 
+            d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) <= currentYear
         ).length;
         
         const totalDocsArquivados = allDocs.filter(d => d.status === 'Arquivado').length;
@@ -86,6 +91,7 @@ export default function DashboardPage() {
             pendingSolicitacoes, 
             pendingTransferencias, 
             docsToExpire,
+            docsExpired,
             totalDocsArquivados,
             totalDocsEmprestados,
             totalDocsDesarquivados,
@@ -217,6 +223,16 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.docsToExpire}</div>
                         <p className="text-xs text-muted-foreground">Com eliminação prevista para o próximo ano</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos Expirados</CardTitle>
+                        <CalendarX className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.docsExpired}</div>
+                        <p className="text-xs text-muted-foreground">Eliminação neste ano ou anterior</p>
                     </CardContent>
                 </Card>
             </div>
