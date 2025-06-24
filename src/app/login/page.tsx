@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Zap, FileUp, FileText, UserPlus, Mail, KeyRound } from "lucide-react";
+import { LogIn, Zap, FileUp, FileText, Mail, KeyRound } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import type { Usuario } from '@/types';
@@ -19,6 +19,17 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+
+  React.useEffect(() => {
+    try {
+      const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
+      if (!storedUsers) {
+        localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(initialUsers));
+      }
+    } catch (error) {
+      console.error("Failed to seed users into localStorage:", error);
+    }
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
