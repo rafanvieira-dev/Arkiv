@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -57,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -208,7 +207,7 @@ export default function DocumentosPage() {
 
       if (existingClassification) {
         if (existingClassification.status === 'Inativo') {
-          assunto = "Código inativo. Um novo será criado ao salvar.";
+          assunto = "Código inválido. Um novo será criado ao salvar.";
           classId = ""; // Force creation of a new one on save
         } else {
           assunto = existingClassification.descricao;
@@ -354,7 +353,7 @@ export default function DocumentosPage() {
       setSolicitacoes(storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial);
 
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
-      setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesSimulado);
+      setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes);
       
       const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
       setListagens(storedListagens ? JSON.parse(storedListagens) : simulatedListagensData);
@@ -378,7 +377,7 @@ export default function DocumentosPage() {
       console.error("Failed to read from localStorage:", error);
       setDocumentos(placeholderDocumentos);
       setSolicitacoes(placeholderSolicitacoesInitial);
-      setClassificacoes(placeholderClassificacoesSimulado);
+      setClassificacoes(initialClassificacoes);
       setListagens(simulatedListagensData);
       setTiposDocumento(initialTiposDocumento);
       setTiposParte(initialTiposParte);
@@ -404,8 +403,13 @@ export default function DocumentosPage() {
       window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(classificacoes));
       window.localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(listagens));
       window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
+      window.localStorage.setItem(TIPOS_DOCUMENTO_STORAGE_KEY, JSON.stringify(tiposDocumento));
+      window.localStorage.setItem(TIPOS_PARTE_STORAGE_KEY, JSON.stringify(tiposParte));
+      window.localStorage.setItem(GENEROS_DOCUMENTAIS_STORAGE_KEY, JSON.stringify(generosDocumentais));
+      window.localStorage.setItem(TIPOS_MIDIA_STORAGE_KEY, JSON.stringify(tiposMidia));
+      window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
     }
-  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded]);
+  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -456,10 +460,21 @@ export default function DocumentosPage() {
     const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId);
     
     if (classification) {
-       if (classification.status === 'Inativo' || classification.status === 'Pendente de Complemento') {
+       if (classification.status === 'Inativo') {
          setFormState(prev => ({
           ...prev,
-          assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
+          assuntoClassificacaoDisplay: "Código inválido. Um novo será criado ao salvar.",
+          prazoArquivoCorrenteDisplay: "",
+          prazoArquivoIntermediarioDisplay: "",
+          destinacaoFinalDisplay: undefined,
+          anoEliminacaoPrevisto: ""
+        }));
+        return;
+      }
+       if (classification.status === 'Pendente de Complemento') {
+         setFormState(prev => ({
+          ...prev,
+          assuntoClassificacaoDisplay: `Pendente de complemento (Cód: ${classification.codigo})`,
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
@@ -570,7 +585,7 @@ export default function DocumentosPage() {
             setFormState(prev => ({
                 ...prev,
                 classificacaoArquivisticaId: "",
-                assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
+                assuntoClassificacaoDisplay: "Código inválido. Um novo será criado ao salvar.",
                 prazoArquivoCorrenteDisplay: "",
                 prazoArquivoIntermediarioDisplay: "",
                 destinacaoFinalDisplay: undefined,
@@ -1027,17 +1042,6 @@ export default function DocumentosPage() {
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
             const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
-            const expectedHeaders = [
-                'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
-                'tipoDocumento', 'numeroDocumento', 'dataAbrangente', 'descricaoDocumento', 
-                'nomePartePrincipal', 'tipoPartePrincipal', 'documentosRelacionadosIds', 
-                'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-                'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
-                'digitalizado', 'tipoBaixa', 'dataBaixa', 'classificacaoArquivisticaId', 
-                'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
-                'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
-                'numeroListagemEliminacao'
-            ];
             
             const missingHeaders = ['status', 'orgao', 'origem', 'tipoMeio', 'categoria', 'tipoDocumento', 'dataAbrangente', 'dataArquivamento', 'classificacaoArquivisticaId', 'segredoJustica', 'grauSigilo'].filter(h => !headers.includes(h));
             if (missingHeaders.length > 0) {
@@ -1046,6 +1050,18 @@ export default function DocumentosPage() {
             }
 
             const newDocsFromCsv: Documento[] = [];
+            const newTiposDocSet = new Set<string>();
+            const newTiposOrigemSet = new Set<string>();
+            const newTiposParteSet = new Set<string>();
+            const newGenerosSet = new Set<string>();
+            const newTiposMidiaSet = new Set<string>();
+
+            const currentTiposDoc = new Set(tiposDocumento);
+            const currentTiposOrigem = new Set(tiposOrigem.map(o => o.nome));
+            const currentTiposParte = new Set(tiposParte);
+            const currentGeneros = new Set(generosDocumentais);
+            const currentTiposMidia = new Set(tiposMidia);
+
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
 
@@ -1054,6 +1070,22 @@ export default function DocumentosPage() {
                 headers.forEach((header, i) => {
                   newDocData[header] = values[i] || "";
                 });
+                
+                if (newDocData.tipoDocumento && !currentTiposDoc.has(newDocData.tipoDocumento)) {
+                    newTiposDocSet.add(newDocData.tipoDocumento);
+                }
+                if (newDocData.origem && !currentTiposOrigem.has(newDocData.origem)) {
+                    newTiposOrigemSet.add(newDocData.origem);
+                }
+                if (newDocData.tipoPartePrincipal && !currentTiposParte.has(newDocData.tipoPartePrincipal)) {
+                    newTiposParteSet.add(newDocData.tipoPartePrincipal);
+                }
+                if (newDocData.generoDocumental && !currentGeneros.has(newDocData.generoDocumental)) {
+                    newGenerosSet.add(newDocData.generoDocumental);
+                }
+                if (newDocData.tipoMidiaDetalhe && !currentTiposMidia.has(newDocData.tipoMidiaDetalhe)) {
+                    newTiposMidiaSet.add(newDocData.tipoMidiaDetalhe);
+                }
                 
                 const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
                 const classification = classificacoes.find(c => c.id === newDocData.classificacaoArquivisticaId);
@@ -1122,9 +1154,29 @@ export default function DocumentosPage() {
                 };
                 newDocsFromCsv.push(newDoc);
             });
+            
+            if (newTiposDocSet.size > 0) {
+                setTiposDocumento(prev => [...prev, ...Array.from(newTiposDocSet)]);
+            }
+            if (newTiposOrigemSet.size > 0) {
+                const newOrigens: TipoOrigem[] = Array.from(newTiposOrigemSet).map(nome => ({
+                    id: `to_imp_${Date.now()}_${nome.replace(/\s+/g, '_')}`,
+                    nome: nome,
+                }));
+                setTiposOrigem(prev => [...prev, ...newOrigens]);
+            }
+            if (newTiposParteSet.size > 0) {
+                setTiposParte(prev => [...prev, ...Array.from(newTiposParteSet)]);
+            }
+            if (newGenerosSet.size > 0) {
+                setGenerosDocumentais(prev => [...prev, ...Array.from(newGenerosSet)]);
+            }
+            if (newTiposMidiaSet.size > 0) {
+                setTiposMidia(prev => [...prev, ...Array.from(newTiposMidiaSet)]);
+            }
 
             setDocumentos(prev => [...prev, ...newDocsFromCsv]);
-            toast({ title: "Importação Concluída", description: `${newDocsFromCsv.length} documentos foram importados com sucesso.` });
+            toast({ title: "Importação Concluída", description: `${newDocsFromCsv.length} documentos foram importados com sucesso. Novos termos de configuração foram adicionados automaticamente.` });
 
         } catch (error: any) {
              toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
@@ -1471,7 +1523,9 @@ export default function DocumentosPage() {
                       id="assuntoClassificacaoDisplay" 
                       value={formState.assuntoClassificacaoDisplay || ""} 
                       readOnly 
-                      className="bg-muted/50 cursor-not-allowed"
+                      className={cn("bg-muted/50 cursor-not-allowed", {
+                        "text-destructive": formState.assuntoClassificacaoDisplay?.includes('inválido')
+                      })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1942,3 +1996,6 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
+
+    
