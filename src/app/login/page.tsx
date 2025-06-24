@@ -145,9 +145,6 @@ export default function LoginPage() {
                     <FileText className="mr-2 h-4 w-4" /> Nova Solicitação (Público)
                 </Button>
               </Link>
-               <Button variant="outline" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" /> Registrar Nova Conta
-              </Button>
           </div>
            <p className="pt-4 text-center text-xs text-muted-foreground">
               Este é um protótipo. O login é simulado. A senha não é validada de forma segura.
