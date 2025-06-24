@@ -290,7 +290,7 @@ export default function ConfiguracoesPage() {
           </CardHeader>
           <CardContent>
             <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
-              {tiposOrigem.sort((a, b) => a.nome.localeCompare(b.nome)).map(item => {
+              {tiposOrigem.filter(item => item && item.nome).sort((a, b) => a.nome.localeCompare(b.nome)).map(item => {
                 const displayValue = item.sigla ? `${item.nome} - ${item.sigla}` : item.nome;
                 return (
                   <div key={item.id} className="flex items-center justify-between rounded-md border p-2 hover:bg-muted/50">
