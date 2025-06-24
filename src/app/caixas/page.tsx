@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Caixa } from "@/types";
+import type { Caixa, Documento } from "@/types";
 import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,19 +43,24 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
+import { getYear, parseISO } from 'date-fns';
 
 
-const initialFormStateCaixa: Partial<Caixa> = {
+const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
   codigoCaixa: "",
   descricao: "",
   tipo: "",
   status: "Aberta",
   localizacao: "",
   situacao: "Incompleta",
+  anosArquivamento: "",
+  prazosGuarda: "",
+  anosEliminacao: "",
 };
 
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 
 type ColumnConfigCaixas = {
   id: keyof Caixa | string;
@@ -66,47 +71,90 @@ type ColumnConfigCaixas = {
   cellFormatter?: (value: any, doc: Caixa) => React.ReactNode;
 };
 
-const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = [
-  {
-    id: 'codigoCaixa',
-    header: 'Código',
-    accessorKey: 'codigoCaixa',
-    defaultVisible: true,
-    enableSorting: true,
-    cellFormatter: (value, caixa) => (
-      <Link href={`/documentos?codigoCaixa=${encodeURIComponent(caixa.codigoCaixa)}`} passHref>
-        <span className="text-primary hover:underline cursor-pointer font-medium">
-          {value}
-        </span>
-      </Link>
-    )
-  },
-  { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
-  { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
-  { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
-];
-
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function CaixasPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa>>(initialFormStateCaixa);
+  const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; }>(initialFormStateCaixa);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
   const [caixas, setCaixas] = React.useState<Caixa[]>([]);
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
+  const [documentos, setDocumentos] = React.useState<Documento[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
-  const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
-    ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
-  );
+  const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>({});
   const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
   const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  
+  const ALL_COLUMNS_CONFIG_CAIXAS: ColumnConfigCaixas[] = React.useMemo(() => [
+    {
+      id: 'codigoCaixa',
+      header: 'Código',
+      accessorKey: 'codigoCaixa',
+      defaultVisible: true,
+      enableSorting: true,
+      cellFormatter: (value, caixa) => (
+        <Link href={`/documentos?codigoCaixa=${encodeURIComponent(caixa.codigoCaixa)}`} passHref>
+          <span className="text-primary hover:underline cursor-pointer font-medium">
+            {value}
+          </span>
+        </Link>
+      )
+    },
+    { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
+    { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
+    { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
+    {
+      id: 'anosArquivamento',
+      header: 'Ano(s) Arquivamento',
+      accessorKey: 'anosArquivamento', // Dummy accessor
+      defaultVisible: false,
+      enableSorting: false,
+      cellFormatter: (value, caixa) => {
+        const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+        if (associatedDocs.length === 0) return "N/A";
+        const years = [...new Set(associatedDocs.map(d => d.dataArquivamento ? getYear(parseISO(d.dataArquivamento)) : null).filter(Boolean))].sort((a,b) => a-b);
+        return years.join(', ') || "N/A";
+      }
+    },
+    {
+      id: 'prazosGuarda',
+      header: 'Prazo(s) Guarda',
+      accessorKey: 'prazosGuarda',
+      defaultVisible: false,
+      enableSorting: false,
+      cellFormatter: (value, caixa) => {
+        const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+        if (associatedDocs.length === 0) return "N/A";
+        const prazos = [...new Set(associatedDocs.map(d => d.prazoArquivoIntermediarioDisplay).filter(Boolean))];
+        return prazos.join(', ') || "N/A";
+      }
+    },
+    {
+      id: 'anosEliminacao',
+      header: 'Ano(s) Eliminação',
+      accessorKey: 'anosEliminacao',
+      defaultVisible: false,
+      enableSorting: false,
+      cellFormatter: (value, caixa) => {
+        const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+        if (associatedDocs.length === 0) return "N/A";
+        const anos = [...new Set(associatedDocs.map(d => d.anoEliminacaoPrevisto).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+        return anos.join(', ') || "N/A";
+      }
+    },
+  ], [documentos]);
 
+  React.useEffect(() => {
+    setColumnVisibilityCaixas(
+      ALL_COLUMNS_CONFIG_CAIXAS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+    );
+  }, [ALL_COLUMNS_CONFIG_CAIXAS]);
 
   React.useEffect(() => {
     try {
@@ -115,10 +163,14 @@ export default function CaixasPage() {
 
       const storedTiposCaixa = window.localStorage.getItem(TIPOS_CAIXA_STORAGE_KEY);
       setTiposCaixa(storedTiposCaixa ? JSON.parse(storedTiposCaixa) : initialTiposCaixa);
+      
+      const storedDocumentos = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+      setDocumentos(storedDocumentos ? JSON.parse(storedDocumentos) : []);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setCaixas(initialCaixas);
       setTiposCaixa(initialTiposCaixa);
+      setDocumentos([]);
     }
     setIsDataLoaded(true);
   }, []);
@@ -144,7 +196,19 @@ export default function CaixasPage() {
     if (caixa) {
       setIsEditing(true);
       setEditingCaixaId(caixa.id);
-      setFormStateCaixa(caixa);
+      
+      const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+
+      const anosArquivamento = [...new Set(associatedDocs.map(d => d.dataArquivamento ? getYear(parseISO(d.dataArquivamento)) : null).filter(Boolean))].sort((a,b) => a-b).join(', ');
+      const prazosGuarda = [...new Set(associatedDocs.map(d => d.prazoArquivoIntermediarioDisplay).filter(Boolean))].join(', ');
+      const anosEliminacao = [...new Set(associatedDocs.map(d => d.anoEliminacaoPrevisto).filter(Boolean))].sort().join(', ');
+
+      setFormStateCaixa({
+        ...caixa,
+        anosArquivamento: anosArquivamento || 'N/A',
+        prazosGuarda: prazosGuarda || 'N/A',
+        anosEliminacao: anosEliminacao || 'N/A',
+      });
     } else {
       resetFormAndDialogState();
     }
@@ -296,7 +360,7 @@ export default function CaixasPage() {
               Nova Caixa
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[625px]">
             <DialogHeader>
               <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
               <DialogDescription>
@@ -312,6 +376,18 @@ export default function CaixasPage() {
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="descricao">Descrição</Label>
                 <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
+                <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
+                <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
+                <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo*</Label>
