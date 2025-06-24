@@ -24,6 +24,7 @@ import {
   simulatedListagensData,
   type SimulatedDocumentForSolicitacaoDialog
 } from "@/lib/mock-data";
+import { parseISO } from "date-fns";
 
 
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
@@ -59,7 +60,7 @@ export default function PublicSolicitacaoPage() {
   
   const [dialogDocFilters, setDialogDocFilters] = React.useState<DialogDocFilters>({ searchTerm: "" });
   const [dialogDocSortConfig, setDialogDocSortConfig] = React.useState<DialogDocSortConfig[]>([]);
-  const [isDocumentSelectionVisible, setIsDocumentSelectionVisible] = React.useState(false);
+  const [isDocumentSelectionVisible, setIsDocumentSelectionVisible] = React.useState(true); // Default to true for public page
 
   React.useEffect(() => {
     try {
@@ -153,7 +154,7 @@ export default function PublicSolicitacaoPage() {
     setSelectedDocIdsInDialog([]);
     setDialogDocFilters({ searchTerm: "" });
     setDialogDocSortConfig([]);
-    setIsDocumentSelectionVisible(false);
+    setIsDocumentSelectionVisible(true);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -163,6 +164,12 @@ export default function PublicSolicitacaoPage() {
   const handleSelectChange = (id: keyof Solicitacao) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
+  
+  const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
+    const isoDate = date?.toISOString();
+    setFormState(prev => ({ ...prev, [id]: isoDate }));
+  };
+
 
   const handleSaveChanges = () => {
     if (!formState.nomeSolicitante?.trim()) {
@@ -236,15 +243,7 @@ export default function PublicSolicitacaoPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nomeSolicitante">Nome Completo*</Label>
-                  <Input id="nomeSolicitante" value={formState.nomeSolicitante || ""} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emailContato">E-mail de Contato</Label>
-                  <Input id="emailContato" type="email" value={formState.emailContato || ""} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
+                 <div className="space-y-2 lg:col-span-3">
                   <Label htmlFor="tipo">Tipo de Solicitação*</Label>
                   <Select onValueChange={handleSelectChange('tipo')} value={formState.tipo}>
                     <SelectTrigger id="tipo"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
@@ -253,7 +252,47 @@ export default function PublicSolicitacaoPage() {
                       <SelectItem value="Desarquivamento">Desarquivamento</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formState.tipo === 'Empréstimo' && (
+                      <p className="text-xs text-muted-foreground mt-2">Empréstimo é para quando o documento será somente consultado, sem tramitação.</p>
+                  )}
+                  {formState.tipo === 'Desarquivamento' && (
+                      <p className="text-xs text-muted-foreground mt-2">Essa opção é para quando o documento voltará a tramitar, e implica em nova contagem de prazo após o rearquivamento.</p>
+                  )}
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nomeSolicitante">Nome Completo*</Label>
+                  <Input id="nomeSolicitante" value={formState.nomeSolicitante || ""} onChange={handleInputChange} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="setorSolicitante">Setor do Solicitante</Label>
+                  <Input id="setorSolicitante" value={formState.setorSolicitante || ""} onChange={handleInputChange} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="siglaServidor">Sigla do Servidor</Label>
+                  <Input id="siglaServidor" value={formState.siglaServidor || ""} onChange={handleInputChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="matriculaSolicitante">Matrícula</Label>
+                  <Input id="matriculaSolicitante" value={formState.matriculaSolicitante || ""} onChange={handleInputChange} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="ramal">Ramal</Label>
+                  <Input id="ramal" value={formState.ramal || ""} onChange={handleInputChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emailContato">E-mail de Contato</Label>
+                  <Input id="emailContato" type="email" value={formState.emailContato || ""} onChange={handleInputChange} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dataSolicitacao">Data da Solicitação*</Label>
+                  <DateInputPicker 
+                    value={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
+                    onChange={(date) => handleDateChange('dataSolicitacao')(date)}
+                    placeholder="dd/mm/aaaa"
+                  />
+                </div>
+
                 <div className="lg:col-span-3 space-y-2">
                   <Label htmlFor="observacoes">Observações</Label>
                   <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} rows={2} placeholder="Descreva o motivo da solicitação ou outras informações relevantes."/>
@@ -312,3 +351,5 @@ export default function PublicSolicitacaoPage() {
     </div>
   );
 }
+
+    
