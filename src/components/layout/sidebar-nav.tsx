@@ -14,6 +14,7 @@ import {
   Search,
   Settings,
   Users,
+  ArrowRightLeft,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { href: '/classes-judiciais', label: 'Classes Judiciais', icon: Scale, permissionKey: 'classesJudiciais' },
   { href: '/documentos', label: 'Acervo', icon: FileText, permissionKey: 'acervo' },
   { href: '/listagens-eliminacao', label: 'Listagens de Eliminação', icon: Trash2, permissionKey: 'listagens' },
+  { href: '/transferencias', label: 'Transferências', icon: ArrowRightLeft, permissionKey: 'transferencias' },
   { href: '/solicitacoes', label: 'Solicitações', icon: Send, permissionKey: 'solicitacoes' },
   { href: '/busca-avancada', label: 'Busca Avançada', icon: Search, permissionKey: 'buscaAvancada' },
 ];
@@ -57,7 +59,7 @@ export function SidebarNav() {
     return (
       <>
         <SidebarMenu>
-          {Array.from({ length: 8 }).map((_, i) => <SidebarMenuSkeleton key={i} showIcon />)}
+          {Array.from({ length: 9 }).map((_, i) => <SidebarMenuSkeleton key={i} showIcon />)}
         </SidebarMenu>
         <div className="mt-auto">
           <SidebarMenu>

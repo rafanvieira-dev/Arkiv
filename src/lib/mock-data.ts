@@ -1,5 +1,5 @@
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia } from "@/types";
 
 export const placeholderClassificacoesSimulado = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
@@ -333,12 +333,28 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'listagens', label: 'Listagens de Eliminação', description: 'Permite criar e gerenciar listagens de eliminação.' },
   { id: 'solicitacoes', label: 'Solicitações', description: 'Permite gerenciar solicitações de empréstimo e desarquivamento.' },
   { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
+  { id: 'transferencias', label: 'Transferências', description: 'Permite gerenciar a transferência de documentos para o arquivo.' },
   { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
   { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
 ];
 
+const allTruePermissions: Usuario['permissoes'] = {
+  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true,
+};
+
+const standardUserPermissions: Usuario['permissoes'] = {
+  ...allTruePermissions,
+  usuarios: false,
+  configuracoes: false,
+};
+
+
 export const initialUsers: Usuario[] = [
-  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true } },
-  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: false, configuracoes: false } },
-  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} },
+  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: allTruePermissions },
+  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: standardUserPermissions },
+  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} as Usuario['permissoes'] },
+  { id: "USR004", nomeCompleto: "Usuário 'r'", email: "r", senhaHash: "hashed_password_4", sigla: "R", setor: "Gabinete X", statusAprovacao: "Aprovado", permissoes: { ...standardUserPermissions, dashboard: false, acervo: false, caixas: false, classificacao: false, classesJudiciais: false, listagens: false, buscaAvancada: false, transferencias: false } },
 ];
+
+
+export const initialTransferencias: Transferencia[] = [];

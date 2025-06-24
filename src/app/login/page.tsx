@@ -135,9 +135,11 @@ export default function LoginPage() {
               <Button variant="outline" className="w-full" onClick={handleAdminLogin}>
                   <Zap className="mr-2 h-4 w-4" /> Acesso Rápido (Admin Padrão)
               </Button>
-              <Button variant="outline" className="w-full">
-                  <FileUp className="mr-2 h-4 w-4" /> Transferir Documentos
-              </Button>
+              <Link href="/transferencias" passHref>
+                <Button variant="outline" className="w-full">
+                    <FileUp className="mr-2 h-4 w-4" /> Transferir Documentos
+                </Button>
+              </Link>
               <Link href="/solicitacoes/publica" passHref>
                 <Button variant="outline" className="w-full">
                     <FileText className="mr-2 h-4 w-4" /> Nova Solicitação (Público)

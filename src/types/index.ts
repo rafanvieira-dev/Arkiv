@@ -1,6 +1,4 @@
 
-
-
 export interface ParteDocumento {
   id: string; // UUID for the part entry itself
   nome: string;
@@ -143,7 +141,19 @@ export interface Usuario {
   sigla?: string;
   setor?: string;
   statusAprovacao: 'Aprovado' | 'Pendente' | 'Reprovado';
-  permissoes: Record<string, boolean>; // e.g., { acervo: true, usuarios: false }
+  permissoes: {
+    dashboard: boolean;
+    acervo: boolean;
+    caixas: boolean;
+    classificacao: boolean;
+    classesJudiciais: boolean;
+    listagens: boolean;
+    solicitacoes: boolean;
+    buscaAvancada: boolean;
+    transferencias: boolean;
+    usuarios: boolean;
+    configuracoes: boolean;
+  };
 }
 
 
@@ -152,3 +162,29 @@ export type DataTableColumn<T> = {
   header: string;
   cell?: (props: any) => React.ReactNode;
 };
+
+
+export interface DocumentoTransferencia {
+  id: string; 
+  categoria: Documento['categoria'];
+  codigoClassificacao?: string; 
+  descricao?: string;
+  dataAbrangente?: string;
+  numeroDocumento?: string;
+  quantidadeVolumes?: number;
+  quantidadeApensos?: number;
+  numerosApensos?: string;
+  digitalizado: Documento['digitalizado'];
+  observacoesGerais?: string;
+}
+
+export interface Transferencia {
+  id: string;
+  nomeServidor: string;
+  matricula: string;
+  ramal?: string;
+  setorRemetente: string;
+  dataTransferencia: string;
+  status: 'Pendente' | 'Aprovada' | 'Reprovada';
+  documentos: DocumentoTransferencia[];
+}
