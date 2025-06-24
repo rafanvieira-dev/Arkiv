@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -40,6 +41,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+
 
 const initialClassificacoes: Classificacao[] = [
   { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
@@ -222,6 +225,9 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
 
 
 export default function ClassificacaoPage() {
+  const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
@@ -435,6 +441,140 @@ export default function ClassificacaoPage() {
     );
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      'id', 'tipoPlanoClassificacao', 'codigo', 'descricao', 
+      'tipoPrazoFaseCorrente', 'prazoGuardaFaseCorrenteAnos', 
+      'prazoGuardaFaseCorrenteCondicaoTextual', 'prazoGuardaFaseIntermediariaAnos',
+      'destinacaoFinal', 'observacoes', 'inativo'
+    ];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedClassificacoes.length > 0 ? displayedClassificacoes : classificacoes;
+
+    dataToExport.forEach(item => {
+        const rowData = {
+          id: item.id,
+          tipoPlanoClassificacao: item.tipoPlanoClassificacao || '',
+          codigo: item.codigo,
+          descricao: item.descricao,
+          tipoPrazoFaseCorrente: item.tipoPrazoFaseCorrente || '',
+          prazoGuardaFaseCorrenteAnos: item.prazoGuardaFaseCorrenteAnos ?? '',
+          prazoGuardaFaseCorrenteCondicaoTextual: item.prazoGuardaFaseCorrenteCondicaoTextual || '',
+          prazoGuardaFaseIntermediariaAnos: item.prazoGuardaFaseIntermediariaAnos,
+          destinacaoFinal: item.destinacaoFinal,
+          observacoes: item.observacoes || '',
+          inativo: item.inativo,
+        };
+        const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'classificacoes_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de classificações concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      'tipoPlanoClassificacao', 'codigo', 'descricao', 
+      'tipoPrazoFaseCorrente', 'prazoGuardaFaseCorrenteAnos', 
+      'prazoGuardaFaseCorrenteCondicaoTextual', 'prazoGuardaFaseIntermediariaAnos',
+      'destinacaoFinal', 'observacoes', 'inativo'
+    ];
+    const csvContent = headers.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_classificacao.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = [
+              'tipoPlanoClassificacao', 'codigo', 'descricao', 'tipoPrazoFaseCorrente', 
+              'prazoGuardaFaseCorrenteAnos', 'prazoGuardaFaseCorrenteCondicaoTextual', 
+              'prazoGuardaFaseIntermediariaAnos', 'destinacaoFinal', 'observacoes', 'inativo'
+            ];
+            
+            const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
+            if (!hasAllHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Por favor, utilize o modelo fornecido." });
+                 return;
+            }
+
+            const newItemsFromCsv: Classificacao[] = [];
+            rows.forEach((row, index) => {
+                const values = row.split(',');
+                const newItemData: { [key: string]: string } = {};
+                headers.forEach((header, i) => {
+                  newItemData[header] = values[i]?.trim().replace(/"/g, '') || "";
+                });
+
+                if (!newItemData.codigo || !newItemData.descricao || !newItemData.prazoGuardaFaseIntermediariaAnos || !newItemData.destinacaoFinal) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, prazoGuardaFaseIntermediariaAnos, destinacaoFinal) faltando.`);
+                }
+                
+                const prazoCorrenteAnos = newItemData.prazoGuardaFaseCorrenteAnos ? parseInt(newItemData.prazoGuardaFaseCorrenteAnos, 10) : undefined;
+                const prazoIntermediarioAnos = parseInt(newItemData.prazoGuardaFaseIntermediariaAnos, 10);
+
+                const newItem: Classificacao = {
+                    id: `CLA_IMP_${Date.now()}_${index}`,
+                    tipoPlanoClassificacao: newItemData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] || 'Administrativo',
+                    codigo: newItemData.codigo,
+                    descricao: newItemData.descricao,
+                    tipoPrazoFaseCorrente: newItemData.tipoPrazoFaseCorrente as Classificacao['tipoPrazoFaseCorrente'] || 'Anos',
+                    prazoGuardaFaseCorrenteAnos: isNaN(prazoCorrenteAnos as number) ? undefined : prazoCorrenteAnos,
+                    prazoGuardaFaseCorrenteCondicaoTextual: newItemData.prazoGuardaFaseCorrenteCondicaoTextual,
+                    prazoGuardaFaseIntermediariaAnos: isNaN(prazoIntermediarioAnos) ? 0 : prazoIntermediarioAnos,
+                    destinacaoFinal: newItemData.destinacaoFinal as Classificacao['destinacaoFinal'],
+                    observacoes: newItemData.observacoes,
+                    inativo: newItemData.inativo.toLowerCase() === 'true',
+                };
+                newItemsFromCsv.push(newItem);
+            });
+
+            setClassificacoes(prev => [...prev, ...newItemsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newItemsFromCsv.length} classificações foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
   const numDisplayed = displayedClassificacoes.length;
   const numSelected = selectedRowIds.length;
 
@@ -457,121 +597,142 @@ export default function ClassificacaoPage() {
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
-        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-          setIsDialogOpen(isOpen);
-          if (!isOpen) {
-            resetForm();
-          }
-        }}>
-          <DialogTrigger asChild>
-             <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Classificação
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
-              <DialogDescription>
-                Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
-                <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
-                  <SelectTrigger id="tipoPlanoClassificacao">
-                    <SelectValue placeholder="Selecione o tipo de plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Administrativo">Administrativo</SelectItem>
-                    <SelectItem value="Judicial">Judicial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="codigo">Código*</Label>
-                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Assunto*</Label>
-                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
-                <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
-                  <SelectTrigger id="tipoPrazoFaseCorrente">
-                    <SelectValue placeholder="Selecione o tipo de prazo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Anos">Anos</SelectItem>
-                    <SelectItem value="Condição Textual">Condição Textual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formState.tipoPrazoFaseCorrente === "Anos" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={handleImportClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar CSV
+          </Button>
+          <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".csv"
+              className="hidden"
+          />
+          <Button variant="outline" onClick={handleExportCSV}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Baixar Modelo
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+            setIsDialogOpen(isOpen);
+            if (!isOpen) {
+              resetForm();
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nova Classificação
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[625px]">
+              <DialogHeader>
+                <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="prazoGuardaFaseCorrenteAnos">Prazo Corrente (Anos)</Label>
-                  <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
-                </div>
-              )}
-
-              {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual">Prazo Corrente (Condição)</Label>
-                  <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
-                    <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual">
-                      <SelectValue placeholder="Selecione a condição textual" />
+                  <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
+                  <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
+                    <SelectTrigger id="tipoPlanoClassificacao">
+                      <SelectValue placeholder="Selecione o tipo de plano" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-48 overflow-y-auto">
-                      {opcoesCondicaoTextualFaseCorrente.map(opcao => (
-                        <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
-                      ))}
+                    <SelectContent>
+                      <SelectItem value="Administrativo">Administrativo</SelectItem>
+                      <SelectItem value="Judicial">Judicial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label htmlFor="codigo">Código*</Label>
+                  <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="descricao">Assunto*</Label>
+                  <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)*</Label>
-                <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
+                  <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
+                    <SelectTrigger id="tipoPrazoFaseCorrente">
+                      <SelectValue placeholder="Selecione o tipo de prazo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Anos">Anos</SelectItem>
+                      <SelectItem value="Condição Textual">Condição Textual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
-                <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
-                  <SelectTrigger id="destinacaoFinal">
-                    <SelectValue placeholder="Selecione a destinação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {formState.tipoPrazoFaseCorrente === "Anos" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="prazoGuardaFaseCorrenteAnos">Prazo Corrente (Anos)</Label>
+                    <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
+                  </div>
+                )}
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
-              </div>
+                {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual">Prazo Corrente (Condição)</Label>
+                    <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
+                      <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual">
+                        <SelectValue placeholder="Selecione a condição textual" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48 overflow-y-auto">
+                        {opcoesCondicaoTextualFaseCorrente.map(opcao => (
+                          <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              <div className="space-y-2 md:col-span-2 flex items-center gap-2">
-                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} />
-                <Label htmlFor="inativo" className="mb-0">Inativo</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)*</Label>
+                  <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
+                  <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
+                    <SelectTrigger id="destinacaoFinal">
+                      <SelectValue placeholder="Selecione a destinação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Eliminação">Eliminação</SelectItem>
+                      <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
+                </div>
+
+                <div className="space-y-2 md:col-span-2 flex items-center gap-2">
+                  <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} />
+                  <Label htmlFor="inativo" className="mb-0">Inativo</Label>
+                </div>
               </div>
-            </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleSaveChanges}>Salvar Classificação</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </ScrollArea>
+              <DialogFooter className="pt-4">
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button type="button" onClick={handleSaveChanges}>Salvar Classificação</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
 
       <Card className="mt-6">
@@ -677,3 +838,4 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
+
