@@ -1,11 +1,132 @@
 
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileText, Send, ArrowRightLeft, AlertTriangle, PlusCircle, Archive, Search } from "lucide-react";
+import { placeholderDocumentos, placeholderSolicitacoesInitial, initialTransferencias } from "@/lib/mock-data";
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 
 export default function DashboardPage() {
-  return (
-    <div className="container mx-auto py-2">
-      <PageHeader title="Dashboard" description="Visão geral do ArquivoCentral." />
-      <p>O servidor foi iniciado com sucesso. O conteúdo do painel pode ser restaurado.</p>
-    </div>
-  );
+    const [stats, setStats] = React.useState({
+        totalDocs: 0,
+        pendingSolicitacoes: 0,
+        pendingTransferencias: 0,
+        docsToExpire: 0,
+    });
+
+    React.useEffect(() => {
+        // Data loading and processing will only run on the client side.
+        const totalDocs = placeholderDocumentos.length;
+        const pendingSolicitacoes = placeholderSolicitacoesInitial.filter(s => s.status === 'Pendente').length;
+        const pendingTransferencias = initialTransferencias.filter(t => t.status === 'Pendente').length;
+        
+        const currentYear = new Date().getFullYear();
+        const docsToExpire = placeholderDocumentos.filter(d => 
+            d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) <= currentYear + 1
+        ).length;
+
+        setStats({ totalDocs, pendingSolicitacoes, pendingTransferencias, docsToExpire });
+    }, []);
+
+    const recentActivities = [
+        ...initialTransferencias.filter(t => t.status === 'Pendente').map(t => ({ type: 'Transferência Pendente', id: t.id, date: t.dataTransferencia, link: `/transferencias/${t.id}` })),
+        ...placeholderSolicitacoesInitial.filter(s => s.status === 'Pendente').map(s => ({ type: 'Solicitação Pendente', id: s.numeroSolicitacao, date: s.dataSolicitacao, link: `/solicitacoes` }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+    return (
+        <div className="container mx-auto py-2">
+            <PageHeader title="Dashboard" description="Visão geral do sistema ArquivoCentral." />
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total de Documentos</CardTitle>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocs}</div>
+                        <p className="text-xs text-muted-foreground">Documentos no acervo</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
+                        <Send className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.pendingSolicitacoes}</div>
+                        <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Transferências Pendentes</CardTitle>
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.pendingTransferencias}</div>
+                        <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos a Expirar</CardTitle>
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.docsToExpire}</div>
+                        <p className="text-xs text-muted-foreground">Com eliminação prevista para o próximo ano</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="mt-8 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Atividades Pendentes</CardTitle>
+                        <CardDescription>Ações recentes que requerem sua atenção.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {recentActivities.length > 0 ? recentActivities.map(activity => (
+                                <div key={activity.id} className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                            {activity.type.includes('Transferência') ? <ArrowRightLeft className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium">{activity.type}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                ID: {activity.id} - <ClientSideDateFormatter isoDateString={activity.date} />
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Link href={activity.link} passHref>
+                                        <Button variant="outline" size="sm">Ver</Button>
+                                    </Link>
+                                </div>
+                            )) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade pendente.</p>}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ações Rápidas</CardTitle>
+                         <CardDescription>Atalhos para as funções mais comuns.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2">
+                        <Link href="/documentos" passHref><Button className="w-full justify-start"><PlusCircle className="mr-2 h-4 w-4" />Adicionar ao Acervo</Button></Link>
+                        <Link href="/caixas" passHref><Button className="w-full justify-start"><Archive className="mr-2 h-4 w-4" />Gerenciar Caixas</Button></Link>
+                        <Link href="/busca-avancada" passHref><Button className="w-full justify-start"><Search className="mr-2 h-4 w-4" />Busca Avançada</Button></Link>
+                         <Link href="/transferencias/publica" passHref><Button variant="secondary" className="w-full justify-start"><Send className="mr-2 h-4 w-4" />Nova Transferência</Button></Link>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
 }
