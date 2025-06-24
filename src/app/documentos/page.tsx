@@ -58,6 +58,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -181,6 +182,7 @@ export default function DocumentosPage() {
 
   const [isRelatedDocDialogOpen, setIsRelatedDocDialogOpen] = React.useState(false);
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
+  const [classificationError, setClassificationError] = React.useState<string | null>(null);
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
@@ -191,9 +193,11 @@ export default function DocumentosPage() {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
     setIsFormDisabled(false);
+    setClassificationError(null);
   }, []);
 
   const handleOpenDialog = React.useCallback((doc?: Documento) => {
+    setClassificationError(null);
     if (doc) {
       const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
       setFormState({
@@ -536,6 +540,7 @@ export default function DocumentosPage() {
 
   const handleCodigoClassificacaoBlur = () => {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
+    setClassificationError(null);
     if (codigoInput) {
       const foundClassification = classificacoes.find(
         c => c.codigo === codigoInput && !c.inativo
@@ -549,8 +554,9 @@ export default function DocumentosPage() {
         setFormState(prev => ({
           ...prev,
           classificacaoArquivisticaId: "",
-          assuntoClassificacaoDisplay: "Código não encontrado ou inativo.",
+          assuntoClassificacaoDisplay: "",
         }));
+        setClassificationError("Código não encontrado ou inativo.");
       }
     } else {
       setFormState(prev => ({
@@ -1181,7 +1187,11 @@ export default function DocumentosPage() {
                   onBlur={handleCodigoClassificacaoBlur}
                   placeholder="Digite o código (ex: 020.1)"
                   disabled={isFormDisabled}
+                  className={cn(classificationError && "border-destructive focus-visible:ring-destructive")}
                 />
+                {classificationError && (
+                  <p className="text-base font-medium text-destructive">{classificationError}</p>
+                )}
               </div>
                <div className="space-y-2">
                 <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
