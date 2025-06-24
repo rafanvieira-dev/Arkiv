@@ -64,7 +64,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleAdminLogin = (e: React.MouseEvent) => {
+  const handleStandardUserLogin = (e: React.MouseEvent) => {
     e.preventDefault();
     let allUsers: Usuario[] = [];
      try {
@@ -74,15 +74,15 @@ export default function LoginPage() {
       allUsers = initialUsers;
     }
 
-    const adminUser = allUsers.find(u => u.email === 'admin@sistem.com');
-    if (adminUser) {
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
+    const standardUser = allUsers.find(u => u.email === 'user@sistem.com');
+    if (standardUser) {
+      localStorage.setItem('currentUser', JSON.stringify(standardUser));
       router.push('/');
     } else {
         toast({
             variant: "destructive",
             title: "Erro",
-            description: "Usuário administrador padrão não foi encontrado.",
+            description: "Usuário padrão de teste não foi encontrado.",
         });
     }
   };
@@ -143,8 +143,8 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={handleAdminLogin}>
-                  <Zap className="mr-2 h-4 w-4" /> Acesso Rápido (Admin Padrão)
+              <Button variant="outline" className="w-full" onClick={handleStandardUserLogin}>
+                  <Zap className="mr-2 h-4 w-4" /> Acesso Rápido (Usuário Padrão)
               </Button>
               <Link href="/transferencias/publica" passHref>
                 <Button variant="outline" className="w-full">
