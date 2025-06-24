@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/page-header";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, ChevronDown } from "lucide-react";
 import { DateInputPicker } from "@/components/date-input-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -199,62 +199,67 @@ export default function TransferenciasPage() {
                                         <CardHeader className="p-0 pb-4">
                                             <CardTitle className="text-lg">Documento {index + 1}</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`categoria-${index}`}>Categoria*</Label>
-                                                <Select value={doc.categoria} onValueChange={(value) => handleDocChange(index, 'categoria', value)}>
-                                                    <SelectTrigger id={`categoria-${index}`}><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Documento">Documento</SelectItem>
-                                                        <SelectItem value="Dossiê">Dossiê</SelectItem>
-                                                        <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
-                                                        <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor={`codigoClassificacao-${index}`}>Código de Classificação*</Label>
-                                                <Input id={`codigoClassificacao-${index}`} value={doc.codigoClassificacao} onChange={(e) => handleDocChange(index, 'codigoClassificacao', e.target.value)} onBlur={() => handleCodigoClassificacaoBlur(index)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`numeroProcesso-${index}`}>Número do Processo/Documento</Label>
-                                                <Input id={`numeroProcesso-${index}`} value={doc.numeroDocumento} onChange={(e) => handleDocChange(index, 'numeroDocumento', e.target.value)} />
-                                            </div>
-                                             <div className="space-y-2 lg:col-span-3">
-                                                <Label htmlFor={`descricao-${index}`}>Descrição*</Label>
-                                                <Textarea id={`descricao-${index}`} value={doc.descricao} onChange={(e) => handleDocChange(index, 'descricao', e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`periodo-${index}`}>Período (Data Abrangente)</Label>
-                                                <Input id={`periodo-${index}`} value={doc.dataAbrangente} onChange={(e) => handleDocChange(index, 'dataAbrangente', e.target.value)} placeholder="Ex: 01/2023 – 12/2024" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`totalVolumes-${index}`}>Total de Volumes</Label>
-                                                <Input id={`totalVolumes-${index}`} type="number" value={doc.quantidadeVolumes} onChange={(e) => handleNumericDocChange(index, 'quantidadeVolumes', e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`totalApensos-${index}`}>Total de Apensos</Label>
-                                                <Input id={`totalApensos-${index}`} type="number" value={doc.quantidadeApensos} onChange={(e) => handleNumericDocChange(index, 'quantidadeApensos', e.target.value)} />
-                                            </div>
-                                            {doc.quantidadeApensos && doc.quantidadeApensos > 0 && (
+                                        <CardContent className="p-0">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 <div className="space-y-2">
-                                                    <Label htmlFor={`numeroApensos-${index}`}>Número dos Apensos</Label>
-                                                    <Input id={`numeroApensos-${index}`} value={doc.numerosApensos} onChange={(e) => handleDocChange(index, 'numerosApensos', e.target.value)} />
+                                                    <Label htmlFor={`categoria-${index}`}>Categoria*</Label>
+                                                    <Select value={doc.categoria} onValueChange={(value) => handleDocChange(index, 'categoria', value)}>
+                                                        <SelectTrigger id={`categoria-${index}`}><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Documento">Documento</SelectItem>
+                                                            <SelectItem value="Dossiê">Dossiê</SelectItem>
+                                                            <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                                                            <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
-                                            )}
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`digitalizado-${index}`}>Digitalizado*</Label>
-                                                <Select value={doc.digitalizado} onValueChange={(value) => handleDocChange(index, 'digitalizado', value)}>
-                                                    <SelectTrigger id={`digitalizado-${index}`}><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Sim">Sim</SelectItem>
-                                                        <SelectItem value="Não">Não</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                 <div className="space-y-2">
+                                                    <Label htmlFor={`codigoClassificacao-${index}`}>Código de Classificação*</Label>
+                                                    <Input id={`codigoClassificacao-${index}`} value={doc.codigoClassificacao} onChange={(e) => handleDocChange(index, 'codigoClassificacao', e.target.value)} onBlur={() => handleCodigoClassificacaoBlur(index)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`numeroProcesso-${index}`}>Número do Processo/Documento</Label>
+                                                    <Input id={`numeroProcesso-${index}`} value={doc.numeroDocumento} onChange={(e) => handleDocChange(index, 'numeroDocumento', e.target.value)} />
+                                                </div>
+                                                 <div className="space-y-2 lg:col-span-3">
+                                                    <Label htmlFor={`descricao-${index}`}>Descrição*</Label>
+                                                    <Textarea id={`descricao-${index}`} value={doc.descricao} onChange={(e) => handleDocChange(index, 'descricao', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`periodo-${index}`}>Período (Data Abrangente)</Label>
+                                                    <Input id={`periodo-${index}`} value={doc.dataAbrangente} onChange={(e) => handleDocChange(index, 'dataAbrangente', e.target.value)} placeholder="Ex: 01/2023 – 12/2024" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`totalVolumes-${index}`}>Total de Volumes</Label>
+                                                    <Input id={`totalVolumes-${index}`} type="number" value={doc.quantidadeVolumes} onChange={(e) => handleNumericDocChange(index, 'quantidadeVolumes', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`totalApensos-${index}`}>Total de Apensos</Label>
+                                                    <Input id={`totalApensos-${index}`} type="number" value={doc.quantidadeApensos} onChange={(e) => handleNumericDocChange(index, 'quantidadeApensos', e.target.value)} />
+                                                </div>
+                                                {doc.quantidadeApensos && doc.quantidadeApensos > 0 && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`numeroApensos-${index}`}>Número dos Apensos</Label>
+                                                        <Input id={`numeroApensos-${index}`} value={doc.numerosApensos} onChange={(e) => handleDocChange(index, 'numerosApensos', e.target.value)} />
+                                                    </div>
+                                                )}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`digitalizado-${index}`}>Digitalizado*</Label>
+                                                    <Select value={doc.digitalizado} onValueChange={(value) => handleDocChange(index, 'digitalizado', value)}>
+                                                        <SelectTrigger id={`digitalizado-${index}`}><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Sim">Sim</SelectItem>
+                                                            <SelectItem value="Não">Não</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                                                    <Label htmlFor={`observacoes-${index}`}>Observações</Label>
+                                                    <Textarea id={`observacoes-${index}`} value={doc.observacoesGerais} onChange={(e) => handleDocChange(index, 'observacoesGerais', e.target.value)} />
+                                                </div>
                                             </div>
-                                            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                                                <Label htmlFor={`observacoes-${index}`}>Observações</Label>
-                                                <Textarea id={`observacoes-${index}`} value={doc.observacoesGerais} onChange={(e) => handleDocChange(index, 'observacoesGerais', e.target.value)} />
+                                            <div className="flex justify-center pt-4">
+                                                <ChevronDown className="h-6 w-6 text-muted-foreground animate-bounce" />
                                             </div>
                                         </CardContent>
                                     </Card>
