@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -56,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -151,6 +151,7 @@ const TIPOS_PARTE_STORAGE_KEY = 'arquivocentral_tipos_parte';
 const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
+const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 
 export default function DocumentosPage() {
   const { toast } = useToast();
@@ -190,6 +191,7 @@ export default function DocumentosPage() {
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
+  const [caixas, setCaixas] = React.useState<Caixa[]>([]);
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -302,7 +304,15 @@ export default function DocumentosPage() {
     { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: true, enableSorting: true },
     { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: true, enableSorting: true, cellFormatter: (value) => {
         const classif = classificacoes.find(c => c.id === value);
-        return classif ? `${classif.codigo} - ${classif.descricao || 'Pendente'}` : value || 'N/A';
+        if (!classif) return value || 'N/A';
+        const display = `${classif.codigo} - ${classif.descricao || 'Pendente de Complemento'}`;
+        if (classif.status === 'Pendente de Complemento') {
+          return <span className="text-yellow-600 dark:text-yellow-400" title="Esta classificação precisa ser complementada.">{display}</span>;
+        }
+        if (classif.status === 'Inativo') {
+          return <span className="text-destructive line-through" title="Esta classificação está inativa.">{display}</span>;
+        }
+        return display;
       } 
     },
     { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: true, enableSorting: true },
@@ -372,6 +382,9 @@ export default function DocumentosPage() {
 
       const storedTiposOrigem = window.localStorage.getItem(TIPOS_ORIGEM_STORAGE_KEY);
       setTiposOrigem(storedTiposOrigem ? JSON.parse(storedTiposOrigem) : initialTiposOrigem);
+      
+      const storedCaixas = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
+      setCaixas(storedCaixas ? JSON.parse(storedCaixas) : initialCaixas);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -384,6 +397,7 @@ export default function DocumentosPage() {
       setGenerosDocumentais(initialGenerosDocumentais);
       setTiposMidia(initialTiposMidia);
       setTiposOrigem(initialTiposOrigem);
+      setCaixas(initialCaixas);
     }
     setIsDataLoaded(true);
   }, []);
@@ -408,8 +422,9 @@ export default function DocumentosPage() {
       window.localStorage.setItem(GENEROS_DOCUMENTAIS_STORAGE_KEY, JSON.stringify(generosDocumentais));
       window.localStorage.setItem(TIPOS_MIDIA_STORAGE_KEY, JSON.stringify(tiposMidia));
       window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
+      window.localStorage.setItem(CAIXAS_STORAGE_KEY, JSON.stringify(caixas));
     }
-  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem]);
+  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, caixas]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -1055,12 +1070,14 @@ export default function DocumentosPage() {
             const newTiposParteSet = new Set<string>();
             const newGenerosSet = new Set<string>();
             const newTiposMidiaSet = new Set<string>();
+            const newCaixasMap = new Map<string, Caixa>();
 
             const currentTiposDoc = new Set(tiposDocumento);
             const currentTiposOrigem = new Set(tiposOrigem.map(o => o.nome));
             const currentTiposParte = new Set(tiposParte);
             const currentGeneros = new Set(generosDocumentais);
             const currentTiposMidia = new Set(tiposMidia);
+            const currentCaixaCodes = new Set(caixas.map(c => c.codigoCaixa));
 
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
@@ -1085,6 +1102,23 @@ export default function DocumentosPage() {
                 }
                 if (newDocData.tipoMidiaDetalhe && !currentTiposMidia.has(newDocData.tipoMidiaDetalhe)) {
                     newTiposMidiaSet.add(newDocData.tipoMidiaDetalhe);
+                }
+                if (newDocData.codigosCaixa) {
+                    const boxCodes = String(newDocData.codigosCaixa).split(',').map((c: string) => c.trim()).filter(Boolean);
+                    boxCodes.forEach((code: string) => {
+                        if (!currentCaixaCodes.has(code) && !newCaixasMap.has(code)) {
+                            const newCaixa: Caixa = {
+                                id: `CX_IMP_ACERVO_${Date.now()}_${code}`,
+                                codigoCaixa: code,
+                                descricao: "Caixa criada automaticamente via importação de acervo. Por favor, complementar.",
+                                tipo: "", // Empty string as default
+                                status: "Aberta",
+                                situacao: "Incompleta",
+                                documentoIds: []
+                            };
+                            newCaixasMap.set(code, newCaixa);
+                        }
+                    });
                 }
                 
                 const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
@@ -1174,9 +1208,12 @@ export default function DocumentosPage() {
             if (newTiposMidiaSet.size > 0) {
                 setTiposMidia(prev => [...prev, ...Array.from(newTiposMidiaSet)]);
             }
+            if (newCaixasMap.size > 0) {
+                setCaixas(prev => [...prev, ...Array.from(newCaixasMap.values())]);
+            }
 
             setDocumentos(prev => [...prev, ...newDocsFromCsv]);
-            toast({ title: "Importação Concluída", description: `${newDocsFromCsv.length} documentos foram importados com sucesso. Novos termos de configuração foram adicionados automaticamente.` });
+            toast({ title: "Importação Concluída", description: `${newDocsFromCsv.length} documentos foram importados com sucesso. Novos termos de configuração e caixas foram adicionados automaticamente, se necessário.` });
 
         } catch (error: any) {
              toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
