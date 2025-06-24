@@ -5,31 +5,77 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Zap, FileUp, FileText, UserPlus, Mail, KeyRound } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import type { Usuario } from '@/types';
+import { useToast } from "@/hooks/use-toast";
 import { initialUsers } from '@/lib/mock-data';
+
+const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login for the standard user
-    const standardUser = initialUsers.find(u => u.email === 'user@sistem.com');
-    if (standardUser) {
-      localStorage.setItem('currentUser', JSON.stringify(standardUser));
+    
+    let allUsers: Usuario[] = [];
+    try {
+      const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
+      // If no users are in storage, use the initial mock data
+      allUsers = storedUsers ? JSON.parse(storedUsers) : initialUsers;
+    } catch {
+      allUsers = initialUsers;
     }
-    router.push('/');
+
+    const user = allUsers.find(u => u.email === email);
+
+    // NOTE: For this prototype, we're not validating the password hash,
+    // just checking if the user exists and is approved.
+    if (user) {
+      if (user.statusAprovacao === 'Aprovado') {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        router.push('/');
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Acesso Negado",
+          description: "Sua conta de usuário ainda não foi aprovada pelo administrador.",
+        });
+      }
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Erro de Login",
+        description: "E-mail ou senha inválidos. Por favor, tente novamente.",
+      });
+    }
   };
 
   const handleAdminLogin = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Simulate login for the admin user
-    const adminUser = initialUsers.find(u => u.email === 'admin@sistem.com');
+    let allUsers: Usuario[] = [];
+     try {
+      const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
+      allUsers = storedUsers ? JSON.parse(storedUsers) : initialUsers;
+    } catch {
+      allUsers = initialUsers;
+    }
+
+    const adminUser = allUsers.find(u => u.email === 'admin@sistem.com');
     if (adminUser) {
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
+      router.push('/');
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Usuário administrador padrão não foi encontrado.",
+        });
     }
-    router.push('/');
   };
 
 
@@ -45,14 +91,30 @@ export default function LoginPage() {
                   <Label htmlFor="email">Login (E-mail)</Label>
                   <div className="relative flex items-center">
                       <Mail className="absolute left-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="email" type="email" placeholder="seu@email.com" className="pl-10" required defaultValue="user@sistem.com" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="seu@email.com" 
+                        className="pl-10" 
+                        required 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
                   </div>
               </div>
               <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
                   <div className="relative flex items-center">
                       <KeyRound className="absolute left-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="password" type="password" placeholder="Sua senha" className="pl-10" required defaultValue="password" />
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        placeholder="Sua senha" 
+                        className="pl-10" 
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
                   </div>
               </div>
               <Button className="w-full" type="submit">
