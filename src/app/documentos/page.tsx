@@ -729,6 +729,32 @@ export default function DocumentosPage() {
       grauSigilo: formState.grauSigilo || 'Ostensivo',
       numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, 
     };
+
+    const boxCodes = (finalFormState.codigosCaixa || "").split(',').map(c => c.trim()).filter(Boolean);
+    if (boxCodes.length > 0) {
+        const newCaixasToCreate: Caixa[] = [];
+        const currentCaixaCodes = new Set(caixas.map(c => c.codigoCaixa));
+        
+        boxCodes.forEach(code => {
+            if (!currentCaixaCodes.has(code)) {
+                const newCaixa: Caixa = {
+                    id: `CX_AUTO_${Date.now()}_${code.replace(/\s/g, "")}`,
+                    codigoCaixa: code,
+                    descricao: "Caixa criada automaticamente via cadastro de acervo.",
+                    tipo: "JUD", 
+                    status: "Aberta",
+                    situacao: "Incompleta",
+                    documentoIds: []
+                };
+                newCaixasToCreate.push(newCaixa);
+                currentCaixaCodes.add(code); 
+            }
+        });
+
+        if (newCaixasToCreate.length > 0) {
+            setCaixas(prev => [...prev, ...newCaixasToCreate]);
+        }
+    }
     
     setDocumentos(prevDocs => {
       const originalDoc = prevDocs.find(d => d.id === finalFormState.id);
@@ -1110,8 +1136,8 @@ export default function DocumentosPage() {
                             const newCaixa: Caixa = {
                                 id: `CX_IMP_ACERVO_${Date.now()}_${code}`,
                                 codigoCaixa: code,
-                                descricao: "Caixa criada automaticamente via importação de acervo. Por favor, complementar.",
-                                tipo: "", // Empty string as default
+                                descricao: "Caixa criada automaticamente via importação de acervo.",
+                                tipo: "JUD", // Default type
                                 status: "Aberta",
                                 situacao: "Incompleta",
                                 documentoIds: []
