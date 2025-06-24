@@ -184,7 +184,6 @@ export default function DocumentosPage() {
 
   const [isRelatedDocDialogOpen, setIsRelatedDocDialogOpen] = React.useState(false);
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
-  const [classificationError, setClassificationError] = React.useState<string | null>(null);
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
@@ -196,11 +195,9 @@ export default function DocumentosPage() {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
     setIsFormDisabled(false);
-    setClassificationError(null);
   }, []);
 
   const handleOpenDialog = React.useCallback((doc?: Documento) => {
-    setClassificationError(null);
     if (doc) {
       const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
       setFormState({
@@ -496,16 +493,18 @@ export default function DocumentosPage() {
       }));
 
     } else { 
-       setFormState(prev => ({
-        ...prev,
-        assuntoClassificacaoDisplay: "",
-        prazoArquivoCorrenteDisplay: "",
-        prazoArquivoIntermediarioDisplay: "",
-        destinacaoFinalDisplay: undefined,
-        anoEliminacaoPrevisto: ""
-      }));
+       if (!formState.codigoClassificacaoArquivisticaInput) {
+            setFormState(prev => ({
+                ...prev,
+                assuntoClassificacaoDisplay: "",
+                prazoArquivoCorrenteDisplay: "",
+                prazoArquivoIntermediarioDisplay: "",
+                destinacaoFinalDisplay: undefined,
+                anoEliminacaoPrevisto: ""
+            }));
+       }
     }
-  }, [formState.classificacaoArquivisticaId, formState.dataArquivamento, formState.alteracaoDestinacaoFinal, classificacoes]);
+  }, [formState.classificacaoArquivisticaId, formState.codigoClassificacaoArquivisticaInput, formState.dataArquivamento, formState.alteracaoDestinacaoFinal, classificacoes]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -547,29 +546,43 @@ export default function DocumentosPage() {
 
   const handleCodigoClassificacaoBlur = () => {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
-    setClassificationError(null);
     if (codigoInput) {
       const foundClassification = classificacoes.find(
-        c => c.codigo === codigoInput && !c.inativo
+        c => c.codigo === codigoInput
       );
       if (foundClassification) {
-        setFormState(prev => ({
-          ...prev,
-          classificacaoArquivisticaId: foundClassification.id,
-        }));
+        if (foundClassification.inativo) {
+            setFormState(prev => ({
+                ...prev,
+                classificacaoArquivisticaId: "", // Will be created on save
+                assuntoClassificacaoDisplay: `${foundClassification.descricao} (INATIVO)`,
+            }));
+        } else {
+            setFormState(prev => ({
+                ...prev,
+                classificacaoArquivisticaId: foundClassification.id,
+            }));
+        }
       } else {
         setFormState(prev => ({
           ...prev,
-          classificacaoArquivisticaId: "",
-          assuntoClassificacaoDisplay: "",
+          classificacaoArquivisticaId: "", // Will be created on save
+          assuntoClassificacaoDisplay: "(Novo - será criado ao salvar)",
+          prazoArquivoCorrenteDisplay: "",
+          prazoArquivoIntermediarioDisplay: "",
+          destinacaoFinalDisplay: undefined,
+          anoEliminacaoPrevisto: ""
         }));
-        setClassificationError("Código não encontrado ou inativo.");
       }
     } else {
       setFormState(prev => ({
         ...prev,
         classificacaoArquivisticaId: "",
         assuntoClassificacaoDisplay: "",
+        prazoArquivoCorrenteDisplay: "",
+        prazoArquivoIntermediarioDisplay: "",
+        destinacaoFinalDisplay: undefined,
+        anoEliminacaoPrevisto: ""
       }));
     }
   };
@@ -593,7 +606,31 @@ export default function DocumentosPage() {
   };
   
   const handleSaveChanges = () => {
-    const requiredFields: Array<{ key: keyof typeof formState; label: string }> = [
+    const formStateToSave = { ...formState };
+    const codigoInput = formStateToSave.codigoClassificacaoArquivisticaInput?.trim();
+    let resolvedClassificationId = formStateToSave.classificacaoArquivisticaId;
+  
+    if (codigoInput && !resolvedClassificationId) {
+      const existingClassif = classificacoes.find(c => c.codigo === codigoInput);
+      if (!existingClassif || existingClassif.inativo) {
+        const newClassification: Classificacao = {
+          id: `CLA_AUTO_${Date.now()}`,
+          codigo: codigoInput,
+          descricao: "Complementar o cadastro",
+          observacoes: "Cadastro gerado automaticamente. Por favor, complementar as informações.",
+          inativo: false,
+          prazoGuardaFaseIntermediariaAnos: 0,
+          destinacaoFinal: 'Eliminação',
+          tipoPlanoClassificacao: 'Administrativo',
+          tipoPrazoFaseCorrente: 'Anos',
+          prazoGuardaFaseCorrenteAnos: 0,
+        };
+        setClassificacoes(prev => [...prev, newClassification]);
+        resolvedClassificationId = newClassification.id;
+      }
+    }
+
+    const requiredFields: Array<{ key: keyof typeof formStateToSave; label: string }> = [
       { key: 'status', label: 'Status' },
       { key: 'orgao', label: 'Órgão' },
       { key: 'origem', label: 'Origem' },
@@ -602,13 +639,13 @@ export default function DocumentosPage() {
       { key: 'tipoDocumento', label: 'Espécie de Documento' },
       { key: 'dataAbrangente', label: 'Data Abrangente' },
       { key: 'dataArquivamento', label: 'Data de Arquivamento' },
-      { key: 'classificacaoArquivisticaId', label: 'Código de Classificação Arquivística' },
+      { key: 'codigoClassificacaoArquivisticaInput', label: 'Código de Classificação Arquivística' },
       { key: 'segredoJustica', label: 'Segredo de Justiça' },
       { key: 'grauSigilo', label: 'Grau de Sigilo (LAI)' },
     ];
 
     const missingFields = requiredFields.filter(field => {
-      const value = formState[field.key as keyof typeof formState];
+      const value = formStateToSave[field.key];
       return value === undefined || value === null || value === '';
     });
 
@@ -625,8 +662,9 @@ export default function DocumentosPage() {
 
     const finalFormState: Documento = {
       ...initialFormState, 
-      ...formState, 
+      ...formStateToSave, 
       id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
+      classificacaoArquivisticaId: resolvedClassificationId,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental!,
       tipoMidiaDetalhe: formState.tipoMidiaDetalhe,
@@ -653,14 +691,12 @@ export default function DocumentosPage() {
       let docsToUpdate = [...prevDocs];
       const docIndex = docsToUpdate.findIndex(d => d.id === finalFormState.id);
 
-      // Update the main document
       if (docIndex > -1) {
         docsToUpdate[docIndex] = finalFormState;
       } else {
         docsToUpdate.push(finalFormState);
       }
 
-      // Update added related docs (bidirectional)
       addedIds.forEach(relatedId => {
         const relatedDocIndex = docsToUpdate.findIndex(d => d.id === relatedId);
         if (relatedDocIndex > -1) {
@@ -672,7 +708,6 @@ export default function DocumentosPage() {
         }
       });
 
-      // Update removed related docs (bidirectional)
       removedIds.forEach(relatedId => {
         const relatedDocIndex = docsToUpdate.findIndex(d => d.id === relatedId);
         if (relatedDocIndex > -1) {
@@ -1408,11 +1443,7 @@ export default function DocumentosPage() {
                       onBlur={handleCodigoClassificacaoBlur}
                       placeholder="Digite o código (ex: 020.1)"
                       disabled={isFormDisabled}
-                      className={cn(classificationError && "border-destructive focus-visible:ring-destructive")}
                     />
-                    {classificationError && (
-                      <p className="text-base font-medium text-destructive">{classificationError}</p>
-                    )}
                   </div>
                    <div className="space-y-2">
                     <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
