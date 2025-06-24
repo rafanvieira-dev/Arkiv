@@ -580,6 +580,36 @@ export default function DocumentosPage() {
   };
   
   const handleSaveChanges = () => {
+    const requiredFields: Array<{ key: keyof typeof formState; label: string }> = [
+      { key: 'status', label: 'Status' },
+      { key: 'orgao', label: 'Órgão' },
+      { key: 'origem', label: 'Origem' },
+      { key: 'tipoMeio', label: 'Tipo de Meio' },
+      { key: 'categoria', label: 'Categoria' },
+      { key: 'tipoDocumento', label: 'Espécie de Documento' },
+      { key: 'dataAbrangente', label: 'Data Abrangente' },
+      { key: 'dataArquivamento', label: 'Data de Arquivamento' },
+      { key: 'classificacaoArquivisticaId', label: 'Código de Classificação Arquivística' },
+      { key: 'segredoJustica', label: 'Segredo de Justiça' },
+      { key: 'grauSigilo', label: 'Grau de Sigilo (LAI)' },
+    ];
+
+    const missingFields = requiredFields.filter(field => {
+      const value = formState[field.key as keyof typeof formState];
+      return value === undefined || value === null || value === '';
+    });
+
+    if (missingFields.length > 0) {
+      const missingLabels = missingFields.map(f => f.label).join(', ');
+      toast({
+        variant: "destructive",
+        title: "Campos Obrigatórios",
+        description: `Por favor, preencha os seguintes campos: ${missingLabels}.`,
+        duration: 5000,
+      });
+      return;
+    }
+
     const finalFormState: Documento = {
       ...initialFormState, 
       ...formState, 
@@ -941,7 +971,7 @@ export default function DocumentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="origem">Origem</Label>
+                <Label htmlFor="origem">Origem*</Label>
                 <Input id="origem" value={formState.origem || ""} onChange={handleInputChange} placeholder="Ex: Tribunal de Justiça" disabled={isFormDisabled} />
               </div>
               
@@ -958,7 +988,7 @@ export default function DocumentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="generoDocumental">Gênero Documental*</Label>
+                <Label htmlFor="generoDocumental">Gênero Documental</Label>
                 <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
                   <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
                   <SelectContent>
@@ -983,7 +1013,7 @@ export default function DocumentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipoDocumento">Espécie de Documento</Label>
+                <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
                 <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
                   <SelectTrigger id="tipoDocumento">
                     <SelectValue placeholder="Selecione o tipo" />
@@ -1002,7 +1032,7 @@ export default function DocumentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="dataAbrangente">Data Abrangente do Documento</Label>
+                <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
                 <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
               </div>
 
@@ -1060,7 +1090,7 @@ export default function DocumentosPage() {
 
 
               <div className="space-y-2">
-                <Label htmlFor="dataArquivamento">Data de Arquivamento</Label>
+                <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
                  <DateInputPicker 
                   value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
                   onChange={(date) => handleDateChange('dataArquivamento')(date)} 
@@ -1116,7 +1146,7 @@ export default function DocumentosPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="digitalizado">Digitalizado?*</Label>
+                <Label htmlFor="digitalizado">Digitalizado?</Label>
                 <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
                   <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1142,7 +1172,7 @@ export default function DocumentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística</Label>
+                <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
                 <Input 
                   id="codigoClassificacaoArquivisticaInput" 
                   name="codigoClassificacaoArquivisticaInput"
@@ -1170,7 +1200,7 @@ export default function DocumentosPage() {
                  <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final*</Label>
+                <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
                 <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
                   <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
                   <SelectContent>
