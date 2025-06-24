@@ -326,9 +326,12 @@ export default function BuscaAvancadaPage() {
                 <SelectValue placeholder="Selecione a origem" />
               </SelectTrigger>
               <SelectContent>
-                {tiposOrigem.sort((a, b) => a.nome.localeCompare(b.nome)).map(o => {
-                  const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
-                  return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>);
+                {tiposOrigem
+                  .filter(o => o && o.nome)
+                  .sort((a, b) => a.nome.localeCompare(b.nome))
+                  .map(o => {
+                    const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                    return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>);
                 })}
               </SelectContent>
             </Select>
