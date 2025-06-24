@@ -357,4 +357,66 @@ export const initialUsers: Usuario[] = [
 ];
 
 
-export const initialTransferencias: Transferencia[] = [];
+export const initialTransferencias: Transferencia[] = [
+    {
+        id: 'TRANSF_1717088400000',
+        nomeServidor: 'Carlos Andrade',
+        matricula: '11223',
+        ramal: '4567',
+        setorRemetente: 'Gabinete do Desembargador X',
+        dataTransferencia: new Date('2024-05-30T10:00:00Z').toISOString(),
+        status: 'Pendente',
+        documentos: [
+            {
+                id: 'DOC_T_1717088400000_0',
+                categoria: 'Processo Judicial',
+                codigoClassificacao: '020.1',
+                descricao: 'Processo sobre licitação de TI',
+                dataAbrangente: '01/2022 - 12/2023',
+                numeroDocumento: 'PJ-2022-00123',
+                quantidadeVolumes: 2,
+                quantidadeApensos: 1,
+                numerosApensos: 'AP-2022-001',
+                digitalizado: 'Não',
+                observacoesGerais: 'Documentação sigilosa.'
+            }
+        ]
+    },
+    {
+        id: 'TRANSF_1717088500000',
+        nomeServidor: 'Lúcia Martins',
+        matricula: '44556',
+        ramal: '8901',
+        setorRemetente: 'Secretaria de Recursos Humanos',
+        dataTransferencia: new Date('2024-05-28T15:30:00Z').toISOString(),
+        status: 'Aprovada',
+        documentos: [
+            {
+                id: 'DOC_T_1717088500000_0',
+                categoria: 'Dossiê',
+                codigoClassificacao: '030.5',
+                descricao: 'Dossiê de aposentadoria do servidor Y',
+                dataAbrangente: '1990 - 2024',
+                numeroDocumento: 'D-S-Y-1990',
+                quantidadeVolumes: 1,
+                quantidadeApensos: 0,
+                numerosApensos: '',
+                digitalizado: 'Sim',
+                observacoesGerais: ''
+            },
+            {
+                id: 'DOC_T_1717088500000_1',
+                categoria: 'Processo Administrativo',
+                codigoClassificacao: '045.2',
+                descricao: 'Processo de férias de 2023',
+                dataAbrangente: '2023',
+                numeroDocumento: 'PA-FERIAS-2023',
+                quantidadeVolumes: 1,
+                quantidadeApensos: 0,
+                numerosApensos: '',
+                digitalizado: 'Sim',
+                observacoesGerais: 'Todos os processos de férias do ano.'
+            }
+        ]
+    }
+];

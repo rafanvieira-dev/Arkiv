@@ -135,7 +135,7 @@ export default function LoginPage() {
               <Button variant="outline" className="w-full" onClick={handleAdminLogin}>
                   <Zap className="mr-2 h-4 w-4" /> Acesso Rápido (Admin Padrão)
               </Button>
-              <Link href="/transferencias" passHref>
+              <Link href="/transferencias/publica" passHref>
                 <Button variant="outline" className="w-full">
                     <FileUp className="mr-2 h-4 w-4" /> Transferir Documentos
                 </Button>

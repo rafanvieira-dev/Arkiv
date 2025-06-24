@@ -7,7 +7,7 @@ import React from 'react';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const publicPages = ['/login', '/solicitacoes/publica', '/transferencias'];
+  const publicPages = ['/login', '/solicitacoes/publica', '/transferencias/publica'];
   const isPublicPage = publicPages.includes(pathname);
 
   if (isPublicPage) {
