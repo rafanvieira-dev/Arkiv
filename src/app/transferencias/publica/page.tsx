@@ -204,7 +204,7 @@ export default function TransferenciasPublicaPage() {
                                 {documentos.map((doc, index) => (
                                     <Card key={index} className="p-4 bg-muted/50 overflow-hidden">
                                         <CardHeader className="p-0 pb-4">
-                                            <CardTitle className="text-lg">Documento {index + 1}</CardTitle>
+                                            <CardTitle className="text-lg">Documento {index + 1} de {documentos.length}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-0">
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
