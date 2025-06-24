@@ -56,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -151,19 +151,6 @@ const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
 
-const initialTiposDocumento = [
-  "Ação Ordinária", 
-  "Comunicação Interna",
-  "Ofício", 
-  "Memorando",
-  "Petição",
-  "Processo Administrativo",
-  "Processo Judicial",
-  "Requerimento", 
-  "Relatório",
-  "Solicitação de Informações",
-];
-
 export default function DocumentosPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -201,8 +188,6 @@ export default function DocumentosPage() {
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
-  const [isTipoDocDialogOpen, setIsTipoDocDialogOpen] = React.useState(false);
-  const [newTipoDocValue, setNewTipoDocValue] = React.useState("");
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -393,9 +378,8 @@ export default function DocumentosPage() {
       window.localStorage.setItem(CLASSIFICACOES_STORAGE_KEY, JSON.stringify(classificacoes));
       window.localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(listagens));
       window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(solicitacoes));
-      window.localStorage.setItem(TIPOS_DOCUMENTO_STORAGE_KEY, JSON.stringify(tiposDocumento));
     }
-  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento]);
+  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -857,21 +841,6 @@ export default function DocumentosPage() {
     return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
 
-  const handleSaveNewTipoDoc = () => {
-    if (newTipoDocValue.trim() && !tiposDocumento.includes(newTipoDocValue.trim())) {
-      const updatedTipos = [...tiposDocumento, newTipoDocValue.trim()].sort((a, b) => a.localeCompare(b));
-      setTiposDocumento(updatedTipos);
-      setFormState(prev => ({ ...prev, tipoDocumento: newTipoDocValue.trim() }));
-      toast({ title: "Sucesso", description: `O tipo "${newTipoDocValue.trim()}" foi adicionado.` });
-      setNewTipoDocValue("");
-      setIsTipoDocDialogOpen(false);
-    } else if (tiposDocumento.includes(newTipoDocValue.trim())) {
-      toast({ variant: "destructive", title: "Erro", description: "Este tipo de documento já existe." });
-    } else {
-      toast({ variant: "destructive", title: "Erro", description: "O nome do tipo de documento não pode ser vazio." });
-    }
-  };
-
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
 
@@ -1006,46 +975,16 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="tipoDocumento">Tipo de Documento</Label>
-                <div className="flex items-center gap-2">
-                  <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
-                    <SelectTrigger id="tipoDocumento" className="flex-1">
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
-                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Dialog open={isTipoDocDialogOpen} onOpenChange={setIsTipoDocDialogOpen}>
-                      <DialogTrigger asChild>
-                          <Button type="button" variant="outline" size="icon" className="flex-shrink-0" disabled={isFormDisabled} aria-label="Adicionar novo tipo de documento">
-                              <PlusCircle className="h-4 w-4" />
-                          </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                              <DialogTitle>Novo Tipo de Documento</DialogTitle>
-                              <DialogDescription>
-                                  Adicione um novo tipo à lista para padronização.
-                              </DialogDescription>
-                          </DialogHeader>
-                          <div className="py-4 space-y-2">
-                              <Label htmlFor="new-tipo-doc">Nome do Novo Tipo</Label>
-                              <Input 
-                                  id="new-tipo-doc" 
-                                  value={newTipoDocValue}
-                                  onChange={(e) => setNewTipoDocValue(e.target.value)}
-                                  placeholder="Ex: Carta Precatória"
-                              />
-                          </div>
-                          <DialogFooter>
-                              <Button type="button" variant="outline" onClick={() => setIsTipoDocDialogOpen(false)}>Cancelar</Button>
-                              <Button type="button" onClick={handleSaveNewTipoDoc}>Salvar</Button>
-                          </DialogFooter>
-                      </DialogContent>
-                  </Dialog>
-                </div>
+                <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
+                  <SelectTrigger id="tipoDocumento">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
+                        <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
