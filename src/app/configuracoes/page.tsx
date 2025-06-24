@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Upload, Download, FileSpreadsheet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,13 @@ export default function ConfiguracoesPage() {
   const [isOrigemDialogOpen, setIsOrigemDialogOpen] = React.useState(false);
   const [origemFormState, setOrigemFormState] = React.useState<{ id?: string; nome: string; sigla: string }>({ nome: "", sigla: "" });
   const [isEditingOrigem, setIsEditingOrigem] = React.useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const activeImportContext = React.useRef<{
+    setter: React.Dispatch<React.SetStateAction<any>>;
+    type: 'simple' | 'origem';
+    listName: string;
+  } | null>(null);
 
 
   React.useEffect(() => {
@@ -189,7 +196,7 @@ export default function ConfiguracoesPage() {
     }
     
     const isDuplicate = tiposOrigem.some(
-      (item) => item && item.nome && item.nome.toLowerCase() === origemFormState.nome.trim().toLowerCase() && item.id !== origemFormState.id
+      (item) => item?.nome?.toLowerCase() === origemFormState.nome.trim().toLowerCase() && item.id !== origemFormState.id
     );
 
     if (isDuplicate) {
@@ -219,54 +226,180 @@ export default function ConfiguracoesPage() {
     toast({ title: "Sucesso", description: `Origem removida.` });
   };
   
-  const ListManagementCard = ({ title, description, mode, list, placeholder }: { title: string; description: string; mode: DialogMode; list: string[]; placeholder: string; }) => (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between">
-        <div>
-          <CardTitle className="font-headline text-primary">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        <Button size="sm" onClick={() => handleOpenDialog(mode, `Novo ${title}`)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Novo
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
-          {list.sort((a, b) => a.localeCompare(b)).map(item => (
-            <div key={item} className="flex items-center justify-between rounded-md border p-2 hover:bg-muted/50">
-              <span className="text-sm">{item}</span>
+  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem', listName: string) => {
+    activeImportContext.current = { setter, type, listName };
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !activeImportContext.current) return;
+
+    const { setter, type, listName } = activeImportContext.current;
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        const rows = text.split('\n').filter(row => row.trim() !== '');
+        const headerRow = rows.shift()?.trim();
+        if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+
+        if (type === 'simple') {
+          const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+          if (headers[0] !== 'nome') throw new Error("Cabeçalho inválido. A primeira coluna deve ser 'nome'.");
+          
+          const newItems = rows.map(row => row.trim().replace(/"/g, '')).filter(Boolean);
+          (setter as React.Dispatch<React.SetStateAction<string[]>>)(prev => {
+            const existing = new Set(prev.map(i => i.toLowerCase()));
+            const uniqueNewItems = newItems.filter(item => !existing.has(item.toLowerCase()));
+            return [...prev, ...uniqueNewItems].sort((a,b) => a.localeCompare(b));
+          });
+          toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
+        } else if (type === 'origem') {
+          const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+          const requiredHeaders = ['nome'];
+          if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. A coluna 'nome' é necessária.");
+
+          const newItems: TipoOrigem[] = [];
+          rows.forEach((row, index) => {
+            const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            const newItemData: { [key: string]: string } = {};
+            headers.forEach((h, i) => newItemData[h] = values[i] || "");
+
+            if (!newItemData.nome) throw new Error(`Linha ${index + 2}: a coluna 'nome' é obrigatória.`);
+
+            newItems.push({
+              id: `to_imp_${Date.now()}_${index}`,
+              nome: newItemData.nome,
+              sigla: newItemData.sigla || undefined,
+            });
+          });
+
+          (setter as React.Dispatch<React.SetStateAction<TipoOrigem[]>>)(prev => {
+            const existingNames = new Set(prev.map(i => i.nome.toLowerCase()));
+            const uniqueNewItems = newItems.filter(item => !existingNames.has(item.nome.toLowerCase()));
+            return [...prev, ...uniqueNewItems].sort((a, b) => a.nome.localeCompare(b.nome));
+          });
+          toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
+        }
+      } catch (error: any) {
+        toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+      } finally {
+        if (event.target) event.target.value = '';
+        activeImportContext.current = null;
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleExport = (list: any[], fileName: string, headers: string[]) => {
+    if (!list || list.length === 0) {
+      toast({ variant: "destructive", title: "Nenhum dado para exportar" });
+      return;
+    }
+    
+    const csvRows = [headers.join(',')];
+    if (typeof list[0] === 'string') {
+      (list as string[]).forEach(item => csvRows.push(`"${item.replace(/"/g, '""')}"`));
+    } else {
+      (list as TipoOrigem[]).forEach(item => {
+        const row = headers.map(header => `"${String(item[header as keyof TipoOrigem] ?? '').replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+      });
+    }
+    
+    const blob = new Blob([`\uFEFF${csvRows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadTemplate = (fileName: string, headers: string[]) => {
+    const csvContent = headers.join(',');
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const ListManagementCard = ({ 
+    title, description, mode, list, placeholder, listName,
+  }: { 
+    title: string; description: string; mode: DialogMode; list: string[]; placeholder: string; listName: string;
+  }) => {
+      const setter = getListAndSetter(mode)[1];
+      return (
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
-                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(mode, `Editar ${title}`, item)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Editar</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleDelete(mode, item)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Excluir</p></TooltipContent>
-                </Tooltip>
+                <CardTitle className="font-headline text-primary">{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
               </div>
-            </div>
-          ))}
-          {list.length === 0 && (
-             <p className="text-sm text-center text-muted-foreground py-4">{placeholder}</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+              <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
+                  <Button size="sm" variant="outline" onClick={() => handleImportClick(setter, 'simple', listName)}>
+                      <Upload className="mr-2 h-4 w-4" /> Importar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleExport(list, `${listName.toLowerCase().replace(/ /g, '_')}_export.csv`, ['nome'])}>
+                      <Download className="mr-2 h-4 w-4" /> Exportar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate(`modelo_${listName.toLowerCase().replace(/ /g, '_')}.csv`, ['nome'])}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" /> Modelo
+                  </Button>
+                  <Button size="sm" onClick={() => handleOpenDialog(mode, `Novo ${title}`)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Novo
+                  </Button>
+              </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
+            {list.sort((a, b) => a.localeCompare(b)).map(item => (
+              <div key={item} className="flex items-center justify-between rounded-md border p-2 hover:bg-muted/50">
+                <span className="text-sm">{item}</span>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(mode, `Editar ${title}`, item)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Editar</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleDelete(mode, item)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Excluir</p></TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            ))}
+            {list.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">{placeholder}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      );
+  };
+
 
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
+      <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
       <PageHeader title="Configurações do Sistema" description="Ajuste as configurações gerais e os parâmetros do ARKIV." />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -276,17 +409,31 @@ export default function ConfiguracoesPage() {
             mode="tipoDocumento"
             list={tiposDocumento}
             placeholder="Nenhuma espécie de documento cadastrada."
+            listName="Espécies de Documento"
         />
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between">
-            <div>
-              <CardTitle className="font-headline text-primary">Tipos de Origem</CardTitle>
-              <CardDescription>Adicione ou edite os tipos de origem e suas siglas.</CardDescription>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <CardTitle className="font-headline text-primary">Tipos de Origem</CardTitle>
+                <CardDescription>Adicione ou edite os tipos de origem e suas siglas.</CardDescription>
+              </div>
+              <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
+                <Button size="sm" variant="outline" onClick={() => handleImportClick(setTiposOrigem, 'origem', 'Tipos de Origem')}>
+                    <Upload className="mr-2 h-4 w-4" /> Importar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleExport(tiposOrigem, 'tipos_origem_export.csv', ['nome', 'sigla'])}>
+                    <Download className="mr-2 h-4 w-4" /> Exportar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_tipos_origem.csv', ['nome', 'sigla'])}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Modelo
+                </Button>
+                <Button size="sm" onClick={() => handleOpenOrigemDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Novo
+                </Button>
+              </div>
             </div>
-            <Button size="sm" onClick={() => handleOpenOrigemDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
@@ -328,6 +475,7 @@ export default function ConfiguracoesPage() {
             mode="tipoParte"
             list={tiposParte}
             placeholder="Nenhum tipo de parte cadastrado."
+            listName="Tipos de Parte"
         />
         <ListManagementCard
             title="Gêneros Documentais"
@@ -335,6 +483,7 @@ export default function ConfiguracoesPage() {
             mode="generoDocumental"
             list={generosDocumentais}
             placeholder="Nenhum gênero documental cadastrado."
+            listName="Gêneros Documentais"
         />
         <ListManagementCard
             title="Tipos de Mídia"
@@ -342,6 +491,7 @@ export default function ConfiguracoesPage() {
             mode="tipoMidia"
             list={tiposMidia}
             placeholder="Nenhum tipo de mídia cadastrado."
+            listName="Tipos de Mídia"
         />
         <ListManagementCard
             title="Tipos de Caixa"
@@ -349,6 +499,7 @@ export default function ConfiguracoesPage() {
             mode="tipoCaixa"
             list={tiposCaixa}
             placeholder="Nenhum tipo de caixa cadastrado."
+            listName="Tipos de Caixa"
         />
       </div>
 
