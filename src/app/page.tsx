@@ -51,29 +51,6 @@ export default function DashboardPage() {
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline text-primary">Acesso Rápido</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Link href="/documentos" passHref><Button variant="outline" className="w-full justify-start"><FileText className="mr-2 h-4 w-4" />Adicionar ao Acervo</Button></Link>
-            <Link href="/solicitacoes" passHref><Button variant="outline" className="w-full justify-start"><Send className="mr-2 h-4 w-4" />Nova Solicitação</Button></Link>
-            <Link href="/caixas" passHref><Button variant="outline" className="w-full justify-start"><Archive className="mr-2 h-4 w-4" />Gerenciar Caixas</Button></Link>
-            <Link href="/busca-avancada" passHref><Button variant="outline" className="w-full justify-start"><Search className="mr-2 h-4 w-4" />Busca Avançada</Button></Link>
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline text-primary">Atividade Recente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Nenhuma atividade recente para exibir.</p>
-            {/* Placeholder for recent activity feed */}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
