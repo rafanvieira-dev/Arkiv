@@ -27,12 +27,14 @@ import { Logo } from '@/components/icons/logo';
 import { SidebarNav } from './sidebar-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 function AppHeader() {
   const { toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -93,7 +95,7 @@ function AppHeader() {
               <span>Configurações</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => router.push('/login')}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>
