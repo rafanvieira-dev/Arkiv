@@ -1,4 +1,5 @@
 
+
 export interface ParteDocumento {
   id: string; // UUID for the part entry itself
   nome: string;
@@ -15,7 +16,7 @@ export interface MidiaDetalhe {
 
 export interface Documento {
   id: string; // UUID, system-generated, read-only for user. Visível, mas não alterável.
-  status: 'Arquivado' | 'Eliminado' | 'Emprestado' | 'Desarquivado' | 'Aguardando prazo para eliminação'; // 1.2
+  status: 'Arquivado' | 'Eliminado' | 'Emprestado' | 'Desarquivado' | 'Aguardando prazo para eliminação' | 'Pendente de Conferência'; // 1.2
   orgao: 'TRF2' | 'SJRJ' | 'SJES'; // 1.3
   origem: string; // 1.C - Campo para cadastramento da origem. Cada origem cadastrada ficará gravada no sistema, e o usuário poderá escolher
   tipoMeio: 'Não digital' | 'Digital' | 'Híbrido'; // 1.4

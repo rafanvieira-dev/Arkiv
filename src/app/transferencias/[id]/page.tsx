@@ -82,7 +82,7 @@ export default function TransferenciaDetailPage() {
 
       const newDoc: Documento = {
         id: `DOC${Date.now() + index}`,
-        status: 'Arquivado',
+        status: 'Pendente de Conferência',
         orgao: 'TRF2',
         origem: transferencia.setorRemetente,
         tipoMeio: docTransfer.digitalizado === 'Sim' ? 'Digital' : 'Não digital',

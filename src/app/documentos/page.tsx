@@ -246,6 +246,9 @@ export default function DocumentosPage() {
         if (value === 'Arquivado') {
           return <Badge className="border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80">{value || 'N/A'}</Badge>;
         }
+        if (value === 'Pendente de Conferência') {
+          return <Badge className="border-transparent bg-purple-500 text-purple-50 hover:bg-purple-500/80 dark:bg-purple-600 dark:text-purple-50 dark:hover:bg-purple-600/80">{value || 'N/A'}</Badge>;
+        }
         return <Badge variant={
           value === 'Emprestado' ? 'outline' :
           value === 'Eliminado' ? 'destructive' :
@@ -832,6 +835,7 @@ export default function DocumentosPage() {
                   <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Arquivado">Arquivado</SelectItem>
+                    <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
                     <SelectItem value="Eliminado">Eliminado</SelectItem>
                     <SelectItem value="Emprestado">Emprestado</SelectItem>
                     <SelectItem value="Desarquivado">Desarquivado</SelectItem>
@@ -1162,6 +1166,7 @@ export default function DocumentosPage() {
                   <SelectContent>
                     <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
                     <SelectItem value="Arquivado">Arquivado</SelectItem>
+                    <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
                     <SelectItem value="Eliminado">Eliminado</SelectItem>
                     <SelectItem value="Emprestado">Emprestado</SelectItem>
                     <SelectItem value="Desarquivado">Desarquivado</SelectItem>
