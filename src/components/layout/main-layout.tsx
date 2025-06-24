@@ -57,6 +57,11 @@ function AppHeader() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    router.push('/login');
+  };
+
   if (!mounted) {
     return <div className="h-16" />; 
   }
@@ -95,7 +100,7 @@ function AppHeader() {
               <span>Configurações</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => router.push('/login')}>
+            <DropdownMenuItem onSelect={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>
