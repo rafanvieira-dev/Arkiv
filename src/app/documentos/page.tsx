@@ -12,7 +12,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Classificacao } from "
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square
+  CheckSquare, Square, X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado } from "@/lib/mock-data";
+import { useToast } from "@/hooks/use-toast";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -150,6 +151,7 @@ const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 
 export default function DocumentosPage() {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
@@ -181,6 +183,9 @@ export default function DocumentosPage() {
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isFormDisabled, setIsFormDisabled] = React.useState(false);
 
+  const [isRelatedDocDialogOpen, setIsRelatedDocDialogOpen] = React.useState(false);
+  const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
+
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
@@ -204,6 +209,10 @@ export default function DocumentosPage() {
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
         totalMidias: doc.totalMidias ?? undefined,
+        tipoMidiaDetalhe: doc.tipoMidiaDetalhe ?? undefined,
+        outroTipoMidiaDetalhe: doc.outroTipoMidiaDetalhe ?? "",
+        numeroMidiaDetalhe: doc.numeroMidiaDetalhe ?? "",
+        paginaMidiaDetalhe: doc.paginaMidiaDetalhe ?? "",
       });
       setDocumentIdToDisplay(doc.id);
       setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
@@ -528,6 +537,24 @@ export default function DocumentosPage() {
       }));
     }
   };
+
+  const handleRemoveRelatedDoc = (idToRemove: string) => {
+    setFormState(prev => ({
+        ...prev,
+        documentosRelacionadosIds: prev.documentosRelacionadosIds?.split(',').map(s => s.trim()).filter(id => id !== idToRemove).join(',') || ""
+    }));
+  };
+
+  const handleAddRelatedDoc = (idToAdd: string) => {
+    setFormState(prev => {
+        const currentIds = prev.documentosRelacionadosIds?.split(',').map(s => s.trim()).filter(Boolean) || [];
+        if (!currentIds.includes(idToAdd)) {
+            return { ...prev, documentosRelacionadosIds: [...currentIds, idToAdd].join(',') };
+        }
+        return prev;
+    });
+    toast({ title: "Documento Adicionado", description: `O documento ${idToAdd} foi adicionado à lista de relacionados.` });
+  };
   
   const handleSaveChanges = () => {
     const finalFormState: Documento = {
@@ -550,14 +577,48 @@ export default function DocumentosPage() {
     };
     
     setDocumentos(prevDocs => {
-      const docIndex = prevDocs.findIndex(d => d.id === finalFormState.id);
+      const originalDoc = prevDocs.find(d => d.id === finalFormState.id);
+      const originalRelatedIds = new Set(originalDoc?.documentosRelacionadosIds?.split(',').filter(Boolean).map(s => s.trim()) || []);
+      const newRelatedIds = new Set(finalFormState.documentosRelacionadosIds?.split(',').filter(Boolean).map(s => s.trim()) || []);
+
+      const addedIds = [...newRelatedIds].filter(id => !originalRelatedIds.has(id));
+      const removedIds = [...originalRelatedIds].filter(id => !newRelatedIds.has(id));
+
+      let docsToUpdate = [...prevDocs];
+      const docIndex = docsToUpdate.findIndex(d => d.id === finalFormState.id);
+
+      // Update the main document
       if (docIndex > -1) {
-        const updatedDocs = [...prevDocs];
-        updatedDocs[docIndex] = finalFormState;
-        return updatedDocs;
+        docsToUpdate[docIndex] = finalFormState;
       } else {
-        return [...prevDocs, finalFormState];
+        docsToUpdate.push(finalFormState);
       }
+
+      // Update added related docs (bidirectional)
+      addedIds.forEach(relatedId => {
+        const relatedDocIndex = docsToUpdate.findIndex(d => d.id === relatedId);
+        if (relatedDocIndex > -1) {
+            const relatedDoc = { ...docsToUpdate[relatedDocIndex] };
+            const relatedDocIds = new Set(relatedDoc.documentosRelacionadosIds?.split(',').filter(Boolean).map(s => s.trim()) || []);
+            relatedDocIds.add(finalFormState.id);
+            relatedDoc.documentosRelacionadosIds = Array.from(relatedDocIds).join(',');
+            docsToUpdate[relatedDocIndex] = relatedDoc;
+        }
+      });
+
+      // Update removed related docs (bidirectional)
+      removedIds.forEach(relatedId => {
+        const relatedDocIndex = docsToUpdate.findIndex(d => d.id === relatedId);
+        if (relatedDocIndex > -1) {
+            const relatedDoc = { ...docsToUpdate[relatedDocIndex] };
+            let relatedDocIds = relatedDoc.documentosRelacionadosIds?.split(',').filter(Boolean).map(s => s.trim()) || [];
+            relatedDocIds = relatedDocIds.filter(id => id !== finalFormState.id);
+            relatedDoc.documentosRelacionadosIds = relatedDocIds.join(',');
+            docsToUpdate[relatedDocIndex] = relatedDoc;
+        }
+      });
+
+      return docsToUpdate;
     });
     setSelectedRowIds([]); 
     setIsDialogOpen(false);
@@ -941,9 +1002,38 @@ export default function DocumentosPage() {
                   <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" disabled={isFormDisabled} />
                 )}
               </div>
-               <div className="space-y-2">
-                <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados (IDs)</Label>
-                <Input id="documentosRelacionadosIds" value={formState.documentosRelacionadosIds || ""} onChange={handleInputChange} placeholder="IDs separados por vírgula" disabled={isFormDisabled} />
+              
+              <div className="space-y-2">
+                <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados</Label>
+                <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
+                    {formState.documentosRelacionadosIds?.split(',').filter(Boolean).map(id => (
+                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                            <Link href={`/documentos?edit=${id.trim()}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+                                {id.trim()}
+                            </Link>
+                            <button
+                                type="button"
+                                className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                                onClick={() => handleRemoveRelatedDoc(id.trim())}
+                                aria-label={`Remover ${id.trim()}`}
+                                disabled={isFormDisabled}
+                            >
+                                <X className="h-3 w-3" />
+                            </button>
+                        </Badge>
+                    ))}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setIsRelatedDocDialogOpen(true)}
+                        disabled={isFormDisabled}
+                    >
+                        <PlusCircle className="h-4 w-4" />
+                        <span className="sr-only">Adicionar documento relacionado</span>
+                    </Button>
+                </div>
               </div>
 
 
@@ -1457,6 +1547,71 @@ export default function DocumentosPage() {
         </CardContent>
       </Card>
     </div>
+
+    <Dialog open={isRelatedDocDialogOpen} onOpenChange={setIsRelatedDocDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>Selecionar Documento Relacionado</DialogTitle>
+                <DialogDescription>
+                    Busque e selecione um documento existente para relacionar.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Input 
+                    placeholder="Buscar por ID, número, ou descrição..."
+                    value={relatedDocSearchTerm}
+                    onChange={(e) => setRelatedDocSearchTerm(e.target.value)}
+                />
+                <ScrollArea className="h-72 mt-4 border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Número</TableHead>
+                                <TableHead>Descrição</TableHead>
+                                <TableHead className="text-right">Ação</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {documentos
+                                .filter(doc => {
+                                    const searchTerm = relatedDocSearchTerm.toLowerCase();
+                                    if (doc.id === documentIdToDisplay) return false;
+                                    if (!searchTerm) return true;
+                                    return (
+                                        doc.id.toLowerCase().includes(searchTerm) ||
+                                        doc.numeroDocumento?.toLowerCase().includes(searchTerm) ||
+                                        doc.descricaoDocumento?.toLowerCase().includes(searchTerm)
+                                    );
+                                })
+                                .map(doc => (
+                                <TableRow key={doc.id}>
+                                    <TableCell>{doc.id}</TableCell>
+                                    <TableCell>{doc.numeroDocumento}</TableCell>
+                                    <TableCell className="max-w-xs truncate">{doc.descricaoDocumento}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleAddRelatedDoc(doc.id)}
+                                            disabled={formState.documentosRelacionadosIds?.split(',').map(s=>s.trim()).includes(doc.id)}
+                                        >
+                                            Adicionar
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRelatedDocDialogOpen(false)}>Fechar</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
     </TooltipProvider>
   );
 }
+
+    
