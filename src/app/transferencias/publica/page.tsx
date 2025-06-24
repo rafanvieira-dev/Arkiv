@@ -43,6 +43,7 @@ export default function TransferenciasPublicaPage() {
     const [ramal, setRamal] = React.useState("");
     const [setorRemetente, setSetorRemetente] = React.useState("");
     const [dataTransferencia, setDataTransferencia] = React.useState<Date | undefined>(new Date());
+    const [observacoes, setObservacoes] = React.useState("");
     const [documentos, setDocumentos] = React.useState<FormDoc[]>([createEmptyDoc()]);
     
     const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
@@ -109,6 +110,7 @@ export default function TransferenciasPublicaPage() {
             dataTransferencia: dataTransferencia.toISOString(),
             status: "Pendente",
             documentos: documentos.map((doc, index) => ({ ...doc, id: `DOC_T_${Date.now()}_${index}` })),
+            observacoes,
         };
         
         try {
@@ -131,6 +133,7 @@ export default function TransferenciasPublicaPage() {
         setRamal("");
         setSetorRemetente("");
         setDataTransferencia(new Date());
+        setObservacoes("");
         setDocumentos([createEmptyDoc()]);
     };
 
@@ -184,6 +187,10 @@ export default function TransferenciasPublicaPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="quantidadeDocumentos">Quantidade de Documentos*</Label>
                                 <Input id="quantidadeDocumentos" type="number" min="1" max="50" value={documentos.length} onChange={handleQuantidadeChange} />
+                            </div>
+                            <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                                <Label htmlFor="observacoes">Observações Gerais da Transferência</Label>
+                                <Textarea id="observacoes" value={observacoes} onChange={e => setObservacoes(e.target.value)} />
                             </div>
                         </div>
 

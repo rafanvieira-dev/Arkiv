@@ -187,4 +187,5 @@ export interface Transferencia {
   dataTransferencia: string;
   status: 'Pendente' | 'Aprovada' | 'Reprovada';
   documentos: DocumentoTransferencia[];
+  observacoes?: string;
 }

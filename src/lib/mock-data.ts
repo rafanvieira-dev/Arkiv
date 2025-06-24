@@ -366,6 +366,7 @@ export const initialTransferencias: Transferencia[] = [
         setorRemetente: 'Gabinete do Desembargador X',
         dataTransferencia: new Date('2024-05-30T10:00:00Z').toISOString(),
         status: 'Pendente',
+        observacoes: "Transferência urgente de processos concluídos.",
         documentos: [
             {
                 id: 'DOC_T_1717088400000_0',
@@ -390,6 +391,7 @@ export const initialTransferencias: Transferencia[] = [
         setorRemetente: 'Secretaria de Recursos Humanos',
         dataTransferencia: new Date('2024-05-28T15:30:00Z').toISOString(),
         status: 'Aprovada',
+        observacoes: "Documentos para arquivo permanente.",
         documentos: [
             {
                 id: 'DOC_T_1717088500000_0',

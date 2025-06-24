@@ -3,11 +3,11 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Transferencia } from "@/types";
-import { Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, CheckCircle, XCircle } from "lucide-react";
+import { Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { initialTransferencias } from "@/lib/mock-data";
+import Link from "next/link";
 
 const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
 
@@ -49,7 +50,18 @@ export default function TransferenciasManagementPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
-    { id: 'id', header: 'Nº da Transferência', accessorKey: 'id', defaultVisible: true, enableSorting: true },
+    { 
+      id: 'id', 
+      header: 'Nº da Transferência', 
+      accessorKey: 'id', 
+      defaultVisible: true, 
+      enableSorting: true,
+      cellFormatter: (value, item) => (
+        <Link href={`/transferencias/${item.id}`} className="text-primary hover:underline font-medium">
+          {value}
+        </Link>
+      )
+    },
     { id: 'nomeServidor', header: 'Nome do Servidor', accessorKey: 'nomeServidor', defaultVisible: true, enableSorting: true },
     { id: 'matricula', header: 'Matrícula', accessorKey: 'matricula', defaultVisible: true, enableSorting: true },
     { id: 'ramal', header: 'Ramal', accessorKey: 'ramal', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
@@ -175,14 +187,9 @@ export default function TransferenciasManagementPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
-  const handleApprove = (id: string) => {
-    setTransferencias(prev => prev.map(t => t.id === id ? { ...t, status: 'Aprovada' } : t));
-    toast({ title: "Transferência Aprovada", description: `A transferência ${id} foi aprovada.` });
-  };
-  
-  const handleReject = (id: string) => {
-    setTransferencias(prev => prev.map(t => t.id === id ? { ...t, status: 'Reprovada' } : t));
-    toast({ title: "Transferência Reprovada", description: `A transferência ${id} foi reprovada.` });
+  const handleDelete = (id: string) => {
+    setTransferencias(prev => prev.filter(t => t.id !== id));
+    toast({ title: "Transferência Excluída" });
   };
 
   const numDisplayed = displayedTransferencias.length;
@@ -280,23 +287,7 @@ export default function TransferenciasManagementPage() {
                         <div className="flex items-center justify-end">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700" aria-label="Aprovar Transferência" onClick={() => handleApprove(item.id)} disabled={item.status !== 'Pendente'}>
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Aprovar</p></TooltipContent>
-                          </Tooltip>
-                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" aria-label="Reprovar Transferência" onClick={() => handleReject(item.id)} disabled={item.status !== 'Pendente'}>
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Reprovar</p></TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência">
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência" onClick={() => handleDelete(item.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
