@@ -264,7 +264,7 @@ export default function DocumentosPage() {
     { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
     { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental', defaultVisible: true, enableSorting: true },
     { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
-    { id: 'tipoDocumento', header: 'Tipo Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'tipoDocumento', header: 'Espécie Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
@@ -983,7 +983,7 @@ export default function DocumentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipoDocumento">Tipo de Documento</Label>
+                <Label htmlFor="tipoDocumento">Espécie de Documento</Label>
                 <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
                   <SelectTrigger id="tipoDocumento">
                     <SelectValue placeholder="Selecione o tipo" />
@@ -1351,7 +1351,7 @@ export default function DocumentosPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="filterTipoDocumento">Tipo de Documento</Label>
+                <Label htmlFor="filterTipoDocumento">Espécie de Documento</Label>
                  <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
               </div>
               <div className="space-y-2">

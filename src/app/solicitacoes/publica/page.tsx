@@ -304,7 +304,7 @@ export default function PublicSolicitacaoPage() {
               <Card className="mt-2">
                 <CardHeader className="p-4">
                   <Input 
-                    placeholder="Pesquisar em documentos disponíveis por nº, tipo, descrição, caixa..." 
+                    placeholder="Pesquisar em documentos disponíveis por nº, espécie, descrição, caixa..." 
                     value={dialogDocFilters.searchTerm} 
                     onChange={(e) => setDialogDocFilters({searchTerm: e.target.value})}
                   />
@@ -316,7 +316,7 @@ export default function PublicSolicitacaoPage() {
                         <TableRow>
                           <TableHead className="w-10"><Checkbox onCheckedChange={(checked) => setSelectedDocIdsInDialog(checked ? documentsForDialog.filter(isDocumentSelectable).map(d => d.id) : [])} /></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')}>Nº Doc {renderDialogDocSortIcon('numeroDocumento')}</Button></TableHead>
-                          <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')}>Tipo {renderDialogDocSortIcon('tipoDocumento')}</Button></TableHead>
+                          <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')}>Espécie {renderDialogDocSortIcon('tipoDocumento')}</Button></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')}>Descrição {renderDialogDocSortIcon('descricaoDocumento')}</Button></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('codigosCaixa')}>Caixa(s) {renderDialogDocSortIcon('codigosCaixa')}</Button></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('status')}>Status {renderDialogDocSortIcon('status')}</Button></TableHead>

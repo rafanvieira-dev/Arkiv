@@ -102,7 +102,7 @@ export default function BuscaAvancadaPage() {
       )
     },
     { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Eliminado' ? 'destructive' : 'default'}>{value}</Badge> },
-    { id: 'tipoDocumento', header: 'Tipo de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: true, enableSorting: true },
     { id: 'origem', header: 'Origem', accessorKey: 'origem', defaultVisible: true, enableSorting: true },
@@ -318,7 +318,7 @@ export default function BuscaAvancadaPage() {
             <Input id="origem" placeholder="Ex: Tribunal de Justiça" value={filters.origem} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tipoDocumento">Tipo de Documento</Label>
+            <Label htmlFor="tipoDocumento">Espécie de Documento</Label>
             <Input id="tipoDocumento" placeholder="Ex: Ação Ordinária" value={filters.tipoDocumento} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">

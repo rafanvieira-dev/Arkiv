@@ -209,7 +209,7 @@ export default function ListagensEliminacaoPage() {
       )
     },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
-    { id: 'tipoDocumento', header: 'Tipo de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
+    { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { id: 'nomePartePrincipal', header: 'Partes', accessorKey: 'nomePartePrincipal', enableSorting: true },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },

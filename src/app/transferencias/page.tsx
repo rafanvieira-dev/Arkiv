@@ -76,7 +76,7 @@ export default function TransferenciasManagementPage() {
     { id: 'dataTransferencia', header: 'Data de Transferência', accessorKey: 'dataTransferencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { id: 'quantidadeDocumentos', header: 'Qtd. Documentos', accessorKey: 'documentos', defaultVisible: true, enableSorting: true, cellFormatter: (docs) => docs?.length || 0 },
-    { id: 'tiposDocumento', header: 'Tipos de Documento', accessorKey: 'documentos', defaultVisible: true, enableSorting: false, cellFormatter: (docs) => {
+    { id: 'tiposDocumento', header: 'Espécies de Documento', accessorKey: 'documentos', defaultVisible: true, enableSorting: false, cellFormatter: (docs) => {
         if (!docs || docs.length === 0) return 'N/A';
         const tipos = [...new Set(docs.map((d: any) => d.categoria))];
         const displayString = tipos.join(', ');

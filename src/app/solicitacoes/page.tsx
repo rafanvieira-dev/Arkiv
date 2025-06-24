@@ -641,7 +641,7 @@ export default function SolicitacoesPage() {
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Input 
                           name="searchTerm" 
-                          placeholder="Pesquisar por nº, tipo, descrição, caixa..." 
+                          placeholder="Pesquisar por nº, espécie, descrição, caixa..." 
                           value={dialogDocFilters.searchTerm} 
                           onChange={handleDialogDocFilterChange}
                           className="w-full"
@@ -670,7 +670,7 @@ export default function SolicitacoesPage() {
                               </TableHead>
                               <TableHead className="py-1 px-2">
                                 <Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Tipo {renderDialogDocSortIcon('tipoDocumento')}
+                                  Espécie {renderDialogDocSortIcon('tipoDocumento')}
                                 </Button>
                               </TableHead>
                               <TableHead className="py-1 px-2">

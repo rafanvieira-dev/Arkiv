@@ -196,11 +196,11 @@ export default function ConfiguracoesPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ListManagementCard
-            title="Tipos de Documento"
-            description="Adicione ou edite os tipos de documento."
+            title="Espécies de Documento"
+            description="Adicione ou edite as espécies de documento."
             mode="tipoDocumento"
             list={tiposDocumento}
-            placeholder="Nenhum tipo de documento cadastrado."
+            placeholder="Nenhuma espécie de documento cadastrada."
         />
         <ListManagementCard
             title="Tipos de Parte"
