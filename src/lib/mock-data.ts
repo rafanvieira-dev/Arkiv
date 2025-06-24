@@ -4,7 +4,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia
 export const initialCaixas: Caixa[] = [
   { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
   { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
-  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
+  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "Pasta", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
 ];
 
 export const placeholderClassificacoesSimulado = [
@@ -431,3 +431,25 @@ export const initialGenerosDocumentais: string[] = ['Textual', 'Iconográfico', 
 export const initialTiposMidia: string[] = ['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'];
 
 export const initialTiposParte: string[] = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima"];
+
+export const initialTiposOrigem: string[] = [
+  "Tribunal de Justiça",
+  "Secretaria Municipal",
+  "Câmara de Vereadores",
+  "Advocacia Geral",
+  "Vara Federal",
+  "Juizado Especial",
+  "Secretaria de Recursos Humanos",
+  "Gabinete do Desembargador X",
+  "Vara Cível"
+];
+
+export const initialTiposCaixa: string[] = [
+  "JUD",
+  "DOC",
+  "ADM",
+  "ADM/SIGA",
+  "JUD/APOLO",
+  "JUD/HÍBRIDO",
+  "Pasta"
+];

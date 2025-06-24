@@ -19,7 +19,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte } from "@/lib/mock-data";
+import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 
@@ -27,8 +27,10 @@ const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
 const TIPOS_PARTE_STORAGE_KEY = 'arquivocentral_tipos_parte';
 const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
+const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
+const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
 
-type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia';
+type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoOrigem' | 'tipoCaixa';
 
 
 export default function ConfiguracoesPage() {
@@ -38,6 +40,8 @@ export default function ConfiguracoesPage() {
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
+  const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -58,6 +62,12 @@ export default function ConfiguracoesPage() {
       
       const storedMidias = window.localStorage.getItem(TIPOS_MIDIA_STORAGE_KEY);
       setTiposMidia(storedMidias ? JSON.parse(storedMidias) : initialTiposMidia);
+      
+      const storedTiposOrigem = window.localStorage.getItem(TIPOS_ORIGEM_STORAGE_KEY);
+      setTiposOrigem(storedTiposOrigem ? JSON.parse(storedTiposOrigem) : initialTiposOrigem);
+
+      const storedTiposCaixa = window.localStorage.getItem(TIPOS_CAIXA_STORAGE_KEY);
+      setTiposCaixa(storedTiposCaixa ? JSON.parse(storedTiposCaixa) : initialTiposCaixa);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -65,6 +75,8 @@ export default function ConfiguracoesPage() {
       setTiposParte(initialTiposParte);
       setGenerosDocumentais(initialGenerosDocumentais);
       setTiposMidia(initialTiposMidia);
+      setTiposOrigem(initialTiposOrigem);
+      setTiposCaixa(initialTiposCaixa);
     }
     setIsDataLoaded(true);
   }, []);
@@ -76,11 +88,13 @@ export default function ConfiguracoesPage() {
         window.localStorage.setItem(TIPOS_PARTE_STORAGE_KEY, JSON.stringify(tiposParte));
         window.localStorage.setItem(GENEROS_DOCUMENTAIS_STORAGE_KEY, JSON.stringify(generosDocumentais));
         window.localStorage.setItem(TIPOS_MIDIA_STORAGE_KEY, JSON.stringify(tiposMidia));
+        window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
+        window.localStorage.setItem(TIPOS_CAIXA_STORAGE_KEY, JSON.stringify(tiposCaixa));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, isDataLoaded]);
+  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, isDataLoaded]);
 
   const resetForm = () => {
     setDialogConfig(null);
@@ -107,6 +121,8 @@ export default function ConfiguracoesPage() {
       case 'tipoParte': return [tiposParte, setTiposParte];
       case 'generoDocumental': return [generosDocumentais, setGenerosDocumentais];
       case 'tipoMidia': return [tiposMidia, setTiposMidia];
+      case 'tipoOrigem': return [tiposOrigem, setTiposOrigem];
+      case 'tipoCaixa': return [tiposCaixa, setTiposCaixa];
     }
   }
 
@@ -203,6 +219,13 @@ export default function ConfiguracoesPage() {
             placeholder="Nenhuma espécie de documento cadastrada."
         />
         <ListManagementCard
+            title="Tipos de Origem"
+            description="Adicione ou edite os tipos de origem."
+            mode="tipoOrigem"
+            list={tiposOrigem}
+            placeholder="Nenhum tipo de origem cadastrado."
+        />
+        <ListManagementCard
             title="Tipos de Parte"
             description="Adicione ou edite os tipos de parte envolvida."
             mode="tipoParte"
@@ -222,6 +245,13 @@ export default function ConfiguracoesPage() {
             mode="tipoMidia"
             list={tiposMidia}
             placeholder="Nenhum tipo de mídia cadastrado."
+        />
+        <ListManagementCard
+            title="Tipos de Caixa"
+            description="Adicione ou edite os tipos de caixa."
+            mode="tipoCaixa"
+            list={tiposCaixa}
+            placeholder="Nenhum tipo de caixa cadastrado."
         />
       </div>
 

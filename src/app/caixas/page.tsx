@@ -42,10 +42,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { initialCaixas } from "@/lib/mock-data";
+import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
 
-
-const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
 
 const initialFormStateCaixa: Partial<Caixa> = {
   codigoCaixa: "",
@@ -57,6 +55,7 @@ const initialFormStateCaixa: Partial<Caixa> = {
 };
 
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
 
 type ColumnConfigCaixas = {
   id: keyof Caixa | string;
@@ -94,12 +93,11 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 export default function CaixasPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa>>(initialFormStateCaixa);
-  const [selectedTipoCaixa, setSelectedTipoCaixa] = React.useState<string>("");
-  const [outroTipoCaixa, setOutroTipoCaixa] = React.useState<string>("");
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
   const [caixas, setCaixas] = React.useState<Caixa[]>([]);
+  const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>(
@@ -114,9 +112,13 @@ export default function CaixasPage() {
     try {
       const stored = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
       setCaixas(stored ? JSON.parse(stored) : initialCaixas);
+
+      const storedTiposCaixa = window.localStorage.getItem(TIPOS_CAIXA_STORAGE_KEY);
+      setTiposCaixa(storedTiposCaixa ? JSON.parse(storedTiposCaixa) : initialTiposCaixa);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setCaixas(initialCaixas);
+      setTiposCaixa(initialTiposCaixa);
     }
     setIsDataLoaded(true);
   }, []);
@@ -134,8 +136,6 @@ export default function CaixasPage() {
 
   const resetFormAndDialogState = () => {
     setFormStateCaixa(initialFormStateCaixa);
-    setSelectedTipoCaixa("");
-    setOutroTipoCaixa("");
     setIsEditing(false);
     setEditingCaixaId(null);
   };
@@ -145,13 +145,6 @@ export default function CaixasPage() {
       setIsEditing(true);
       setEditingCaixaId(caixa.id);
       setFormStateCaixa(caixa);
-      if (tiposCaixaPadrao.includes(caixa.tipo)) {
-        setSelectedTipoCaixa(caixa.tipo);
-        setOutroTipoCaixa("");
-      } else {
-        setSelectedTipoCaixa("Outro");
-        setOutroTipoCaixa(caixa.tipo);
-      }
     } else {
       resetFormAndDialogState();
     }
@@ -169,16 +162,14 @@ export default function CaixasPage() {
 
 
   const handleSaveChanges = () => {
-    const tipoFinal = selectedTipoCaixa === "Outro" ? outroTipoCaixa : selectedTipoCaixa;
-
     const caixaDataToSave: Caixa = {
       ...initialFormStateCaixa,
       ...formStateCaixa,
-      tipo: tipoFinal,
-      id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`, 
+      id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`,
+      tipo: formStateCaixa.tipo || "",
       status: formStateCaixa.status || 'Aberta',
       situacao: formStateCaixa.situacao || 'Incompleta',
-    } as Caixa; 
+    } as Caixa;
 
     let updatedCaixas;
     if (isEditing && editingCaixaId) {
@@ -324,40 +315,17 @@ export default function CaixasPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo*</Label>
-                <Select onValueChange={(value) => {
-                  setSelectedTipoCaixa(value);
-                  if (value !== "Outro") {
-                    setFormStateCaixa(prev => ({ ...prev, tipo: value }));
-                    setOutroTipoCaixa("");
-                  } else {
-                     setFormStateCaixa(prev => ({ ...prev, tipo: "" })); 
-                  }
-                }} value={selectedTipoCaixa}>
+                <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
                   <SelectTrigger id="tipo">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tiposCaixaPadrao.map(tipo => (
+                    {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
                       <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                     ))}
-                    <SelectItem value="Outro">Outro (Especificar)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {selectedTipoCaixa === "Outro" && (
-                <div className="space-y-2">
-                  <Label htmlFor="outroTipoCaixa">Espec. Tipo*</Label>
-                  <Input
-                    id="outroTipoCaixa"
-                    placeholder="Digite o novo tipo"
-                    value={outroTipoCaixa}
-                    onChange={(e) => {
-                      setOutroTipoCaixa(e.target.value);
-                      setFormStateCaixa(prev => ({ ...prev, tipo: e.target.value }));
-                    }}
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="localizacao">Localização</Label>
                 <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />

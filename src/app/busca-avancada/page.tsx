@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { initialTiposOrigem } from "@/lib/mock-data";
 
 
 const initialFilters = {
@@ -72,6 +73,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 
 
 export default function BuscaAvancadaPage() {
@@ -82,6 +84,7 @@ export default function BuscaAvancadaPage() {
   
   const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
   const [allClassificacoes, setAllClassificacoes] = React.useState<Classificacao[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
   
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
@@ -142,6 +145,9 @@ export default function BuscaAvancadaPage() {
       
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       if (storedClassificacoes) setAllClassificacoes(JSON.parse(storedClassificacoes));
+
+      const storedTiposOrigem = window.localStorage.getItem(TIPOS_ORIGEM_STORAGE_KEY);
+      setTiposOrigem(storedTiposOrigem ? JSON.parse(storedTiposOrigem) : initialTiposOrigem);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
     }
@@ -174,7 +180,7 @@ export default function BuscaAvancadaPage() {
   const handleSearch = () => {
     const filtered = allDocuments.filter(doc => {
         if (filters.numeroDocumento && !doc.numeroDocumento?.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) return false;
-        if (filters.origem && !doc.origem?.toLowerCase().includes(filters.origem.toLowerCase())) return false;
+        if (filters.origem && doc.origem !== filters.origem) return false;
         if (filters.tipoDocumento && !doc.tipoDocumento?.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) return false;
         if (filters.descricaoDocumento && !doc.descricaoDocumento?.toLowerCase().includes(filters.descricaoDocumento.toLowerCase())) return false;
         if (filters.partes && !doc.nomePartePrincipal?.toLowerCase().includes(filters.partes.toLowerCase())) return false;
@@ -315,7 +321,16 @@ export default function BuscaAvancadaPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="origem">Origem</Label>
-            <Input id="origem" placeholder="Ex: Tribunal de Justiça" value={filters.origem} onChange={handleInputChange} />
+            <Select onValueChange={handleSelectChange('origem')} value={filters.origem}>
+              <SelectTrigger id="origem">
+                <SelectValue placeholder="Selecione a origem" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiposOrigem.map(o => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="tipoDocumento">Espécie de Documento</Label>

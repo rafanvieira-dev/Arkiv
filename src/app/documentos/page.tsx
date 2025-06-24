@@ -56,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -150,6 +150,7 @@ const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
 const TIPOS_PARTE_STORAGE_KEY = 'arquivocentral_tipos_parte';
 const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
+const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 
 export default function DocumentosPage() {
   const { toast } = useToast();
@@ -188,6 +189,7 @@ export default function DocumentosPage() {
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -356,6 +358,9 @@ export default function DocumentosPage() {
       const storedMidias = window.localStorage.getItem(TIPOS_MIDIA_STORAGE_KEY);
       setTiposMidia(storedMidias ? JSON.parse(storedMidias) : initialTiposMidia);
 
+      const storedTiposOrigem = window.localStorage.getItem(TIPOS_ORIGEM_STORAGE_KEY);
+      setTiposOrigem(storedTiposOrigem ? JSON.parse(storedTiposOrigem) : initialTiposOrigem);
+
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setDocumentos(placeholderDocumentos);
@@ -366,6 +371,7 @@ export default function DocumentosPage() {
       setTiposParte(initialTiposParte);
       setGenerosDocumentais(initialGenerosDocumentais);
       setTiposMidia(initialTiposMidia);
+      setTiposOrigem(initialTiposOrigem);
     }
     setIsDataLoaded(true);
   }, []);
@@ -978,7 +984,14 @@ export default function DocumentosPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="origem">Origem*</Label>
-                <Input id="origem" value={formState.origem || ""} onChange={handleInputChange} placeholder="Ex: Tribunal de Justiça" disabled={isFormDisabled} />
+                <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
+                  <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
+                  <SelectContent>
+                    {tiposOrigem.sort((a,b) => a.localeCompare(b)).map(o => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
