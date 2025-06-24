@@ -45,6 +45,7 @@ export default function DashboardPage() {
     });
     
     const [recentActivities, setRecentActivities] = React.useState<{ type: string; id: string; date: string; link: string; }[]>([]);
+    const [years, setYears] = React.useState({ current: new Date().getFullYear(), next: new Date().getFullYear() + 1 });
 
     React.useEffect(() => {
         // Data loading and processing will only run on the client side.
@@ -63,12 +64,13 @@ export default function DashboardPage() {
         const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
         const allListagens: ListagemEliminacao[] = storedListagens ? JSON.parse(storedListagens) : simulatedListagensData;
 
+        const currentYear = new Date().getFullYear();
+        setYears({ current: currentYear, next: currentYear + 1 });
 
         const totalDocs = allDocs.length;
         const pendingSolicitacoes = allSolicitacoes.filter(s => s.status === 'Pendente').length;
         const pendingTransferencias = allTransferencias.filter(t => t.status === 'Pendente').length;
         
-        const currentYear = new Date().getFullYear();
         const docsToExpire = allDocs.filter(d => 
             d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) === currentYear + 1
         ).length;
@@ -115,126 +117,150 @@ export default function DashboardPage() {
             <PageHeader title="Dashboard" description="Visão geral do sistema ArquivoCentral." />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total de Documentos</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocs}</div>
-                        <p className="text-xs text-muted-foreground">Documentos no acervo</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos Arquivados</CardTitle>
-                        <Archive className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocsArquivados}</div>
-                        <p className="text-xs text-muted-foreground">Status "Arquivado"</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos Emprestados</CardTitle>
-                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocsEmprestados}</div>
-                        <p className="text-xs text-muted-foreground">Status "Emprestado"</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos Desarquivados</CardTitle>
-                        <FileUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocsDesarquivados}</div>
-                        <p className="text-xs text-muted-foreground">Status "Desarquivado"</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Aguardando Eliminação</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocsAguardandoEliminacao}</div>
-                        <p className="text-xs text-muted-foreground">Status "Aguardando prazo"</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos Eliminados</CardTitle>
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalDocsEliminados}</div>
-                        <p className="text-xs text-muted-foreground">Status "Eliminado"</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total de Caixas</CardTitle>
-                        <Box className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalCaixas}</div>
-                        <p className="text-xs text-muted-foreground">Caixas cadastradas</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total de Listagens</CardTitle>
-                        <ListChecks className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalListagens}</div>
-                        <p className="text-xs text-muted-foreground">Listagens de eliminação</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
-                        <Send className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.pendingSolicitacoes}</div>
-                        <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Transferências Pendentes</CardTitle>
-                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.pendingTransferencias}</div>
-                        <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos a Expirar</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.docsToExpire}</div>
-                        <p className="text-xs text-muted-foreground">Com eliminação prevista para o próximo ano</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Documentos Expirados</CardTitle>
-                        <CalendarX className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.docsExpired}</div>
-                        <p className="text-xs text-muted-foreground">Eliminação neste ano ou anterior</p>
-                    </CardContent>
-                </Card>
+                <Link href="/documentos" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total de Documentos</CardTitle>
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocs}</div>
+                            <p className="text-xs text-muted-foreground">Documentos no acervo</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/documentos?status=Arquivado" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos Arquivados</CardTitle>
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocsArquivados}</div>
+                            <p className="text-xs text-muted-foreground">Status "Arquivado"</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                 <Link href="/documentos?status=Emprestado" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos Emprestados</CardTitle>
+                            <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocsEmprestados}</div>
+                            <p className="text-xs text-muted-foreground">Status "Emprestado"</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/documentos?status=Desarquivado" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos Desarquivados</CardTitle>
+                            <FileUp className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocsDesarquivados}</div>
+                            <p className="text-xs text-muted-foreground">Status "Desarquivado"</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/documentos?status=Aguardando%20prazo%20para%20elimina%C3%A7%C3%A3o" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Aguardando Eliminação</CardTitle>
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocsAguardandoEliminacao}</div>
+                            <p className="text-xs text-muted-foreground">Status "Aguardando prazo"</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/documentos?status=Eliminado" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos Eliminados</CardTitle>
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalDocsEliminados}</div>
+                            <p className="text-xs text-muted-foreground">Status "Eliminado"</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/caixas" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total de Caixas</CardTitle>
+                            <Box className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalCaixas}</div>
+                            <p className="text-xs text-muted-foreground">Caixas cadastradas</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/listagens-eliminacao" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total de Listagens</CardTitle>
+                            <ListChecks className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalListagens}</div>
+                            <p className="text-xs text-muted-foreground">Listagens de eliminação</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/solicitacoes" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
+                            <Send className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.pendingSolicitacoes}</div>
+                            <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/transferencias" className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Transferências Pendentes</CardTitle>
+                            <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.pendingTransferencias}</div>
+                            <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href={`/documentos?anoElimPrevistoExato=${years.next}`} className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos a Expirar</CardTitle>
+                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.docsToExpire}</div>
+                            <p className="text-xs text-muted-foreground">Com eliminação prevista para o próximo ano</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href={`/documentos?anoElimPrevistoAte=${years.current}`} className="block">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Documentos Expirados</CardTitle>
+                            <CalendarX className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.docsExpired}</div>
+                            <p className="text-xs text-muted-foreground">Eliminação neste ano ou anterior</p>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             <div className="mt-8 grid gap-8 md:grid-cols-2 lg:grid-cols-3">

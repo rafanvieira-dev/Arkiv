@@ -496,6 +496,22 @@ export default function DocumentosPage() {
     }
   }, [formState.classificacaoArquivisticaId, formState.dataArquivamento, formState.alteracaoDestinacaoFinal, classificacoes]);
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const status = params.get('status');
+    const anoExato = params.get('anoElimPrevistoExato');
+    const anoAte = params.get('anoElimPrevistoAte');
+
+    if (status || anoExato || anoAte) {
+        const newFilters = { ...initialFiltersState };
+        if (status) newFilters.status = status;
+        if (anoExato) newFilters.anoElimPrevistoExato = anoExato;
+        if (anoAte) newFilters.anoElimPrevistoAte = anoAte;
+        
+        setFilters(newFilters);
+        setIsFiltersOpen(true);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
