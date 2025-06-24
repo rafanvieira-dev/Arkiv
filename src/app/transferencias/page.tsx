@@ -62,6 +62,13 @@ export default function TransferenciasManagementPage() {
         </Link>
       )
     },
+    { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (
+      <Badge variant={
+        value === 'Aprovada' ? 'secondary' :
+        value === 'Reprovada' ? 'destructive' :
+        'default'
+      }>{value}</Badge>
+    )},
     { id: 'nomeServidor', header: 'Nome do Servidor', accessorKey: 'nomeServidor', defaultVisible: true, enableSorting: true },
     { id: 'matricula', header: 'Matrícula', accessorKey: 'matricula', defaultVisible: true, enableSorting: true },
     { id: 'ramal', header: 'Ramal', accessorKey: 'ramal', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
@@ -75,13 +82,6 @@ export default function TransferenciasManagementPage() {
         const displayString = tipos.join(', ');
         return <span className="block max-w-xs truncate" title={displayString}>{displayString}</span>;
     } },
-    { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (
-      <Badge variant={
-        value === 'Aprovada' ? 'secondary' :
-        value === 'Reprovada' ? 'destructive' :
-        'default'
-      }>{value}</Badge>
-    )},
   ], []);
 
   React.useEffect(() => {

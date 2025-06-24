@@ -84,18 +84,6 @@ type ColumnConfig = {
 
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'numeroSolicitacao', header: 'Nº Solicitação', accessorKey: 'numeroSolicitacao', defaultVisible: true, enableSorting: true },
-  { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
-  { id: 'nomeSolicitante', header: 'Solicitante', accessorKey: 'nomeSolicitante', defaultVisible: true, enableSorting: true },
-  { id: 'setorSolicitante', header: 'Setor', accessorKey: 'setorSolicitante', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'siglaServidor', header: 'Sigla Servidor', accessorKey: 'siglaServidor', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'matriculaSolicitante', header: 'Matrícula', accessorKey: 'matriculaSolicitante', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'ramal', header: 'Ramal', accessorKey: 'ramal', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'emailContato', header: 'E-mail', accessorKey: 'emailContato', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  { id: 'dataSolicitacao', header: 'Data Solicitação', accessorKey: 'dataSolicitacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-  { id: 'dataAtendimento', header: 'Data Atendimento', accessorKey: 'dataAtendimento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-  { id: 'dataDevolucao', header: 'Data Devolução', accessorKey: 'dataDevolucao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-  { id: 'documentoIds', header: 'Docs Solicitados (Qtd)', accessorKey: 'documentoIds', defaultVisible: true, enableSorting: true, cellFormatter: (value: string[]) => value.length },
   { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (
     <Badge 
       variant={
@@ -113,6 +101,18 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
       {value}
     </Badge>
   )},
+  { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
+  { id: 'nomeSolicitante', header: 'Solicitante', accessorKey: 'nomeSolicitante', defaultVisible: true, enableSorting: true },
+  { id: 'setorSolicitante', header: 'Setor', accessorKey: 'setorSolicitante', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'siglaServidor', header: 'Sigla Servidor', accessorKey: 'siglaServidor', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'matriculaSolicitante', header: 'Matrícula', accessorKey: 'matriculaSolicitante', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'ramal', header: 'Ramal', accessorKey: 'ramal', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'emailContato', header: 'E-mail', accessorKey: 'emailContato', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'dataSolicitacao', header: 'Data Solicitação', accessorKey: 'dataSolicitacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+  { id: 'dataAtendimento', header: 'Data Atendimento', accessorKey: 'dataAtendimento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+  { id: 'dataDevolucao', header: 'Data Devolução', accessorKey: 'dataDevolucao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
+  { id: 'documentoIds', header: 'Docs Solicitados (Qtd)', accessorKey: 'documentoIds', defaultVisible: true, enableSorting: true, cellFormatter: (value: string[]) => value.length },
 ];
 
 

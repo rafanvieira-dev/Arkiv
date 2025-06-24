@@ -117,6 +117,14 @@ type ColumnConfigClassificacoes = {
 
 const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
   { id: 'tipoPlanoClassificacao', header: 'Tipo de Plano', accessorKey: 'tipoPlanoClassificacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'inativo',
+    defaultVisible: true,
+    enableSorting: true,
+    cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
+  },
   { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
   { id: 'descricao', header: 'Assunto', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
   {
@@ -145,14 +153,6 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
   },
   { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
   { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-  {
-    id: 'status',
-    header: 'Status',
-    accessorKey: 'inativo',
-    defaultVisible: true,
-    enableSorting: true,
-    cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
-  },
 ];
 
 type SortConfig = { id: string; direction: 'asc' | 'desc' };

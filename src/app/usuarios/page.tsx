@@ -315,8 +315,8 @@ export default function UsuariosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Status</TableHead>
                   <TableHead>Nome Completo</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Setor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -325,13 +325,13 @@ export default function UsuariosPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.nomeCompleto}</TableCell>
                     <TableCell>
                       <Badge variant={user.statusAprovacao === 'Aprovado' ? 'secondary' : user.statusAprovacao === 'Reprovado' ? 'destructive' : 'default'} className="flex items-center gap-2 w-fit">
                         {getStatusIcon(user.statusAprovacao)}
                         {user.statusAprovacao}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{user.nomeCompleto}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.setor || 'N/A'}</TableCell>
                     <TableCell className="text-right">
