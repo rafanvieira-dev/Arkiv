@@ -265,8 +265,8 @@ export default function TransferenciasPage() {
                         </ScrollArea>
                     </CardContent>
                     {documentos.length > 1 && (
-                        <div className="flex justify-center items-center pb-4 text-muted-foreground">
-                            <ChevronDown className="h-6 w-6 animate-bounce" />
+                        <div className="flex justify-center items-center pb-4">
+                            <ChevronDown className="h-8 w-8 animate-bounce text-destructive" />
                         </div>
                     )}
                     <CardFooter className="flex justify-end pt-0">
