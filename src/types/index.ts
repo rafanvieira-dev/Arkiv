@@ -80,13 +80,13 @@ export interface Classificacao {
   codigo: string; 
   descricao: string; 
   tipoPlanoClassificacao?: 'Administrativo' | 'Judicial';
+  status: 'Ativo' | 'Inativo' | 'Pendente de Complemento';
   tipoPrazoFaseCorrente?: 'Anos' | 'Condição Textual';
   prazoGuardaFaseCorrenteAnos?: number;
   prazoGuardaFaseCorrenteCondicaoTextual?: string;
   prazoGuardaFaseIntermediariaAnos: number; 
   destinacaoFinal: 'Eliminação' | 'Guarda Permanente'; 
   observacoes?: string;
-  inativo: boolean; 
 }
 
 export interface ClasseJudicial {

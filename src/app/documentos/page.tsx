@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -206,8 +207,8 @@ export default function DocumentosPage() {
       const classCode = existingClassification ? existingClassification.codigo : "";
 
       if (existingClassification) {
-        if (existingClassification.inativo) {
-          assunto = "Complementar o cadastro";
+        if (existingClassification.status === 'Inativo') {
+          assunto = "Código inativo. Um novo será criado ao salvar.";
           classId = ""; // Force creation of a new one on save
         } else {
           assunto = existingClassification.descricao;
@@ -302,7 +303,7 @@ export default function DocumentosPage() {
     { id: 'codigoClassificacaoJudicialId', header: 'Cód. Class. Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: true, enableSorting: true },
     { id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId', defaultVisible: true, enableSorting: true, cellFormatter: (value) => {
         const classif = classificacoes.find(c => c.id === value);
-        return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
+        return classif ? `${classif.codigo} - ${classif.descricao || 'Pendente'}` : value || 'N/A';
       } 
     },
     { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: true, enableSorting: true },
@@ -455,10 +456,10 @@ export default function DocumentosPage() {
     const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId);
     
     if (classification) {
-       if (classification.inativo) {
+       if (classification.status === 'Inativo' || classification.status === 'Pendente de Complemento') {
          setFormState(prev => ({
           ...prev,
-          assuntoClassificacaoDisplay: "Complementar o cadastro",
+          assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
@@ -565,11 +566,11 @@ export default function DocumentosPage() {
         c => c.codigo === codigoInput
       );
       if (foundClassification) {
-        if (foundClassification.inativo) {
+        if (foundClassification.status === 'Inativo') {
             setFormState(prev => ({
                 ...prev,
                 classificacaoArquivisticaId: "",
-                assuntoClassificacaoDisplay: "Complementar o cadastro",
+                assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
                 prazoArquivoCorrenteDisplay: "",
                 prazoArquivoIntermediarioDisplay: "",
                 destinacaoFinalDisplay: undefined,
@@ -585,7 +586,7 @@ export default function DocumentosPage() {
         setFormState(prev => ({
           ...prev,
           classificacaoArquivisticaId: "",
-          assuntoClassificacaoDisplay: "Complementar o cadastro",
+          assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
@@ -631,13 +632,13 @@ export default function DocumentosPage() {
   
     if (codigoInput && !resolvedClassificationId) {
       const existingClassif = classificacoes.find(c => c.codigo === codigoInput);
-      if (!existingClassif || existingClassif.inativo) {
+      if (!existingClassif || existingClassif.status === 'Inativo') {
         const newClassification: Classificacao = {
           id: `CLA_AUTO_${Date.now()}`,
           codigo: codigoInput,
-          descricao: "Complementar o cadastro",
+          descricao: "",
           observacoes: "Cadastro gerado automaticamente. Por favor, complementar as informações.",
-          inativo: false,
+          status: 'Pendente de Complemento',
           prazoGuardaFaseIntermediariaAnos: 0,
           destinacaoFinal: 'Eliminação',
           tipoPlanoClassificacao: 'Administrativo',
@@ -1470,10 +1471,7 @@ export default function DocumentosPage() {
                       id="assuntoClassificacaoDisplay" 
                       value={formState.assuntoClassificacaoDisplay || ""} 
                       readOnly 
-                      className={cn(
-                        "bg-muted/50 cursor-not-allowed",
-                        formState.assuntoClassificacaoDisplay === 'Complementar o cadastro' && "text-destructive font-semibold"
-                      )} 
+                      className="bg-muted/50 cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-2">

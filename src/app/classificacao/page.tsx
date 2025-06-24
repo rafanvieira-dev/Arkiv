@@ -42,13 +42,8 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { initialClassificacoes } from "@/lib/mock-data";
 
-
-const initialClassificacoes: Classificacao[] = [
-  { id: "CLA001", tipoPlanoClassificacao: "Judicial", codigo: "020.1", descricao: "Processos Judiciais Cíveis", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente", observacoes: "Manter cópia digitalizada", inativo: false },
-  { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", inativo: true },
-  { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", inativo: false },
-];
 
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 
@@ -99,13 +94,13 @@ const initialFormState: ClassificacaoFormState = {
   codigo: "",
   descricao: "",
   tipoPlanoClassificacao: "Administrativo",
+  status: 'Ativo',
   tipoPrazoFaseCorrente: "Anos",
   prazoGuardaFaseCorrenteAnos: "",
   prazoGuardaFaseCorrenteCondicaoTextual: "",
   prazoGuardaFaseIntermediariaAnos: "",
   destinacaoFinal: "Eliminação",
   observacoes: "",
-  inativo: false,
 };
 
 
@@ -123,13 +118,17 @@ const ALL_COLUMNS_CONFIG_CLASSIFICACOES: ColumnConfigClassificacoes[] = [
   {
     id: 'status',
     header: 'Status',
-    accessorKey: 'inativo',
+    accessorKey: 'status',
     defaultVisible: true,
     enableSorting: true,
-    cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
+    cellFormatter: (value) => {
+        if (value === 'Inativo') return <Badge variant='destructive'>Inativo</Badge>;
+        if (value === 'Pendente de Complemento') return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">Pendente</Badge>;
+        return <Badge variant='secondary'>Ativo</Badge>;
+    }
   },
   { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
-  { id: 'descricao', header: 'Assunto', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
+  { id: 'descricao', header: 'Assunto', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   {
     id: 'tipoPrazoFaseCorrenteCombined',
     header: 'Tipo Prazo Corrente',
@@ -277,16 +276,11 @@ export default function ClassificacaoPage() {
       setIsEditing(true);
       setEditingClassificacaoId(classificacao.id);
       setFormState({
-        codigo: classificacao.codigo,
-        descricao: classificacao.descricao,
-        tipoPlanoClassificacao: classificacao.tipoPlanoClassificacao || "Administrativo",
-        tipoPrazoFaseCorrente: classificacao.tipoPrazoFaseCorrente || "Anos",
+        ...classificacao,
         prazoGuardaFaseCorrenteAnos: classificacao.prazoGuardaFaseCorrenteAnos !== undefined ? String(classificacao.prazoGuardaFaseCorrenteAnos) : "",
-        prazoGuardaFaseCorrenteCondicaoTextual: classificacao.prazoGuardaFaseCorrenteCondicaoTextual || "",
         prazoGuardaFaseIntermediariaAnos: String(classificacao.prazoGuardaFaseIntermediariaAnos),
-        destinacaoFinal: classificacao.destinacaoFinal,
+        prazoGuardaFaseCorrenteCondicaoTextual: classificacao.prazoGuardaFaseCorrenteCondicaoTextual || "",
         observacoes: classificacao.observacoes || "",
-        inativo: classificacao.inativo,
       });
     } else {
       resetForm();
@@ -315,23 +309,19 @@ export default function ClassificacaoPage() {
     }
   };
 
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormState(prev => ({ ...prev, inativo: checked }));
-  };
-
   const handleSaveChanges = () => {
     const classificacaoDataToSave: Classificacao = {
       id: isEditing && editingClassificacaoId ? editingClassificacaoId : `CLA${Date.now()}`,
       codigo: formState.codigo,
       descricao: formState.descricao,
       tipoPlanoClassificacao: formState.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'],
+      status: formState.status,
       tipoPrazoFaseCorrente: formState.tipoPrazoFaseCorrente as Classificacao['tipoPrazoFaseCorrente'],
       prazoGuardaFaseCorrenteAnos: formState.tipoPrazoFaseCorrente === 'Anos' && formState.prazoGuardaFaseCorrenteAnos && formState.prazoGuardaFaseCorrenteAnos.trim() !== "" ? parseInt(formState.prazoGuardaFaseCorrenteAnos, 10) : undefined,
       prazoGuardaFaseCorrenteCondicaoTextual: formState.tipoPrazoFaseCorrente === 'Condição Textual' ? formState.prazoGuardaFaseCorrenteCondicaoTextual : undefined,
       prazoGuardaFaseIntermediariaAnos: formState.prazoGuardaFaseIntermediariaAnos && formState.prazoGuardaFaseIntermediariaAnos.trim() !== "" ? parseInt(formState.prazoGuardaFaseIntermediariaAnos, 10) : 0,
       destinacaoFinal: formState.destinacaoFinal as Classificacao['destinacaoFinal'],
       observacoes: formState.observacoes,
-      inativo: formState.inativo,
     };
 
     let updatedClassificacoes;
@@ -357,7 +347,7 @@ export default function ClassificacaoPage() {
       if (item.tipoPrazoFaseCorrente === "Condição Textual") return item.prazoGuardaFaseCorrenteCondicaoTextual;
       return null;
     }
-    if (column.id === 'status') return item.inativo;
+    if (column.id === 'status') return item.status;
 
     return item[column.accessorKey as keyof Classificacao];
   };
@@ -374,9 +364,7 @@ export default function ClassificacaoPage() {
 
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
-          else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
-            comparisonResult = valA === valB ? 0 : valA ? -1 : 1;
-          } else if (typeof valA === 'number' && typeof valB === 'number') {
+          else if (typeof valA === 'number' && typeof valB === 'number') {
             comparisonResult = valA - valB;
           } else {
             comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
@@ -443,10 +431,10 @@ export default function ClassificacaoPage() {
 
   const handleExportCSV = () => {
     const headers = [
-      'id', 'tipoPlanoClassificacao', 'codigo', 'descricao', 
+      'id', 'tipoPlanoClassificacao', 'codigo', 'descricao', 'status',
       'tipoPrazoFaseCorrente', 'prazoGuardaFaseCorrenteAnos', 
       'prazoGuardaFaseCorrenteCondicaoTextual', 'prazoGuardaFaseIntermediariaAnos',
-      'destinacaoFinal', 'observacoes', 'inativo'
+      'destinacaoFinal', 'observacoes'
     ];
     const csvRows = [headers.join(',')];
 
@@ -458,13 +446,13 @@ export default function ClassificacaoPage() {
           tipoPlanoClassificacao: item.tipoPlanoClassificacao || '',
           codigo: item.codigo,
           descricao: item.descricao,
+          status: item.status,
           tipoPrazoFaseCorrente: item.tipoPrazoFaseCorrente || '',
           prazoGuardaFaseCorrenteAnos: item.prazoGuardaFaseCorrenteAnos ?? '',
           prazoGuardaFaseCorrenteCondicaoTextual: item.prazoGuardaFaseCorrenteCondicaoTextual || '',
           prazoGuardaFaseIntermediariaAnos: item.prazoGuardaFaseIntermediariaAnos,
           destinacaoFinal: item.destinacaoFinal,
           observacoes: item.observacoes || '',
-          inativo: item.inativo,
         };
         const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
@@ -483,10 +471,10 @@ export default function ClassificacaoPage() {
 
   const handleDownloadTemplate = () => {
     const headers = [
-      'tipoPlanoClassificacao', 'codigo', 'descricao', 
+      'tipoPlanoClassificacao', 'codigo', 'descricao', 'status',
       'tipoPrazoFaseCorrente', 'prazoGuardaFaseCorrenteAnos', 
       'prazoGuardaFaseCorrenteCondicaoTextual', 'prazoGuardaFaseIntermediariaAnos',
-      'destinacaoFinal', 'observacoes', 'inativo'
+      'destinacaoFinal', 'observacoes'
     ];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -519,9 +507,9 @@ export default function ClassificacaoPage() {
             
             const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
             const expectedHeaders = [
-              'tipoPlanoClassificacao', 'codigo', 'descricao', 'tipoPrazoFaseCorrente', 
+              'tipoPlanoClassificacao', 'codigo', 'descricao', 'status', 'tipoPrazoFaseCorrente', 
               'prazoGuardaFaseCorrenteAnos', 'prazoGuardaFaseCorrenteCondicaoTextual', 
-              'prazoGuardaFaseIntermediariaAnos', 'destinacaoFinal', 'observacoes', 'inativo'
+              'prazoGuardaFaseIntermediariaAnos', 'destinacaoFinal', 'observacoes'
             ];
             
             const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
@@ -538,8 +526,8 @@ export default function ClassificacaoPage() {
                   newItemData[header] = values[i]?.trim().replace(/"/g, '') || "";
                 });
 
-                if (!newItemData.codigo || !newItemData.descricao || !newItemData.prazoGuardaFaseIntermediariaAnos || !newItemData.destinacaoFinal) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, prazoGuardaFaseIntermediariaAnos, destinacaoFinal) faltando.`);
+                if (!newItemData.codigo || !newItemData.descricao || !newItemData.prazoGuardaFaseIntermediariaAnos || !newItemData.destinacaoFinal || !newItemData.status) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, status, prazoGuardaFaseIntermediariaAnos, destinacaoFinal) faltando.`);
                 }
                 
                 const prazoCorrenteAnos = newItemData.prazoGuardaFaseCorrenteAnos ? parseInt(newItemData.prazoGuardaFaseCorrenteAnos, 10) : undefined;
@@ -550,13 +538,13 @@ export default function ClassificacaoPage() {
                     tipoPlanoClassificacao: newItemData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] || 'Administrativo',
                     codigo: newItemData.codigo,
                     descricao: newItemData.descricao,
+                    status: newItemData.status as Classificacao['status'],
                     tipoPrazoFaseCorrente: newItemData.tipoPrazoFaseCorrente as Classificacao['tipoPrazoFaseCorrente'] || 'Anos',
                     prazoGuardaFaseCorrenteAnos: isNaN(prazoCorrenteAnos as number) ? undefined : prazoCorrenteAnos,
                     prazoGuardaFaseCorrenteCondicaoTextual: newItemData.prazoGuardaFaseCorrenteCondicaoTextual,
                     prazoGuardaFaseIntermediariaAnos: isNaN(prazoIntermediarioAnos) ? 0 : prazoIntermediarioAnos,
                     destinacaoFinal: newItemData.destinacaoFinal as Classificacao['destinacaoFinal'],
                     observacoes: newItemData.observacoes,
-                    inativo: newItemData.inativo.toLowerCase() === 'true',
                 };
                 newItemsFromCsv.push(newItem);
             });
@@ -658,7 +646,19 @@ export default function ClassificacaoPage() {
                   <Label htmlFor="descricao">Assunto*</Label>
                   <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
                 </div>
-
+                 <div className="space-y-2">
+                    <Label htmlFor="status">Status*</Label>
+                    <Select onValueChange={handleSelectChange('status')} value={formState.status}>
+                      <SelectTrigger id="status">
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ativo">Ativo</SelectItem>
+                        <SelectItem value="Inativo">Inativo</SelectItem>
+                        <SelectItem value="Pendente de Complemento">Pendente de Complemento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 <div className="space-y-2">
                   <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
                   <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
@@ -718,10 +718,6 @@ export default function ClassificacaoPage() {
                   <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
                 </div>
 
-                <div className="space-y-2 md:col-span-2 flex items-center gap-2">
-                  <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleCheckboxChange} />
-                  <Label htmlFor="inativo" className="mb-0">Inativo</Label>
-                </div>
               </div>
               </ScrollArea>
               <DialogFooter className="pt-4">
@@ -838,4 +834,3 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
-
