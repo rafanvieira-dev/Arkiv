@@ -253,9 +253,6 @@ export default function TransferenciasPage() {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div className="flex justify-center items-center md:col-span-2 lg:col-span-3 pt-2">
-                                                    <ChevronDown className="h-6 w-6 text-muted-foreground animate-bounce" />
-                                                </div>
                                                 <div className="space-y-2 md:col-span-2 lg:col-span-3">
                                                     <Label htmlFor={`observacoes-${index}`}>Observações</Label>
                                                     <Textarea id={`observacoes-${index}`} value={doc.observacoesGerais} onChange={(e) => handleDocChange(index, 'observacoesGerais', e.target.value)} />
@@ -266,9 +263,11 @@ export default function TransferenciasPage() {
                                 ))}
                             </div>
                         </ScrollArea>
-
                     </CardContent>
-                    <CardFooter className="flex justify-end">
+                    <div className="flex justify-center items-center pb-4 text-muted-foreground">
+                        <ChevronDown className="h-6 w-6 animate-bounce" />
+                    </div>
+                    <CardFooter className="flex justify-end pt-0">
                         <Button onClick={handleSubmit} size="lg"><Send className="mr-2 h-4 w-4" /> Enviar Transferência</Button>
                     </CardFooter>
                 </Card>
