@@ -166,12 +166,28 @@ export default function UsuariosPage() {
           senhaHash: userData.senhaHash || existingUser.senhaHash,
       };
       setUsers(prev => prev.map(u => (u.id === editingUserId ? updatedUser : u)));
-      toast({ title: "Sucesso", description: "Usuário atualizado com sucesso." });
+
+      try {
+        const currentUserJson = localStorage.getItem('currentUser');
+        if (currentUserJson) {
+          const currentUser = JSON.parse(currentUserJson);
+          if (currentUser.id === editingUserId) {
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            toast({ title: "Sucesso", description: "Usuário atualizado. A página será recarregada para aplicar as permissões." });
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            toast({ title: "Sucesso", description: "Usuário atualizado com sucesso." });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to update currentUser in localStorage", error);
+        toast({ title: "Sucesso", description: "Usuário atualizado, mas ocorreu um erro ao atualizar a sessão." });
+      }
     } else {
       const newUser: Usuario = {
         id: `USR${Date.now()}`,
         ...userData,
-        senhaHash: userData.senhaHash!, // Mandatory for new users
+        senhaHash: userData.senhaHash!,
       };
       setUsers(prev => [...prev, newUser]);
       toast({ title: "Sucesso", description: "Usuário criado com sucesso." });
