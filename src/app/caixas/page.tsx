@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Caixa, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
 import { getYear, parseISO } from 'date-fns';
 
@@ -74,6 +75,9 @@ type ColumnConfigCaixas = {
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function CaixasPage() {
+  const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; }>(initialFormStateCaixa);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -341,6 +345,136 @@ export default function CaixasPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
+  const getDerivedData = React.useCallback((caixa: Caixa) => {
+    const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+    if (associatedDocs.length === 0) return { anos: "N/A", prazos: "N/A", eliminacao: "N/A" };
+
+    const years = [...new Set(associatedDocs.map(d => d.dataArquivamento ? getYear(parseISO(d.dataArquivamento)) : null).filter(Boolean))].sort((a, b) => a - b).join(', ');
+    const prazos = [...new Set(associatedDocs.map(d => d.prazoArquivoIntermediarioDisplay).filter(Boolean))].join(', ');
+    const anosEliminacao = [...new Set(associatedDocs.map(d => d.anoEliminacaoPrevisto).filter(Boolean))].sort((a, b) => a.localeCompare(b)).join(', ');
+
+    return {
+      anos: years || "N/A",
+      prazos: prazos || "N/A",
+      eliminacao: anosEliminacao || "N/A"
+    };
+  }, [documentos]);
+
+  const handleExportCSV = () => {
+    const headers = ['id', 'codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedCaixas.length > 0 ? displayedCaixas : caixas;
+
+    dataToExport.forEach(caixa => {
+        const derived = getDerivedData(caixa);
+        const rowData = {
+          id: caixa.id,
+          codigoCaixa: caixa.codigoCaixa,
+          descricao: caixa.descricao || '',
+          tipo: caixa.tipo,
+          status: caixa.status,
+          localizacao: caixa.localizacao || '',
+          situacao: caixa.situacao,
+          anosArquivamento: derived.anos,
+          prazosGuarda: derived.prazos,
+          anosEliminacao: derived.eliminacao,
+        };
+        const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'caixas_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de caixas concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ['codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao'];
+    const csvContent = headers.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_caixas.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = ['codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao'];
+            
+            const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
+            if (!hasAllHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Por favor, utilize o modelo fornecido." });
+                 return;
+            }
+
+            const newCaixasFromCsv: Caixa[] = [];
+            rows.forEach((row, index) => {
+                const values = row.split(',');
+                const newCaixaData: { [key: string]: string } = {};
+                headers.forEach((header, i) => {
+                  newCaixaData[header] = values[i]?.trim().replace(/"/g, '') || "";
+                });
+
+                if (!newCaixaData.codigoCaixa || !newCaixaData.tipo || !newCaixaData.status || !newCaixaData.situacao) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigoCaixa, tipo, status, situacao) faltando.`);
+                }
+
+                const newCaixa: Caixa = {
+                    id: `CX_IMP_${Date.now()}_${index}`,
+                    codigoCaixa: newCaixaData.codigoCaixa,
+                    descricao: newCaixaData.descricao,
+                    tipo: newCaixaData.tipo,
+                    status: newCaixaData.status as Caixa['status'],
+                    localizacao: newCaixaData.localizacao,
+                    situacao: newCaixaData.situacao as Caixa['situacao'],
+                    documentoIds: []
+                };
+                newCaixasFromCsv.push(newCaixa);
+            });
+
+            setCaixas(prev => [...prev, ...newCaixasFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newCaixasFromCsv.length} caixas foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
+
   const numDisplayed = displayedCaixas.length;
   const numSelected = selectedRowIds.length;
 
@@ -348,98 +482,119 @@ export default function CaixasPage() {
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
-        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-          setIsDialogOpen(isOpen);
-          if (!isOpen) {
-            resetFormAndDialogState();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Caixa
+        <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={handleImportClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
-              <DialogDescription>
-                Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="codigoCaixa">Código*</Label>
-                <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
-                <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
-                <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
-                <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo*</Label>
-                <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
-                  <SelectTrigger id="tipo">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="localizacao">Localização</Label>
-                <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status*</Label>
-                <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
-                  <SelectTrigger id="status">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Aberta">Aberta</SelectItem>
-                    <SelectItem value="Fechada">Fechada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="situacao">Situação*</Label>
-                <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
-                  <SelectTrigger id="situacao">
-                    <SelectValue placeholder="Selecione a situação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Completa">Completa</SelectItem>
-                    <SelectItem value="Incompleta">Incompleta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleSaveChanges}>Salvar Caixa</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+            />
+            <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Baixar Modelo
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) {
+                resetFormAndDialogState();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nova Caixa
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
+                  <DialogDescription>
+                    Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="codigoCaixa">Código*</Label>
+                    <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="descricao">Descrição</Label>
+                    <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
+                    <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
+                    <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
+                    <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo">Tipo*</Label>
+                    <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
+                      <SelectTrigger id="tipo">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
+                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="localizacao">Localização</Label>
+                    <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status*</Label>
+                    <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
+                      <SelectTrigger id="status">
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Aberta">Aberta</SelectItem>
+                        <SelectItem value="Fechada">Fechada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="situacao">Situação*</Label>
+                    <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
+                      <SelectTrigger id="situacao">
+                        <SelectValue placeholder="Selecione a situação" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Completa">Completa</SelectItem>
+                        <SelectItem value="Incompleta">Incompleta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4">
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancelar</Button>
+                  </DialogClose>
+                  <Button type="button" onClick={handleSaveChanges}>Salvar Caixa</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+        </div>
       </PageHeader>
 
       <Card className="mt-6">
