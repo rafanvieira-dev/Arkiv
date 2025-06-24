@@ -16,6 +16,7 @@ import { ClientSideDateFormatter } from "@/components/client-side-date-formatter
 import { initialTransferencias, placeholderClassificacoesSimulado, placeholderDocumentos } from "@/lib/mock-data";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getYear, parseISO, isValid } from 'date-fns';
+import { Label } from "@/components/ui/label";
 
 const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
