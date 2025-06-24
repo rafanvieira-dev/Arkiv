@@ -19,6 +19,7 @@ const defaultPermissions: Usuario['permissoes'] = {
   listagens: false,
   solicitacoes: false,
   buscaAvancada: false,
+  transferencias: false,
   usuarios: false,
   configuracoes: false,
 };
