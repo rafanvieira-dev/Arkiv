@@ -189,7 +189,7 @@ export default function ConfiguracoesPage() {
     }
     
     const isDuplicate = tiposOrigem.some(
-      (item) => item.nome.toLowerCase() === origemFormState.nome.trim().toLowerCase() && item.id !== origemFormState.id
+      (item) => item && item.nome && item.nome.toLowerCase() === origemFormState.nome.trim().toLowerCase() && item.id !== origemFormState.id
     );
 
     if (isDuplicate) {
