@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
     return (
         <div className="container mx-auto py-2">
-            <PageHeader title="Dashboard" description="Visão geral do sistema ArquivoCentral." />
+            <PageHeader title="Dashboard" description="Visão geral do sistema ARKIV." />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Link href="/documentos" className="block">

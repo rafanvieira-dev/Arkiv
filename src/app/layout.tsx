@@ -18,7 +18,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'ArquivoCentral',
+  title: 'ARKIV',
   description: 'Sistema de Gerenciamento de Acervo de Arquivo Público',
 };
 

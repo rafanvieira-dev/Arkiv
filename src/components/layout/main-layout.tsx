@@ -70,7 +70,7 @@ function AppHeader() {
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-2">
         {isMobile && <SidebarTrigger />}
-        <h1 className="text-xl font-headline font-semibold text-primary hidden sm:block">ArquivoCentral</h1>
+        <h1 className="text-xl font-headline font-semibold text-primary hidden sm:block">ARKIV</h1>
       </div>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={toggleDarkMode} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
@@ -137,7 +137,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <Logo className="text-sidebar-primary h-8 w-8" />
             <span className="font-headline text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              ArquivoCentral
+              ARKIV
             </span>
           </div>
           <div> 
@@ -148,7 +148,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <SidebarNav />
         </SidebarContent>
         <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden">
-          <p className="text-xs text-sidebar-foreground/70">© {new Date().getFullYear()} ArquivoCentral</p>
+          <p className="text-xs text-sidebar-foreground/70">© {new Date().getFullYear()} ARKIV</p>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">

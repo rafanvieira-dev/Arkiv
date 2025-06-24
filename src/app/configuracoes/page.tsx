@@ -192,7 +192,7 @@ export default function ConfiguracoesPage() {
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
-      <PageHeader title="Configurações do Sistema" description="Ajuste as configurações gerais e os parâmetros do ArquivoCentral." />
+      <PageHeader title="Configurações do Sistema" description="Ajuste as configurações gerais e os parâmetros do ARKIV." />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ListManagementCard
