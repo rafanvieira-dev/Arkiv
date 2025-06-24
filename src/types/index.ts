@@ -9,7 +9,7 @@ export interface ParteDocumento {
 
 export interface MidiaDetalhe {
   id: string; // UUID for the midia entry
-  tipoMidia: "CD-R" | "CD-RW" | "DVD-R" | "DVD-RW" | "Disquete" | "Pen Drive" | "HD" | string; // Allow "Outro"
+  tipoMidia: string;
   numeroMidia?: string;
   paginaMidia?: string;
 }
@@ -20,7 +20,7 @@ export interface Documento {
   orgao: 'TRF2' | 'SJRJ' | 'SJES'; // 1.3
   origem: string; // 1.C - Campo para cadastramento da origem. Cada origem cadastrada ficará gravada no sistema, e o usuário poderá escolher
   tipoMeio: 'Não digital' | 'Digital' | 'Híbrido'; // 1.4
-  generoDocumental: 'Textual' | 'Iconográfico' | 'Cartográfico' | 'Sonoro' | 'Filmográfico' | 'Audiovisual' | string; // 1.5 - Opção padrão "Textual"
+  generoDocumental: string; // 1.5 - Opção padrão "Textual"
   categoria: 'Documento' | 'Dossiê' | 'Processo Judicial' | 'Processo Administrativo'; // 1.6 - Opção padrão "Documento"
   tipoDocumento: string; // 1.7 - Campo para cadastramento do Tipo de Documento.
   numeroDocumento?: string; // 1.8
@@ -34,8 +34,7 @@ export interface Documento {
   numerosApensos?: string; // 1.13 - Simplificado para string por agora
   totalMidias?: number; // 1.14
   // Campos para uma mídia, simplificado:
-  tipoMidiaDetalhe?: "CD-R" | "CD-RW" | "DVD-R" | "DVD-RW" | "Disquete" | "Pen Drive" | "HD" | string; // 1.15
-  outroTipoMidiaDetalhe?: string;
+  tipoMidiaDetalhe?: string; // 1.15
   numeroMidiaDetalhe?: string; // 1.16
   paginaMidiaDetalhe?: string; // 1.17
   
@@ -54,9 +53,7 @@ export interface Documento {
 
   // Simplificado para Partes (1.29)
   tipoPartePrincipal?: string; // Lista extensa, permitir "Outro"
-  outroTipoPartePrincipal?: string;
-  // partes?: ParteDocumento[]; // Estrutura completa para o futuro
-
+  
   segredoJustica: 'Sim' | 'Não'; // 1.30 - Opção padrão “Não”
   grauSigilo: 'Ostensivo' | 'Reservado' | 'Secreto' | 'Ultrassecreto'; // 1.31 - Opção padrão “Ostensivo” (LAI)
   
@@ -67,6 +64,9 @@ export interface Documento {
   numeroListagemEliminacao?: string; // New field for elimination list number
   
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)
+  // Deprecated fields, to be removed after migration if needed
+  outroTipoMidiaDetalhe?: string;
+  outroTipoPartePrincipal?: string;
 }
 
 export interface Classificacao {

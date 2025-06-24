@@ -56,7 +56,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, placeholderClassificacoesSimulado, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -76,7 +76,6 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   numerosApensos: "",
   totalMidias: undefined,
   tipoMidiaDetalhe: undefined,
-  outroTipoMidiaDetalhe: "",
   numeroMidiaDetalhe: "",
   paginaMidiaDetalhe: "",
   digitalizado: "Não",
@@ -93,7 +92,6 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   anoEliminacaoPrevisto: "", 
   nomePartePrincipal: "",
   tipoPartePrincipal: "",
-  outroTipoPartePrincipal: "",
   segredoJustica: "Não",
   grauSigilo: "Ostensivo",
   codigosCaixa: "",
@@ -103,8 +101,6 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   codigoClassificacaoJudicialId: "",
   numeroListagemEliminacao: "",
 };
-
-const tiposParteOpcoes = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima", "Outro"];
 
 const initialFiltersState = {
   status: "",
@@ -150,6 +146,9 @@ const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
+const TIPOS_PARTE_STORAGE_KEY = 'arquivocentral_tipos_parte';
+const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
+const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 
 export default function DocumentosPage() {
   const { toast } = useToast();
@@ -167,10 +166,6 @@ export default function DocumentosPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
-
-  const [outroGeneroDocumental, setOutroGeneroDocumental] = React.useState("");
-  const [outroTipoMidia, setOutroTipoMidia] = React.useState("");
-  const [outroTipoParte, setOutroTipoParte] = React.useState("");
   
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
@@ -188,13 +183,13 @@ export default function DocumentosPage() {
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
+  const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
+  const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
+  const [tiposParte, setTiposParte] = React.useState<string[]>([]);
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
-    setOutroGeneroDocumental("");
-    setOutroTipoMidia("");
-    setOutroTipoParte("");
     setIsFormDisabled(false);
   }, []);
 
@@ -213,14 +208,10 @@ export default function DocumentosPage() {
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
         totalMidias: doc.totalMidias ?? undefined,
         tipoMidiaDetalhe: doc.tipoMidiaDetalhe ?? undefined,
-        outroTipoMidiaDetalhe: doc.outroTipoMidiaDetalhe ?? "",
         numeroMidiaDetalhe: doc.numeroMidiaDetalhe ?? "",
         paginaMidiaDetalhe: doc.paginaMidiaDetalhe ?? "",
       });
       setDocumentIdToDisplay(doc.id);
-      setOutroGeneroDocumental(doc.generoDocumental && !['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'].includes(doc.generoDocumental) ? doc.generoDocumental : "");
-      setOutroTipoMidia(doc.tipoMidiaDetalhe && !['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'].includes(doc.tipoMidiaDetalhe) ? doc.tipoMidiaDetalhe : "");
-      setOutroTipoParte(doc.tipoPartePrincipal && !tiposParteOpcoes.slice(0,-1).includes(doc.tipoPartePrincipal) ? doc.tipoPartePrincipal : "");
       setIsFormDisabled(doc.status === 'Eliminado');
     } else {
       resetForm(); 
@@ -284,7 +275,7 @@ export default function DocumentosPage() {
     { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: true, enableSorting: true },
     { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: true, enableSorting: true },
     { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias', defaultVisible: true, enableSorting: true },
-    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true, cellFormatter: (value, doc) => doc.tipoMidiaDetalhe === 'Outro' ? doc.outroTipoMidiaDetalhe : doc.tipoMidiaDetalhe },
+    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true },
     { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: true, enableSorting: true },
     { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: true, enableSorting: true },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
@@ -349,8 +340,17 @@ export default function DocumentosPage() {
       const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
       setListagens(storedListagens ? JSON.parse(storedListagens) : simulatedListagensData);
       
-      const storedTipos = window.localStorage.getItem(TIPOS_DOCUMENTO_STORAGE_KEY);
-      setTiposDocumento(storedTipos ? JSON.parse(storedTipos) : initialTiposDocumento);
+      const storedTiposDoc = window.localStorage.getItem(TIPOS_DOCUMENTO_STORAGE_KEY);
+      setTiposDocumento(storedTiposDoc ? JSON.parse(storedTiposDoc) : initialTiposDocumento);
+      
+      const storedTiposParte = window.localStorage.getItem(TIPOS_PARTE_STORAGE_KEY);
+      setTiposParte(storedTiposParte ? JSON.parse(storedTiposParte) : initialTiposParte);
+
+      const storedGeneros = window.localStorage.getItem(GENEROS_DOCUMENTAIS_STORAGE_KEY);
+      setGenerosDocumentais(storedGeneros ? JSON.parse(storedGeneros) : initialGenerosDocumentais);
+
+      const storedMidias = window.localStorage.getItem(TIPOS_MIDIA_STORAGE_KEY);
+      setTiposMidia(storedMidias ? JSON.parse(storedMidias) : initialTiposMidia);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -359,6 +359,9 @@ export default function DocumentosPage() {
       setClassificacoes(placeholderClassificacoesSimulado);
       setListagens(simulatedListagensData);
       setTiposDocumento(initialTiposDocumento);
+      setTiposParte(initialTiposParte);
+      setGenerosDocumentais(initialGenerosDocumentais);
+      setTiposMidia(initialTiposMidia);
     }
     setIsDataLoaded(true);
   }, []);
@@ -509,9 +512,6 @@ export default function DocumentosPage() {
 
   const handleSelectChange = (id: keyof Partial<Documento>) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
-    if (id === 'generoDocumental' && value !== 'Outro') setOutroGeneroDocumental("");
-    if (id === 'tipoMidiaDetalhe' && value !== 'Outro') setOutroTipoMidia("");
-    if (id === 'tipoPartePrincipal' && value !== 'Outro') setOutroTipoParte("");
   };
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
@@ -569,9 +569,9 @@ export default function DocumentosPage() {
       ...formState, 
       id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
-      generoDocumental: formState.generoDocumental === 'Outro' ? outroGeneroDocumental : formState.generoDocumental!,
-      tipoMidiaDetalhe: formState.tipoMidiaDetalhe === 'Outro' ? outroTipoMidia : formState.tipoMidiaDetalhe,
-      tipoPartePrincipal: formState.tipoPartePrincipal === 'Outro' ? outroTipoParte : formState.tipoPartePrincipal,
+      generoDocumental: formState.generoDocumental!,
+      tipoMidiaDetalhe: formState.tipoMidiaDetalhe,
+      tipoPartePrincipal: formState.tipoPartePrincipal,
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -946,18 +946,11 @@ export default function DocumentosPage() {
                 <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
                   <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Textual">Textual</SelectItem>
-                    <SelectItem value="Iconográfico">Iconográfico</SelectItem>
-                    <SelectItem value="Cartográfico">Cartográfico</SelectItem>
-                    <SelectItem value="Sonoro">Sonoro</SelectItem>
-                    <SelectItem value="Filmográfico">Filmográfico</SelectItem>
-                    <SelectItem value="Audiovisual">Audiovisual</SelectItem>
-                    <SelectItem value="Outro">Outro (Especificar)</SelectItem>
+                    {generosDocumentais.sort((a, b) => a.localeCompare(b)).map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {formState.generoDocumental === 'Outro' && (
-                  <Input id="outroGeneroDocumentalInput" value={outroGeneroDocumental} onChange={(e) => setOutroGeneroDocumental(e.target.value)} placeholder="Especifique o gênero" className="mt-2" disabled={isFormDisabled} />
-                )}
               </div>
 
               <div className="space-y-2">
@@ -1011,12 +1004,9 @@ export default function DocumentosPage() {
                 <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal} disabled={isFormDisabled}>
                   <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                   <SelectContent>
-                    {tiposParteOpcoes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    {tiposParte.sort((a,b) => a.localeCompare(b)).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {formState.tipoPartePrincipal === 'Outro' && (
-                  <Input id="outroTipoPartePrincipalInput" value={outroTipoParte} onChange={(e) => setOutroTipoParte(e.target.value)} placeholder="Especifique o tipo de parte" className="mt-2" disabled={isFormDisabled} />
-                )}
               </div>
               
               <div className="space-y-2">
@@ -1092,19 +1082,11 @@ export default function DocumentosPage() {
                     <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
                       <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CD-R">CD-R</SelectItem>
-                        <SelectItem value="CD-RW">CD-RW</SelectItem>
-                        <SelectItem value="DVD-R">DVD-R</SelectItem>
-                        <SelectItem value="DVD-RW">DVD-RW</SelectItem>
-                        <SelectItem value="Disquete">Disquete</SelectItem>
-                        <SelectItem value="Pen Drive">Pen Drive</SelectItem>
-                        <SelectItem value="HD">HD Externo</SelectItem>
-                        <SelectItem value="Outro">Outro (Especificar)</SelectItem>
+                        {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
+                           <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    {formState.tipoMidiaDetalhe === 'Outro' && (
-                      <Input id="outroTipoMidiaInput" value={outroTipoMidia} onChange={(e) => setOutroTipoMidia(e.target.value)} placeholder="Especifique o tipo de mídia" className="mt-2" disabled={isFormDisabled} />
-                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
@@ -1333,12 +1315,9 @@ export default function DocumentosPage() {
                   <SelectTrigger id="filterGeneroDocumental"><SelectValue placeholder="Todos os gêneros" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL_VALUES_SENTINEL}>Todos os gêneros</SelectItem>
-                    <SelectItem value="Textual">Textual</SelectItem>
-                    <SelectItem value="Iconográfico">Iconográfico</SelectItem>
-                    <SelectItem value="Cartográfico">Cartográfico</SelectItem>
-                    <SelectItem value="Sonoro">Sonoro</SelectItem>
-                    <SelectItem value="Filmográfico">Filmográfico</SelectItem>
-                    <SelectItem value="Audiovisual">Audiovisual</SelectItem>
+                    {generosDocumentais.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

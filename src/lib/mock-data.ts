@@ -49,9 +49,6 @@ export const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 0,
     tipoMidiaDetalhe: undefined,
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "",
-    paginaMidiaDetalhe: "",
     digitalizado: "Não", 
     tipoBaixa: "",
     dataBaixa: undefined,
@@ -62,7 +59,6 @@ export const placeholderDocumentos: Documento[] = [
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2039", 
     tipoPartePrincipal: "Autor",
-    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX001", 
@@ -92,7 +88,6 @@ export const placeholderDocumentos: Documento[] = [
     numerosApensos: "AP001",
     totalMidias: 1,
     tipoMidiaDetalhe: "DVD-R",
-    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "M001",
     paginaMidiaDetalhe: "1-10",
     digitalizado: "Sim", 
@@ -105,7 +100,6 @@ export const placeholderDocumentos: Documento[] = [
     alteracaoDestinacaoFinal: "Não Alterar",
     anoEliminacaoPrevisto: "2027", 
     tipoPartePrincipal: "Requerente",
-    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX002", 
@@ -134,7 +128,6 @@ export const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 2,
     tipoMidiaDetalhe: "Pen Drive",
-    outroTipoMidiaDetalhe: "",
     numeroMidiaDetalhe: "M002, M003",
     paginaMidiaDetalhe: "N/A",
     digitalizado: "Sim", 
@@ -147,7 +140,6 @@ export const placeholderDocumentos: Documento[] = [
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "", 
     tipoPartePrincipal: "Interessado",
-    outroTipoPartePrincipal: "",
     segredoJustica: "Sim", 
     grauSigilo: "Secreto", 
     codigosCaixa: "CX001, CX003", 
@@ -176,9 +168,6 @@ export const placeholderDocumentos: Documento[] = [
     numerosApensos: "",
     totalMidias: 0,
     tipoMidiaDetalhe: undefined,
-    outroTipoMidiaDetalhe: "",
-    numeroMidiaDetalhe: "",
-    paginaMidiaDetalhe: "",
     digitalizado: "Não", 
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
@@ -189,7 +178,6 @@ export const placeholderDocumentos: Documento[] = [
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2018", 
     tipoPartePrincipal: "Requerente",
-    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Ostensivo", 
     codigosCaixa: "CX-TEMP-001", 
@@ -231,7 +219,6 @@ export const placeholderDocumentos: Documento[] = [
     alteracaoDestinacaoFinal: "Não Alterar", 
     anoEliminacaoPrevisto: "2026", 
     tipoPartePrincipal: "Autor",
-    outroTipoPartePrincipal: "",
     segredoJustica: "Não", 
     grauSigilo: "Reservado", 
     codigosCaixa: "CX-DIG-010", 
@@ -422,3 +409,19 @@ export const initialTransferencias: Transferencia[] = [
         ]
     }
 ];
+
+export const initialTiposDocumento: string[] = [
+  "Ação Ordinária", 
+  "Comunicação Interna", 
+  "Execução Fiscal", 
+  "Petição", 
+  "Procedimento do Juizado Especial Cível", 
+  "Requerimento", 
+  "Solicitação de Informações"
+];
+
+export const initialGenerosDocumentais: string[] = ['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'];
+
+export const initialTiposMidia: string[] = ['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 'Disquete', 'Pen Drive', 'HD'];
+
+export const initialTiposParte: string[] = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima"];
