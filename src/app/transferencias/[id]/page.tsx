@@ -32,7 +32,6 @@ export default function TransferenciaDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   const [allTransferencias, setAllTransferencias] = React.useState<Transferencia[]>([]);
-  const [allDocumentos, setAllDocumentos] = React.useState<Documento[]>([]);
   const [allClassificacoes, setAllClassificacoes] = React.useState<Classificacao[]>([]);
 
   React.useEffect(() => {
@@ -41,9 +40,6 @@ export default function TransferenciaDetailPage() {
       const transferenciasData = storedTransferencias ? JSON.parse(storedTransferencias) : initialTransferencias;
       setAllTransferencias(transferenciasData);
       
-      const storedDocumentos = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
-      setAllDocumentos(storedDocumentos ? JSON.parse(storedDocumentos) : placeholderDocumentos);
-
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       setAllClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : placeholderClassificacoesSimulado);
 
@@ -59,6 +55,11 @@ export default function TransferenciaDetailPage() {
 
   const handleApprove = () => {
     if (!transferencia) return;
+    
+    // Read the latest document list directly from localStorage to prevent using stale state
+    const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+    const currentAllDocuments: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
+
 
     // 1. Create new Documento records
     const newDocsFromTransfer: Documento[] = transferencia.documentos.map((docTransfer, index) => {
@@ -128,11 +129,11 @@ export default function TransferenciaDetailPage() {
 
     // 2. Update transfer status
     const updatedTransferencias = allTransferencias.map(t =>
-      t.id === transferencia.id ? { ...t, status: 'Aprovada' } : t
+      t.id === transferencia.id ? { ...t, status: 'Aprovada' as const } : t
     );
 
     // 3. Combine new docs with existing ones
-    const updatedAllDocs = [...allDocumentos, ...newDocsFromTransfer];
+    const updatedAllDocs = [...currentAllDocuments, ...newDocsFromTransfer];
 
     // 4. Save to localStorage
     try {
@@ -150,7 +151,7 @@ export default function TransferenciaDetailPage() {
   const handleReject = () => {
     if (!transferencia) return;
     const updatedTransferencias = allTransferencias.map(t =>
-      t.id === transferencia.id ? { ...t, status: 'Reprovada' } : t
+      t.id === transferencia.id ? { ...t, status: 'Reprovada' as const } : t
     );
     try {
       window.localStorage.setItem(TRANSFERENCIAS_STORAGE_KEY, JSON.stringify(updatedTransferencias));
