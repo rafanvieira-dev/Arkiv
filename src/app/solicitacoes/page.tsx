@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import type { Solicitacao, Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ListFilter,
-  ColumnsIcon, CheckSquare, Square
+  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
 
 export default function SolicitacoesPage() {
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [acervoDocs, setAcervoDocs] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
@@ -527,6 +528,159 @@ export default function SolicitacoesPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      'id', 'numeroSolicitacao', 'nomeSolicitante', 'setorSolicitante', 
+      'siglaServidor', 'matriculaSolicitante', 'ramal', 'emailContato', 
+      'tipo', 'dataSolicitacao', 'dataAtendimento', 'dataDevolucao', 
+      'status', 'observacoes', 'documentoIds'
+    ];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedSolicitacoes.length > 0 ? displayedSolicitacoes : solicitacoes;
+
+    dataToExport.forEach(item => {
+        const rowData = {
+          id: item.id,
+          numeroSolicitacao: item.numeroSolicitacao,
+          nomeSolicitante: item.nomeSolicitante,
+          setorSolicitante: item.setorSolicitante || '',
+          siglaServidor: item.siglaServidor || '',
+          matriculaSolicitante: item.matriculaSolicitante || '',
+          ramal: item.ramal || '',
+          emailContato: item.emailContato || '',
+          tipo: item.tipo,
+          dataSolicitacao: item.dataSolicitacao,
+          dataAtendimento: item.dataAtendimento || '',
+          dataDevolucao: item.dataDevolucao || '',
+          status: item.status,
+          observacoes: item.observacoes || '',
+          documentoIds: item.documentoIds.join(';')
+        };
+        const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'solicitacoes_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de solicitações concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      'nomeSolicitante', 'setorSolicitante', 'siglaServidor', 
+      'matriculaSolicitante', 'ramal', 'emailContato', 'tipo', 
+      'dataSolicitacao', 'dataAtendimento', 'dataDevolucao', 
+      'observacoes', 'documentoIds'
+    ];
+    const exampleRow = [
+      "Nome Exemplo", "Setor Exemplo", "EX", "12345", "6789", "exemplo@email.com",
+      "Empréstimo", new Date().toISOString(), "", "", "Observação de exemplo",
+      "DOC001;DOC002"
+    ].map(v => `"${v}"`).join(',');
+
+    const csvContent = `${headers.join(',')}\n${exampleRow}`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_solicitacoes.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = [
+                'nomeSolicitante', 'tipo', 'dataSolicitacao', 'documentoIds'
+            ];
+            
+            const hasRequiredHeaders = expectedHeaders.every(h => headers.includes(h));
+            if (!hasRequiredHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${expectedHeaders.filter(h => !headers.includes(h)).join(', ')}.`, duration: 8000 });
+                 return;
+            }
+
+            const newItemsFromCsv: Solicitacao[] = [];
+            rows.forEach((row, index) => {
+                if(!row.trim()) return;
+                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const newItemData: { [key: string]: any } = {};
+                headers.forEach((header, i) => {
+                  newItemData[header] = values[i] || "";
+                });
+
+                if (!newItemData.nomeSolicitante || !newItemData.tipo || !newItemData.dataSolicitacao || !newItemData.documentoIds) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (nomeSolicitante, tipo, dataSolicitacao, documentoIds) faltando.`);
+                }
+                
+                const docIds = newItemData.documentoIds ? newItemData.documentoIds.split(';').map((id: string) => id.trim()).filter(Boolean) : [];
+
+                let finalStatus: Solicitacao['status'] = 'Pendente';
+                if (newItemData.dataDevolucao) {
+                  finalStatus = 'Devolvido';
+                } else if (newItemData.dataAtendimento) {
+                  finalStatus = 'Atendida';
+                }
+
+                const newItem: Solicitacao = {
+                    id: `SOL_IMP_${Date.now()}_${index}`,
+                    numeroSolicitacao: `SOL-${new Date().getFullYear()}-${(Date.now() + index).toString().slice(-5)}`,
+                    nomeSolicitante: newItemData.nomeSolicitante,
+                    setorSolicitante: newItemData.setorSolicitante,
+                    siglaServidor: newItemData.siglaServidor,
+                    matriculaSolicitante: newItemData.matriculaSolicitante,
+                    ramal: newItemData.ramal,
+                    emailContato: newItemData.emailContato,
+                    tipo: newItemData.tipo as Solicitacao['tipo'],
+                    dataSolicitacao: newItemData.dataSolicitacao,
+                    dataAtendimento: newItemData.dataAtendimento || undefined,
+                    dataDevolucao: newItemData.dataDevolucao || undefined,
+                    documentoIds: docIds,
+                    status: finalStatus,
+                    observacoes: newItemData.observacoes,
+                };
+                newItemsFromCsv.push(newItem);
+            });
+
+            setSolicitacoes(prev => [...prev, ...newItemsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newItemsFromCsv.length} solicitações foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
   const numDisplayed = displayedSolicitacoes.length;
   const numSelected = selectedRowIds.length;
 
@@ -534,224 +688,245 @@ export default function SolicitacoesPage() {
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Solicitações" description="Cadastre e acompanhe empréstimos e desarquivamentos.">
-        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-          setIsDialogOpen(isOpen);
-          if (!isOpen) resetFormAndDialogState();
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Solicitação
+        <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={handleImportClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-primary">{isEditing ? `Editar Solicitação: ${formState.numeroSolicitacao}` : "Nova Solicitação"}</DialogTitle>
-              <DialogDescription>
-                Preencha os dados da solicitação. Campos com * são obrigatórios.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
-                 <div className="space-y-2 lg:col-span-3">
-                  <Label htmlFor="tipo">Tipo de Solicitação*</Label>
-                  <Select onValueChange={handleSelectChange('tipo')} value={formState.tipo}>
-                    <SelectTrigger id="tipo"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Empréstimo">Empréstimo</SelectItem>
-                      <SelectItem value="Desarquivamento">Desarquivamento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formState.tipo === 'Empréstimo' && (
-                      <p className="text-xs text-muted-foreground mt-2">Empréstimo é para quando o documento será somente consultado, sem tramitação.</p>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+            />
+            <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Baixar Modelo
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) resetFormAndDialogState();
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nova Solicitação
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-primary">{isEditing ? `Editar Solicitação: ${formState.numeroSolicitacao}` : "Nova Solicitação"}</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados da solicitação. Campos com * são obrigatórios.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
+                     <div className="space-y-2 lg:col-span-3">
+                      <Label htmlFor="tipo">Tipo de Solicitação*</Label>
+                      <Select onValueChange={handleSelectChange('tipo')} value={formState.tipo}>
+                        <SelectTrigger id="tipo"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Empréstimo">Empréstimo</SelectItem>
+                          <SelectItem value="Desarquivamento">Desarquivamento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formState.tipo === 'Empréstimo' && (
+                          <p className="text-xs text-muted-foreground mt-2">Empréstimo é para quando o documento será somente consultado, sem tramitação.</p>
+                      )}
+                      {formState.tipo === 'Desarquivamento' && (
+                          <p className="text-xs text-muted-foreground mt-2">Essa opção é para quando o documento voltará a tramitar, e implica em nova contagem de prazo após o rearquivamento.</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nomeSolicitante">Nome Solicitante*</Label>
+                      <Input id="nomeSolicitante" value={formState.nomeSolicitante || ""} onChange={handleFormInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="setorSolicitante">Setor do Solicitante</Label>
+                      <Input id="setorSolicitante" value={formState.setorSolicitante || ""} onChange={handleFormInputChange} />
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="siglaServidor">Sigla do Servidor</Label>
+                      <Input id="siglaServidor" value={formState.siglaServidor || ""} onChange={handleFormInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="matriculaSolicitante">Matrícula</Label>
+                      <Input id="matriculaSolicitante" value={formState.matriculaSolicitante || ""} onChange={handleFormInputChange} />
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="ramal">Ramal</Label>
+                      <Input id="ramal" value={formState.ramal || ""} onChange={handleFormInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emailContato">E-mail de Contato</Label>
+                      <Input id="emailContato" type="email" value={formState.emailContato || ""} onChange={handleFormInputChange} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dataSolicitacao">Data da Solicitação*</Label>
+                      <DateInputPicker 
+                        value={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
+                        onChange={(date) => handleDateChange('dataSolicitacao')(date)}
+                        placeholder="dd/mm/aaaa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dataAtendimento">Data de Atendimento</Label>
+                      <DateInputPicker 
+                        value={formState.dataAtendimento ? parseISO(formState.dataAtendimento) : undefined}
+                        onChange={(date) => handleDateChange('dataAtendimento')(date)}
+                        placeholder="dd/mm/aaaa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dataDevolucao">Data de Devolução</Label>
+                      <DateInputPicker 
+                        value={formState.dataDevolucao ? parseISO(formState.dataDevolucao) : undefined}
+                        onChange={(date) => handleDateChange('dataDevolucao')(date)}
+                        placeholder="dd/mm/aaaa"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-3 space-y-2">
+                      <Label htmlFor="observacoes">Observações</Label>
+                      <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleFormInputChange} rows={2}/>
+                    </div>
+                  </div>
+
+                  {!isDocumentSelectionVisible && (
+                    <div className="mt-4 flex justify-center">
+                      <Button type="button" onClick={() => setIsDocumentSelectionVisible(true)} variant="outline">
+                        <ListFilter className="mr-2 h-4 w-4" /> Selecionar Documentos
+                      </Button>
+                    </div>
                   )}
-                  {formState.tipo === 'Desarquivamento' && (
-                      <p className="text-xs text-muted-foreground mt-2">Essa opção é para quando o documento voltará a tramitar, e implica em nova contagem de prazo após o rearquivamento.</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nomeSolicitante">Nome Solicitante*</Label>
-                  <Input id="nomeSolicitante" value={formState.nomeSolicitante || ""} onChange={handleFormInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="setorSolicitante">Setor do Solicitante</Label>
-                  <Input id="setorSolicitante" value={formState.setorSolicitante || ""} onChange={handleFormInputChange} />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="siglaServidor">Sigla do Servidor</Label>
-                  <Input id="siglaServidor" value={formState.siglaServidor || ""} onChange={handleFormInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="matriculaSolicitante">Matrícula</Label>
-                  <Input id="matriculaSolicitante" value={formState.matriculaSolicitante || ""} onChange={handleFormInputChange} />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="ramal">Ramal</Label>
-                  <Input id="ramal" value={formState.ramal || ""} onChange={handleFormInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emailContato">E-mail de Contato</Label>
-                  <Input id="emailContato" type="email" value={formState.emailContato || ""} onChange={handleFormInputChange} />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dataSolicitacao">Data da Solicitação*</Label>
-                  <DateInputPicker 
-                    value={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
-                    onChange={(date) => handleDateChange('dataSolicitacao')(date)}
-                    placeholder="dd/mm/aaaa"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dataAtendimento">Data de Atendimento</Label>
-                  <DateInputPicker 
-                    value={formState.dataAtendimento ? parseISO(formState.dataAtendimento) : undefined}
-                    onChange={(date) => handleDateChange('dataAtendimento')(date)}
-                    placeholder="dd/mm/aaaa"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dataDevolucao">Data de Devolução</Label>
-                  <DateInputPicker 
-                    value={formState.dataDevolucao ? parseISO(formState.dataDevolucao) : undefined}
-                    onChange={(date) => handleDateChange('dataDevolucao')(date)}
-                    placeholder="dd/mm/aaaa"
-                  />
-                </div>
-
-                <div className="lg:col-span-3 space-y-2">
-                  <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleFormInputChange} rows={2}/>
-                </div>
-              </div>
-
-              {!isDocumentSelectionVisible && (
-                <div className="mt-4 flex justify-center">
-                  <Button type="button" onClick={() => setIsDocumentSelectionVisible(true)} variant="outline">
-                    <ListFilter className="mr-2 h-4 w-4" /> Selecionar Documentos
-                  </Button>
-                </div>
-              )}
-
-              {isDocumentSelectionVisible && (
-                <div className="mt-6">
-                  <Label className="text-md font-medium">Documentos Solicitados*</Label>
-                  <Card className="mt-2">
-                    <CardHeader className="p-4">
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Input 
-                          name="searchTerm" 
-                          placeholder="Pesquisar por nº, espécie, descrição, caixa..." 
-                          value={dialogDocFilters.searchTerm} 
-                          onChange={handleDialogDocFilterChange}
-                          className="w-full"
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <ScrollArea className="h-[250px] w-full border-t">
-                        <Table className="min-w-max whitespace-nowrap text-xs">
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="py-1 px-2 w-10 sticky left-0 bg-card z-10">
-                                <Checkbox
-                                  checked={documentsForDialog.length > 0 && documentsForDialog.filter(isDocumentSelectable).length > 0 && documentsForDialog.filter(isDocumentSelectable).every(doc => selectedDocIdsInDialog.includes(doc.id))}
-                                  onCheckedChange={(value) => {
-                                    const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
-                                    setSelectedDocIdsInDialog(value ? selectableIds : []);
-                                  }}
-                                  disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
-                                />
-                              </TableHead>
-                              <TableHead className="py-1 px-2 sticky left-12 bg-card z-10">
-                                <Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Nº Doc {renderDialogDocSortIcon('numeroDocumento')}
-                                </Button>
-                              </TableHead>
-                              <TableHead className="py-1 px-2">
-                                <Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Espécie {renderDialogDocSortIcon('tipoDocumento')}
-                                </Button>
-                              </TableHead>
-                              <TableHead className="py-1 px-2">
-                                <Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Descrição {renderDialogDocSortIcon('descricaoDocumento')}
-                                </Button>
-                              </TableHead>
-                               <TableHead className="py-1 px-2">
-                                <Button variant="ghost" onClick={() => handleDialogDocSort('codigosCaixa')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Caixa(s) {renderDialogDocSortIcon('codigosCaixa')}
-                                </Button>
-                              </TableHead>
-                              <TableHead className="py-1 px-2">
-                                <Button variant="ghost" onClick={() => handleDialogDocSort('status')} className="px-1 py-0 h-auto -ml-1 text-xs">
-                                  Status Acervo {renderDialogDocSortIcon('status')}
-                                </Button>
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {documentsForDialog.map(doc => {
-                              const selectable = isDocumentSelectable(doc);
-                              return (
-                                <TableRow key={doc.id} className={!selectable && !selectedDocIdsInDialog.includes(doc.id) ? "opacity-50" : ""}>
-                                  <TableCell className="py-1 px-2 sticky left-0 bg-card z-10">
-                                    <Checkbox 
-                                      checked={selectedDocIdsInDialog.includes(doc.id)}
+                  {isDocumentSelectionVisible && (
+                    <div className="mt-6">
+                      <Label className="text-md font-medium">Documentos Solicitados*</Label>
+                      <Card className="mt-2">
+                        <CardHeader className="p-4">
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Input 
+                              name="searchTerm" 
+                              placeholder="Pesquisar por nº, espécie, descrição, caixa..." 
+                              value={dialogDocFilters.searchTerm} 
+                              onChange={handleDialogDocFilterChange}
+                              className="w-full"
+                            />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <ScrollArea className="h-[250px] w-full border-t">
+                            <Table className="min-w-max whitespace-nowrap text-xs">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="py-1 px-2 w-10 sticky left-0 bg-card z-10">
+                                    <Checkbox
+                                      checked={documentsForDialog.length > 0 && documentsForDialog.filter(isDocumentSelectable).length > 0 && documentsForDialog.filter(isDocumentSelectable).every(doc => selectedDocIdsInDialog.includes(doc.id))}
                                       onCheckedChange={(value) => {
-                                        setSelectedDocIdsInDialog(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
+                                        const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
+                                        setSelectedDocIdsInDialog(value ? selectableIds : []);
                                       }}
-                                      disabled={!selectable}
+                                      disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
                                     />
-                                  </TableCell>
-                                  <TableCell className="py-1 px-2 sticky left-12 bg-card z-10 font-medium">{doc.numeroDocumento || "N/A"}</TableCell>
-                                  <TableCell className="py-1 px-2">{doc.tipoDocumento || "N/A"}</TableCell>
-                                  <TableCell className="py-1 px-2">
-                                    <span className="block max-w-xs truncate" title={doc.descricaoDocumento || ""}>
-                                      {doc.descricaoDocumento || "N/A"}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="py-1 px-2">{doc.codigosCaixa || "N/A"}</TableCell>
-                                  <TableCell className="py-1 px-2">
-                                    <Badge variant={
-                                        doc.status === 'Arquivado' ? 'secondary' :
-                                        doc.status === 'Emprestado' ? 'default' :
-                                        doc.status === 'Eliminado' ? 'destructive' :
-                                        doc.status === 'Desarquivado' ? 'destructive' :
-                                        'outline'
-                                      }
-                                      className={
-                                        doc.status === 'Emprestado' ? 'border-transparent bg-orange-500 text-orange-50 hover:bg-orange-500/80 dark:bg-orange-600 dark:text-orange-50 dark:hover:bg-orange-600/80' :
-                                        doc.status === 'Desarquivado' ? 'border-transparent bg-purple-500 text-purple-50 hover:bg-purple-500/80 dark:bg-purple-600 dark:text-purple-50 dark:hover:bg-purple-600/80' :
-                                        doc.status === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
-                                        doc.status === 'Arquivado' ? 'border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80' : ''
-                                      }
-                                    >
-                                      {doc.status}
-                                    </Badge>
-                                  </TableCell>
+                                  </TableHead>
+                                  <TableHead className="py-1 px-2 sticky left-12 bg-card z-10">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                      Nº Doc {renderDialogDocSortIcon('numeroDocumento')}
+                                    </Button>
+                                  </TableHead>
+                                  <TableHead className="py-1 px-2">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                      Espécie {renderDialogDocSortIcon('tipoDocumento')}
+                                    </Button>
+                                  </TableHead>
+                                  <TableHead className="py-1 px-2">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                      Descrição {renderDialogDocSortIcon('descricaoDocumento')}
+                                    </Button>
+                                  </TableHead>
+                                   <TableHead className="py-1 px-2">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('codigosCaixa')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                      Caixa(s) {renderDialogDocSortIcon('codigosCaixa')}
+                                    </Button>
+                                  </TableHead>
+                                  <TableHead className="py-1 px-2">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('status')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                      Status Acervo {renderDialogDocSortIcon('status')}
+                                    </Button>
+                                  </TableHead>
                                 </TableRow>
-                              );
-                            })}
-                            {documentsForDialog.length === 0 && (
-                              <TableRow><TableCell colSpan={6} className="h-24 text-center">Nenhum documento encontrado.</TableCell></TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                        <ScrollBar orientation="horizontal" />
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+                              </TableHeader>
+                              <TableBody>
+                                {documentsForDialog.map(doc => {
+                                  const selectable = isDocumentSelectable(doc);
+                                  return (
+                                    <TableRow key={doc.id} className={!selectable && !selectedDocIdsInDialog.includes(doc.id) ? "opacity-50" : ""}>
+                                      <TableCell className="py-1 px-2 sticky left-0 bg-card z-10">
+                                        <Checkbox 
+                                          checked={selectedDocIdsInDialog.includes(doc.id)}
+                                          onCheckedChange={(value) => {
+                                            setSelectedDocIdsInDialog(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
+                                          }}
+                                          disabled={!selectable}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="py-1 px-2 sticky left-12 bg-card z-10 font-medium">{doc.numeroDocumento || "N/A"}</TableCell>
+                                      <TableCell className="py-1 px-2">{doc.tipoDocumento || "N/A"}</TableCell>
+                                      <TableCell className="py-1 px-2">
+                                        <span className="block max-w-xs truncate" title={doc.descricaoDocumento || ""}>
+                                          {doc.descricaoDocumento || "N/A"}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="py-1 px-2">{doc.codigosCaixa || "N/A"}</TableCell>
+                                      <TableCell className="py-1 px-2">
+                                        <Badge variant={
+                                            doc.status === 'Arquivado' ? 'secondary' :
+                                            doc.status === 'Emprestado' ? 'default' :
+                                            doc.status === 'Eliminado' ? 'destructive' :
+                                            doc.status === 'Desarquivado' ? 'destructive' :
+                                            'outline'
+                                          }
+                                          className={
+                                            doc.status === 'Emprestado' ? 'border-transparent bg-orange-500 text-orange-50 hover:bg-orange-500/80 dark:bg-orange-600 dark:text-orange-50 dark:hover:bg-orange-600/80' :
+                                            doc.status === 'Desarquivado' ? 'border-transparent bg-purple-500 text-purple-50 hover:bg-purple-500/80 dark:bg-purple-600 dark:text-purple-50 dark:hover:bg-purple-600/80' :
+                                            doc.status === 'Aguardando prazo para eliminação' ? 'border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80' :
+                                            doc.status === 'Arquivado' ? 'border-transparent bg-green-500 text-green-50 hover:bg-green-500/80 dark:bg-green-600 dark:text-green-50 dark:hover:bg-green-600/80' : ''
+                                          }
+                                        >
+                                          {doc.status}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                                {documentsForDialog.length === 0 && (
+                                  <TableRow><TableCell colSpan={6} className="h-24 text-center">Nenhum documento encontrado.</TableCell></TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                            <ScrollBar orientation="horizontal" />
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
 
-            </ScrollArea>
-            <DialogFooter className="pt-6">
-              <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-              <Button type="button" onClick={handleSaveChanges}>Salvar Solicitação</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                </ScrollArea>
+                <DialogFooter className="pt-6">
+                  <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                  <Button type="button" onClick={handleSaveChanges}>Salvar Solicitação</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+        </div>
       </PageHeader>
 
       <Card className="mt-6">
@@ -888,3 +1063,5 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
+
+    
