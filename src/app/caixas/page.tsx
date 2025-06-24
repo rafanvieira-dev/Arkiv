@@ -42,15 +42,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { initialCaixas } from "@/lib/mock-data";
 
 
 const tiposCaixaPadrao = ["JUD", "DOC", "ADM", "ADM/SIGA", "JUD/APOLO", "JUD/HÍBRIDO"];
-
-const initialCaixas: Caixa[] = [
-  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
-  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
-  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
-];
 
 const initialFormStateCaixa: Partial<Caixa> = {
   codigoCaixa: "",

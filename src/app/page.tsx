@@ -6,9 +6,27 @@ import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Send, ArrowRightLeft, AlertTriangle, PlusCircle, Archive, Search } from "lucide-react";
-import { placeholderDocumentos, placeholderSolicitacoesInitial, initialTransferencias } from "@/lib/mock-data";
+import { 
+    FileText, Send, ArrowRightLeft, AlertTriangle, PlusCircle, Archive, Search,
+    FileUp, Trash2, Clock, Box, ListChecks
+} from "lucide-react";
+import { 
+    placeholderDocumentos, 
+    placeholderSolicitacoesInitial, 
+    initialTransferencias,
+    initialCaixas,
+    simulatedListagensData,
+} from "@/lib/mock-data";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
+import type { Documento, Solicitacao, Transferencia, Caixa, ListagemEliminacao } from '@/types';
+
+
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
+const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
+const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
+const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
+
 
 export default function DashboardPage() {
     const [stats, setStats] = React.useState({
@@ -16,26 +34,75 @@ export default function DashboardPage() {
         pendingSolicitacoes: 0,
         pendingTransferencias: 0,
         docsToExpire: 0,
+        totalDocsArquivados: 0,
+        totalDocsEmprestados: 0,
+        totalDocsDesarquivados: 0,
+        totalDocsEliminados: 0,
+        totalDocsAguardandoEliminacao: 0,
+        totalCaixas: 0,
+        totalListagens: 0,
     });
+    
+    const [recentActivities, setRecentActivities] = React.useState<{ type: string; id: string; date: string; link: string; }[]>([]);
 
     React.useEffect(() => {
         // Data loading and processing will only run on the client side.
-        const totalDocs = placeholderDocumentos.length;
-        const pendingSolicitacoes = placeholderSolicitacoesInitial.filter(s => s.status === 'Pendente').length;
-        const pendingTransferencias = initialTransferencias.filter(t => t.status === 'Pendente').length;
+        const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+        const allDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
+        
+        const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
+        const allSolicitacoes: Solicitacao[] = storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial;
+        
+        const storedTransferencias = window.localStorage.getItem(TRANSFERENCIAS_STORAGE_KEY);
+        const allTransferencias: Transferencia[] = storedTransferencias ? JSON.parse(storedTransferencias) : initialTransferencias;
+        
+        const storedCaixas = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
+        const allCaixas: Caixa[] = storedCaixas ? JSON.parse(storedCaixas) : initialCaixas;
+
+        const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
+        const allListagens: ListagemEliminacao[] = storedListagens ? JSON.parse(storedListagens) : simulatedListagensData;
+
+
+        const totalDocs = allDocs.length;
+        const pendingSolicitacoes = allSolicitacoes.filter(s => s.status === 'Pendente').length;
+        const pendingTransferencias = allTransferencias.filter(t => t.status === 'Pendente').length;
         
         const currentYear = new Date().getFullYear();
-        const docsToExpire = placeholderDocumentos.filter(d => 
+        const docsToExpire = allDocs.filter(d => 
             d.anoEliminacaoPrevisto && parseInt(d.anoEliminacaoPrevisto, 10) <= currentYear + 1
         ).length;
+        
+        const totalDocsArquivados = allDocs.filter(d => d.status === 'Arquivado').length;
+        const totalDocsEmprestados = allDocs.filter(d => d.status === 'Emprestado').length;
+        const totalDocsDesarquivados = allDocs.filter(d => d.status === 'Desarquivado').length;
+        const totalDocsEliminados = allDocs.filter(d => d.status === 'Eliminado').length;
+        const totalDocsAguardandoEliminacao = allDocs.filter(d => d.status === 'Aguardando prazo para eliminação').length;
 
-        setStats({ totalDocs, pendingSolicitacoes, pendingTransferencias, docsToExpire });
+        const totalCaixas = allCaixas.length;
+        const totalListagens = allListagens.length;
+
+        setStats({ 
+            totalDocs, 
+            pendingSolicitacoes, 
+            pendingTransferencias, 
+            docsToExpire,
+            totalDocsArquivados,
+            totalDocsEmprestados,
+            totalDocsDesarquivados,
+            totalDocsEliminados,
+            totalDocsAguardandoEliminacao,
+            totalCaixas,
+            totalListagens
+        });
+
+        const newRecentActivities = [
+            ...allTransferencias.filter(t => t.status === 'Pendente').map(t => ({ type: 'Transferência Pendente', id: t.id, date: t.dataTransferencia, link: `/transferencias/${t.id}` })),
+            ...allSolicitacoes.filter(s => s.status === 'Pendente').map(s => ({ type: 'Solicitação Pendente', id: s.numeroSolicitacao, date: s.dataSolicitacao, link: `/solicitacoes` }))
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+        setRecentActivities(newRecentActivities);
+
     }, []);
-
-    const recentActivities = [
-        ...initialTransferencias.filter(t => t.status === 'Pendente').map(t => ({ type: 'Transferência Pendente', id: t.id, date: t.dataTransferencia, link: `/transferencias/${t.id}` })),
-        ...placeholderSolicitacoesInitial.filter(s => s.status === 'Pendente').map(s => ({ type: 'Solicitação Pendente', id: s.numeroSolicitacao, date: s.dataSolicitacao, link: `/solicitacoes` }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
     return (
         <div className="container mx-auto py-2">
@@ -53,6 +120,76 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos Arquivados</CardTitle>
+                        <Archive className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocsArquivados}</div>
+                        <p className="text-xs text-muted-foreground">Status "Arquivado"</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos Emprestados</CardTitle>
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocsEmprestados}</div>
+                        <p className="text-xs text-muted-foreground">Status "Emprestado"</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos Desarquivados</CardTitle>
+                        <FileUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocsDesarquivados}</div>
+                        <p className="text-xs text-muted-foreground">Status "Desarquivado"</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Aguardando Eliminação</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocsAguardandoEliminacao}</div>
+                        <p className="text-xs text-muted-foreground">Status "Aguardando prazo"</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Documentos Eliminados</CardTitle>
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalDocsEliminados}</div>
+                        <p className="text-xs text-muted-foreground">Status "Eliminado"</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total de Caixas</CardTitle>
+                        <Box className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalCaixas}</div>
+                        <p className="text-xs text-muted-foreground">Caixas cadastradas</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total de Listagens</CardTitle>
+                        <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalListagens}</div>
+                        <p className="text-xs text-muted-foreground">Listagens de eliminação</p>
+                    </CardContent>
+                </Card>
+                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
                         <Send className="h-4 w-4 text-muted-foreground" />

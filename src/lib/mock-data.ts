@@ -1,5 +1,11 @@
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa } from "@/types";
+
+export const initialCaixas: Caixa[] = [
+  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
+  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
+  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "DOC", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa" },
+];
 
 export const placeholderClassificacoesSimulado = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
