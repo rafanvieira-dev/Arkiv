@@ -1,6 +1,1 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
-
-export const ai = genkit({
-  plugins: [googleAI()],
-});
+// AI functionality is temporarily disabled for diagnostics.
