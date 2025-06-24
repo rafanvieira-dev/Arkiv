@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
@@ -69,7 +71,6 @@ type ColumnConfig = {
 };
 
 const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
-  { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
   {
     id: 'status',
     header: 'Status',
@@ -78,6 +79,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
     enableSorting: true,
     cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
   },
+  { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
   { id: 'descricao', header: 'Nome da Classe', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
   { id: 'prazoGuardaAnos', header: 'Prazo de Guarda', accessorKey: 'prazoGuardaAnos', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (value !== undefined ? `${value} anos` : "N/A") },
   { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
@@ -88,6 +90,9 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 
 export default function ClassesJudiciaisPage() {
+  const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState(initialFormState);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
@@ -270,6 +275,117 @@ export default function ClassesJudiciaisPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
+  const handleExportCSV = () => {
+    const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedItems.length > 0 ? displayedItems : classesJudiciais;
+
+    dataToExport.forEach(item => {
+        const rowData = {
+          id: item.id,
+          codigo: item.codigo,
+          descricao: item.descricao,
+          prazoGuardaAnos: item.prazoGuardaAnos ?? '',
+          destinacaoFinal: item.destinacaoFinal,
+          observacoes: item.observacoes || '',
+          inativo: item.inativo
+        };
+        const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'classes_judiciais_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+    const csvContent = headers.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_classes_judiciais.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+            
+            const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
+            if (!hasAllHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Por favor, utilize o modelo fornecido." });
+                 return;
+            }
+
+            const newItemsFromCsv: ClasseJudicial[] = [];
+            rows.forEach((row, index) => {
+                const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+                const newItemData: { [key: string]: string } = {};
+                headers.forEach((header, i) => {
+                  newItemData[header] = values[i] || "";
+                });
+
+                if (!newItemData.codigo || !newItemData.descricao || !newItemData.destinacaoFinal) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, destinacaoFinal) faltando.`);
+                }
+                
+                const prazoAnos = newItemData.prazoGuardaAnos ? parseInt(newItemData.prazoGuardaAnos, 10) : undefined;
+
+                const newItem: ClasseJudicial = {
+                    id: `CJ_IMP_${Date.now()}_${index}`,
+                    codigo: newItemData.codigo,
+                    descricao: newItemData.descricao,
+                    prazoGuardaAnos: isNaN(prazoAnos as number) ? undefined : prazoAnos,
+                    destinacaoFinal: newItemData.destinacaoFinal as ClasseJudicial['destinacaoFinal'],
+                    observacoes: newItemData.observacoes,
+                    inativo: newItemData.inativo.toLowerCase() === 'true',
+                };
+                newItemsFromCsv.push(newItem);
+            });
+
+            setClassesJudiciais(prev => [...prev, ...newItemsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newItemsFromCsv.length} classes foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   const numDisplayed = displayedItems.length;
   const numSelected = selectedRowIds.length;
@@ -278,71 +394,92 @@ export default function ClassesJudiciaisPage() {
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
-        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-          setIsDialogOpen(isOpen);
-          if (!isOpen) {
-            resetForm();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Classe Judicial
+        <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={handleImportClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
-              <DialogDescription>
-                Preencha as informações abaixo. Campos com * são obrigatórios.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="codigo">Código Judicial*</Label>
-                <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Nome da Classe*</Label>
-                <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
-                <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
-                <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
-                  <SelectTrigger id="destinacaoFinal">
-                    <SelectValue placeholder="Selecione a destinação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
-              </div>
-              <div className="space-y-2 md:col-span-2 flex items-center gap-2">
-                <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
-                <Label htmlFor="inativo" className="mb-0">Inativo</Label>
-              </div>
-            </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleSaveChanges}>Salvar Classe Judicial</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+            />
+            <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Baixar Modelo
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) {
+                resetForm();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nova Classe Judicial
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[525px]">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
+                  <DialogDescription>
+                    Preencha as informações abaixo. Campos com * são obrigatórios.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[70vh] pr-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="codigo">Código Judicial*</Label>
+                    <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="descricao">Nome da Classe*</Label>
+                    <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
+                    <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
+                    <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
+                      <SelectTrigger id="destinacaoFinal">
+                        <SelectValue placeholder="Selecione a destinação" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                        <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                        <SelectItem value="Eliminação">Eliminação</SelectItem>
+                        <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="observacoes">Observações</Label>
+                    <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 flex items-center gap-2">
+                    <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
+                    <Label htmlFor="inativo" className="mb-0">Inativo</Label>
+                  </div>
+                </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4">
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancelar</Button>
+                  </DialogClose>
+                  <Button type="button" onClick={handleSaveChanges}>Salvar Classe Judicial</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+        </div>
       </PageHeader>
 
       <Card className="mt-6">
