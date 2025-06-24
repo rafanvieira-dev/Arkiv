@@ -1,4 +1,5 @@
-import type { Documento, ListagemEliminacao, Solicitacao } from "@/types";
+
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario } from "@/types";
 
 export const placeholderClassificacoesSimulado = [
   { id: "CLA001", codigo: "020.1", descricao: "Processos Judiciais Cíveis", inativo: false, prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: 'Guarda Permanente' as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
@@ -322,3 +323,22 @@ export const placeholderSolicitacoesInitial: Solicitacao[] = [
 export type SimulatedDocumentForSolicitacaoDialog = Pick<Documento, 
   'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa'
 >;
+
+export const allPermissions: { id: keyof Usuario['permissoes']; label: string; description: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', description: 'Permite visualizar a tela principal com estatísticas e atalhos.' },
+  { id: 'acervo', label: 'Acervo', description: 'Permite cadastrar, editar e excluir documentos do acervo.' },
+  { id: 'caixas', label: 'Caixas', description: 'Permite gerenciar as caixas de arquivamento.' },
+  { id: 'classificacao', label: 'Classificação', description: 'Permite gerenciar os códigos de classificação arquivística.' },
+  { id: 'classesJudiciais', label: 'Classes Judiciais', description: 'Permite gerenciar as classes judiciais e seus prazos.' },
+  { id: 'listagens', label: 'Listagens de Eliminação', description: 'Permite criar e gerenciar listagens de eliminação.' },
+  { id: 'solicitacoes', label: 'Solicitações', description: 'Permite gerenciar solicitações de empréstimo e desarquivamento.' },
+  { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
+  { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
+  { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
+];
+
+export const initialUsers: Usuario[] = [
+  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true } },
+  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: false, configuracoes: false } },
+  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} },
+];

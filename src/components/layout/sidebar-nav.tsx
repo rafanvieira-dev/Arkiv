@@ -19,33 +19,62 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import type { Usuario } from '@/types';
+import { useUserSession } from '@/hooks/use-user-session';
 
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/caixas', label: 'Caixas', icon: Archive },
-  { href: '/classificacao', label: 'Classificação', icon: ListFilter },
-  { href: '/classes-judiciais', label: 'Classes Judiciais', icon: Scale },
-  { href: '/documentos', label: 'Acervo', icon: FileText },
-  { href: '/listagens-eliminacao', label: 'Listagens de Eliminação', icon: Trash2 },
-  { href: '/solicitacoes', label: 'Solicitações', icon: Send },
-  { href: '/busca-avancada', label: 'Busca Avançada', icon: Search },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  permissionKey: keyof Usuario['permissoes'];
+};
+
+const navItems: NavItem[] = [
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
+  { href: '/caixas', label: 'Caixas', icon: Archive, permissionKey: 'caixas' },
+  { href: '/classificacao', label: 'Classificação', icon: ListFilter, permissionKey: 'classificacao' },
+  { href: '/classes-judiciais', label: 'Classes Judiciais', icon: Scale, permissionKey: 'classesJudiciais' },
+  { href: '/documentos', label: 'Acervo', icon: FileText, permissionKey: 'acervo' },
+  { href: '/listagens-eliminacao', label: 'Listagens de Eliminação', icon: Trash2, permissionKey: 'listagens' },
+  { href: '/solicitacoes', label: 'Solicitações', icon: Send, permissionKey: 'solicitacoes' },
+  { href: '/busca-avancada', label: 'Busca Avançada', icon: Search, permissionKey: 'buscaAvancada' },
 ];
 
-const secondaryNavItems = [
- { href: '/usuarios', label: 'Usuários', icon: Users },
- { href: '/configuracoes', label: 'Configurações', icon: Settings },
+const secondaryNavItems: NavItem[] = [
+ { href: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' },
+ { href: '/configuracoes', label: 'Configurações', icon: Settings, permissionKey: 'configuracoes' },
 ];
 
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { permissions, isLoading } = useUserSession();
+
+  if (isLoading) {
+    return (
+      <>
+        <SidebarMenu>
+          {Array.from({ length: 8 }).map((_, i) => <SidebarMenuSkeleton key={i} showIcon />)}
+        </SidebarMenu>
+        <div className="mt-auto">
+          <SidebarMenu>
+            {Array.from({ length: 2 }).map((_, i) => <SidebarMenuSkeleton key={i} showIcon />)}
+          </SidebarMenu>
+        </div>
+      </>
+    );
+  }
+
+  const filteredNavItems = navItems.filter(item => permissions[item.permissionKey]);
+  const filteredSecondaryNavItems = secondaryNavItems.filter(item => permissions[item.permissionKey]);
 
   return (
     <>
       <SidebarMenu>
-        {navItems.map((item) => (
+        {filteredNavItems.map((item) => (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               asChild
@@ -67,7 +96,7 @@ export function SidebarNav() {
       </SidebarMenu>
       <div className="mt-auto"> {/* Pushes secondary items to the bottom */}
         <SidebarMenu>
-          {secondaryNavItems.map((item) => (
+          {filteredSecondaryNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild

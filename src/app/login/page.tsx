@@ -7,14 +7,31 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Zap, FileUp, FileText, UserPlus, Mail, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
+import { initialUsers } from '@/lib/mock-data';
 
 export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // Simulate login for the standard user
+    const standardUser = initialUsers.find(u => u.email === 'user@sistem.com');
+    if (standardUser) {
+      localStorage.setItem('currentUser', JSON.stringify(standardUser));
+    }
     router.push('/');
   };
+
+  const handleAdminLogin = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Simulate login for the admin user
+    const adminUser = initialUsers.find(u => u.email === 'admin@sistem.com');
+    if (adminUser) {
+      localStorage.setItem('currentUser', JSON.stringify(adminUser));
+    }
+    router.push('/');
+  };
+
 
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
@@ -28,14 +45,14 @@ export default function LoginPage() {
                   <Label htmlFor="email">Login (E-mail)</Label>
                   <div className="relative flex items-center">
                       <Mail className="absolute left-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="email" type="email" placeholder="seu@email.com" className="pl-10" required />
+                      <Input id="email" type="email" placeholder="seu@email.com" className="pl-10" required defaultValue="user@sistem.com" />
                   </div>
               </div>
               <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
                   <div className="relative flex items-center">
                       <KeyRound className="absolute left-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="password" type="password" placeholder="Sua senha" className="pl-10" required />
+                      <Input id="password" type="password" placeholder="Sua senha" className="pl-10" required defaultValue="password" />
                   </div>
               </div>
               <Button className="w-full" type="submit">
@@ -55,7 +72,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={handleLogin}>
+              <Button variant="outline" className="w-full" onClick={handleAdminLogin}>
                   <Zap className="mr-2 h-4 w-4" /> Acesso Rápido (Admin Padrão)
               </Button>
               <Button variant="outline" className="w-full">

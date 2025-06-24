@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -31,26 +32,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { initialUsers, allPermissions } from "@/lib/mock-data";
 
-
-const initialUsers: Usuario[] = [
-  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true } },
-  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: { dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: false, configuracoes: false } },
-  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} },
-];
-
-const allPermissions: { id: string; label: string; description: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Permite visualizar a tela principal com estatísticas e atalhos.' },
-  { id: 'acervo', label: 'Acervo', description: 'Permite cadastrar, editar e excluir documentos do acervo.' },
-  { id: 'caixas', label: 'Caixas', description: 'Permite gerenciar as caixas de arquivamento.' },
-  { id: 'classificacao', label: 'Classificação', description: 'Permite gerenciar os códigos de classificação arquivística.' },
-  { id: 'classesJudiciais', label: 'Classes Judiciais', description: 'Permite gerenciar as classes judiciais e seus prazos.' },
-  { id: 'listagens', label: 'Listagens de Eliminação', description: 'Permite criar e gerenciar listagens de eliminação.' },
-  { id: 'solicitacoes', label: 'Solicitações', description: 'Permite gerenciar solicitações de empréstimo e desarquivamento.' },
-  { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
-  { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
-  { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
-];
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
@@ -284,7 +267,7 @@ export default function UsuariosPage() {
                             <div className="flex items-center space-x-2">
                               <Checkbox
                                 id={`perm-${permission.id}`}
-                                checked={formState.permissoes?.[permission.id] || false}
+                                checked={formState.permissoes?.[permission.id as keyof typeof formState.permissoes] || false}
                                 onCheckedChange={handlePermissionChange(permission.id)}
                               />
                               <Label htmlFor={`perm-${permission.id}`} className="font-normal cursor-pointer">{permission.label}</Label>
