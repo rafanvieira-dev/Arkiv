@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import type { TipoOrigem } from "@/types";
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -30,7 +31,7 @@ const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
 
-type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoOrigem' | 'tipoCaixa';
+type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoCaixa';
 
 
 export default function ConfiguracoesPage() {
@@ -40,7 +41,7 @@ export default function ConfiguracoesPage() {
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
-  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
@@ -48,6 +49,11 @@ export default function ConfiguracoesPage() {
   const [dialogConfig, setDialogConfig] = React.useState<{ mode: DialogMode; title: string } | null>(null);
   const [editingValue, setEditingValue] = React.useState<string | null>(null);
   const [formValue, setFormValue] = React.useState("");
+  
+  const [isOrigemDialogOpen, setIsOrigemDialogOpen] = React.useState(false);
+  const [origemFormState, setOrigemFormState] = React.useState<{ id?: string; nome: string; sigla: string }>({ nome: "", sigla: "" });
+  const [isEditingOrigem, setIsEditingOrigem] = React.useState(false);
+
 
   React.useEffect(() => {
     try {
@@ -121,7 +127,6 @@ export default function ConfiguracoesPage() {
       case 'tipoParte': return [tiposParte, setTiposParte];
       case 'generoDocumental': return [generosDocumentais, setGenerosDocumentais];
       case 'tipoMidia': return [tiposMidia, setTiposMidia];
-      case 'tipoOrigem': return [tiposOrigem, setTiposOrigem];
       case 'tipoCaixa': return [tiposCaixa, setTiposCaixa];
     }
   }
@@ -158,6 +163,60 @@ export default function ConfiguracoesPage() {
     const [, setter] = getListAndSetter(mode);
     setter(prev => prev.filter(item => item !== valueToDelete));
     toast({ title: "Sucesso", description: `"${valueToDelete}" foi removido.` });
+  };
+  
+  const resetOrigemForm = () => {
+    setOrigemFormState({ nome: "", sigla: "" });
+    setIsEditingOrigem(false);
+    setIsOrigemDialogOpen(false);
+  };
+
+  const handleOpenOrigemDialog = (origem?: TipoOrigem) => {
+    if (origem) {
+        setIsEditingOrigem(true);
+        setOrigemFormState({ id: origem.id, nome: origem.nome, sigla: origem.sigla || "" });
+    } else {
+        setIsEditingOrigem(false);
+        setOrigemFormState({ nome: "", sigla: "" });
+    }
+    setIsOrigemDialogOpen(true);
+  };
+
+  const handleSaveOrigem = () => {
+    if (!origemFormState.nome.trim()) {
+        toast({ variant: "destructive", title: "Erro", description: "O nome não pode ser vazio." });
+        return;
+    }
+    
+    const isDuplicate = tiposOrigem.some(
+      (item) => item.nome.toLowerCase() === origemFormState.nome.trim().toLowerCase() && item.id !== origemFormState.id
+    );
+
+    if (isDuplicate) {
+       toast({ variant: "destructive", title: "Erro", description: "Este nome de origem já existe." });
+       return;
+    }
+
+    const siglaValue = origemFormState.sigla.trim().toUpperCase();
+
+    if (isEditingOrigem && origemFormState.id) {
+        setTiposOrigem(prev => prev.map(item => item.id === origemFormState.id ? { ...item, nome: origemFormState.nome.trim(), sigla: siglaValue || undefined } : item));
+        toast({ title: "Sucesso", description: "Origem atualizada." });
+    } else {
+        const newOrigem: TipoOrigem = {
+            id: `to${Date.now()}`,
+            nome: origemFormState.nome.trim(),
+            sigla: siglaValue || undefined,
+        };
+        setTiposOrigem(prev => [...prev, newOrigem]);
+        toast({ title: "Sucesso", description: "Nova origem adicionada." });
+    }
+    resetOrigemForm();
+  };
+
+  const handleDeleteOrigem = (idToDelete: string) => {
+    setTiposOrigem(prev => prev.filter(item => item.id !== idToDelete));
+    toast({ title: "Sucesso", description: `Origem removida.` });
   };
   
   const ListManagementCard = ({ title, description, mode, list, placeholder }: { title: string; description: string; mode: DialogMode; list: string[]; placeholder: string; }) => (
@@ -218,13 +277,51 @@ export default function ConfiguracoesPage() {
             list={tiposDocumento}
             placeholder="Nenhuma espécie de documento cadastrada."
         />
-        <ListManagementCard
-            title="Tipos de Origem"
-            description="Adicione ou edite os tipos de origem."
-            mode="tipoOrigem"
-            list={tiposOrigem}
-            placeholder="Nenhum tipo de origem cadastrado."
-        />
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="font-headline text-primary">Tipos de Origem</CardTitle>
+              <CardDescription>Adicione ou edite os tipos de origem e suas siglas.</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => handleOpenOrigemDialog()}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-2">
+              {tiposOrigem.sort((a, b) => a.nome.localeCompare(b.nome)).map(item => {
+                const displayValue = item.sigla ? `${item.nome} - ${item.sigla}` : item.nome;
+                return (
+                  <div key={item.id} className="flex items-center justify-between rounded-md border p-2 hover:bg-muted/50">
+                    <span className="text-sm">{displayValue}</span>
+                    <div>
+                       <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenOrigemDialog(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Editar</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleDeleteOrigem(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Excluir</p></TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
+              {tiposOrigem.length === 0 && (
+                 <p className="text-sm text-center text-muted-foreground py-4">Nenhum tipo de origem cadastrado.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
         <ListManagementCard
             title="Tipos de Parte"
             description="Adicione ou edite os tipos de parte envolvida."
@@ -276,6 +373,42 @@ export default function ConfiguracoesPage() {
                   <Button variant="outline">Cancelar</Button>
                 </DialogClose>
                 <Button onClick={handleSave}>Salvar</Button>
+              </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isOrigemDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) resetOrigemForm();
+          else setIsOrigemDialogOpen(isOpen);
+        }}>
+          <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{isEditingOrigem ? "Editar Tipo de Origem" : "Novo Tipo de Origem"}</DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="origem-nome">Nome*</Label>
+                    <Input 
+                      id="origem-nome" 
+                      value={origemFormState.nome}
+                      onChange={(e) => setOrigemFormState(p => ({...p, nome: e.target.value}))}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="origem-sigla">Sigla da Unidade (Opcional)</Label>
+                    <Input 
+                      id="origem-sigla" 
+                      value={origemFormState.sigla}
+                      onChange={(e) => setOrigemFormState(p => ({...p, sigla: e.target.value}))}
+                      className="uppercase"
+                    />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button onClick={handleSaveOrigem}>Salvar</Button>
               </DialogFooter>
           </DialogContent>
         </Dialog>

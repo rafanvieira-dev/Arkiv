@@ -1,5 +1,5 @@
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem } from "@/types";
 
 export const initialCaixas: Caixa[] = [
   { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
@@ -39,7 +39,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC001", 
     status: "Arquivado", 
     orgao: "TRF2", 
-    origem: "Tribunal de Justiça", 
+    origem: "Tribunal de Justiça - TJ", 
     tipoMeio: "Não digital", 
     generoDocumental: "Textual", 
     categoria: "Processo Judicial", 
@@ -78,7 +78,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC002", 
     status: "Emprestado", 
     orgao: "SJRJ", 
-    origem: "Secretaria Municipal", 
+    origem: "Secretaria Municipal - SM", 
     tipoMeio: "Digital", 
     generoDocumental: "Audiovisual", 
     categoria: "Documento", 
@@ -118,7 +118,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC003", 
     status: "Arquivado", 
     orgao: "SJES", 
-    origem: "Câmara de Vereadores", 
+    origem: "Câmara de Vereadores - CV", 
     tipoMeio: "Híbrido", 
     generoDocumental: "Textual", 
     categoria: "Processo Administrativo", 
@@ -158,7 +158,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC004", 
     status: "Eliminado", 
     orgao: "TRF2", 
-    origem: "Advocacia Geral", 
+    origem: "Advocacia Geral - AG", 
     tipoMeio: "Não digital", 
     generoDocumental: "Textual", 
     categoria: "Documento", 
@@ -196,7 +196,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC005", 
     status: "Aguardando prazo para eliminação", 
     orgao: "SJRJ", 
-    origem: "Vara Federal", 
+    origem: "Vara Federal - VF", 
     tipoMeio: "Digital", 
     generoDocumental: "Iconográfico", 
     categoria: "Processo Judicial", 
@@ -237,7 +237,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC007", 
     status: "Arquivado", 
     orgao: "TRF2", 
-    origem: "Vara Cível", 
+    origem: "Vara Cível - VC", 
     tipoMeio: "Não digital", 
     generoDocumental: "Textual", 
     categoria: "Processo Judicial", 
@@ -273,7 +273,7 @@ export const placeholderDocumentos: Documento[] = [
     id: "DOC008", 
     status: "Aguardando prazo para eliminação", 
     orgao: "SJRJ", 
-    origem: "Juizado Especial", 
+    origem: "Juizado Especial - JE", 
     tipoMeio: "Digital", 
     generoDocumental: "Textual", 
     categoria: "Processo Judicial", 
@@ -432,16 +432,16 @@ export const initialTiposMidia: string[] = ['CD-R', 'CD-RW', 'DVD-R', 'DVD-RW', 
 
 export const initialTiposParte: string[] = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima"];
 
-export const initialTiposOrigem: string[] = [
-  "Tribunal de Justiça",
-  "Secretaria Municipal",
-  "Câmara de Vereadores",
-  "Advocacia Geral",
-  "Vara Federal",
-  "Juizado Especial",
-  "Secretaria de Recursos Humanos",
-  "Gabinete do Desembargador X",
-  "Vara Cível"
+export const initialTiposOrigem: TipoOrigem[] = [
+  { id: 'to1', nome: 'Tribunal de Justiça', sigla: 'TJ' },
+  { id: 'to2', nome: 'Secretaria Municipal', sigla: 'SM' },
+  { id: 'to3', nome: 'Câmara de Vereadores', sigla: 'CV' },
+  { id: 'to4', nome: 'Advocacia Geral', sigla: 'AG' },
+  { id: 'to5', nome: 'Vara Federal', sigla: 'VF' },
+  { id: 'to6', nome: 'Juizado Especial', sigla: 'JE' },
+  { id: 'to7', nome: 'Secretaria de Recursos Humanos', sigla: 'SRH' },
+  { id: 'to8', nome: 'Gabinete do Desembargador X', sigla: 'GAB-DES-X' },
+  { id: 'to9', nome: 'Vara Cível', sigla: 'VC' },
 ];
 
 export const initialTiposCaixa: string[] = [

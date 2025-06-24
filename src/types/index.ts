@@ -14,6 +14,12 @@ export interface MidiaDetalhe {
   paginaMidia?: string;
 }
 
+export interface TipoOrigem {
+  id: string;
+  nome: string;
+  sigla?: string;
+}
+
 export interface Documento {
   id: string; // UUID, system-generated, read-only for user. Visível, mas não alterável.
   status: 'Arquivado' | 'Eliminado' | 'Emprestado' | 'Desarquivado' | 'Aguardando prazo para eliminação' | 'Pendente de Conferência'; // 1.2

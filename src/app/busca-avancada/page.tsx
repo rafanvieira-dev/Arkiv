@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { Search, RotateCcw, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { DateInputPicker } from "@/components/date-input-picker";
-import type { Documento, Classificacao } from "@/types";
+import type { Documento, Classificacao, TipoOrigem } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, isAfter, isBefore } from "date-fns";
@@ -84,7 +84,7 @@ export default function BuscaAvancadaPage() {
   
   const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
   const [allClassificacoes, setAllClassificacoes] = React.useState<Classificacao[]>([]);
-  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
@@ -326,9 +326,10 @@ export default function BuscaAvancadaPage() {
                 <SelectValue placeholder="Selecione a origem" />
               </SelectTrigger>
               <SelectContent>
-                {tiposOrigem.map(o => (
-                  <SelectItem key={o} value={o}>{o}</SelectItem>
-                ))}
+                {tiposOrigem.sort((a, b) => a.nome.localeCompare(b.nome)).map(o => {
+                  const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                  return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>);
+                })}
               </SelectContent>
             </Select>
           </div>

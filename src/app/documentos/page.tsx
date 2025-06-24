@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -189,7 +189,7 @@ export default function DocumentosPage() {
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
-  const [tiposOrigem, setTiposOrigem] = React.useState<string[]>([]);
+  const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -987,9 +987,10 @@ export default function DocumentosPage() {
                 <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
                   <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
                   <SelectContent>
-                    {tiposOrigem.sort((a,b) => a.localeCompare(b)).map(o => (
-                      <SelectItem key={o} value={o}>{o}</SelectItem>
-                    ))}
+                    {tiposOrigem.sort((a,b) => a.nome.localeCompare(b.nome)).map(o => {
+                      const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                      return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>)
+                    })}
                   </SelectContent>
                 </Select>
               </div>
