@@ -12,7 +12,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOri
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -155,6 +155,7 @@ const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 export default function DocumentosPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
   const numeroListagemFromQuery = searchParams.get('numeroListagem');
@@ -270,7 +271,7 @@ export default function DocumentosPage() {
     { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio', defaultVisible: true, enableSorting: true },
     { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental', defaultVisible: true, enableSorting: true },
     { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
-    { id: 'tipoDocumento', header: 'Espécie Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
@@ -898,6 +899,189 @@ export default function DocumentosPage() {
     }
     return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
+  
+  const handleExportCSV = () => {
+    const dataToExport = displayedDocumentos.length > 0 ? displayedDocumentos : processedDocumentos;
+    if (dataToExport.length === 0) {
+        toast({ variant: "destructive", title: "Nenhum dado para exportar", description: "Filtre os dados ou adicione documentos antes de exportar." });
+        return;
+    }
+
+    const headers = Object.keys(placeholderDocumentos[0]).filter(key => !key.startsWith('outro'));
+    const csvRows = [headers.join(',')];
+
+    dataToExport.forEach(doc => {
+        const row = headers.map(header => {
+            const value = doc[header as keyof Documento];
+            const stringValue = value === null || value === undefined ? "" : String(value);
+            return `"${stringValue.replace(/"/g, '""')}"`;
+        });
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'acervo_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de documentos concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateHeaders = [
+        'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
+        'tipoDocumento', 'numeroDocumento', 'dataAbrangente', 'descricaoDocumento', 
+        'nomePartePrincipal', 'tipoPartePrincipal', 'documentosRelacionadosIds', 
+        'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
+        'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
+        'digitalizado', 'tipoBaixa', 'dataBaixa', 'classificacaoArquivisticaId', 
+        'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+        'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
+        'numeroListagemEliminacao'
+    ];
+    const csvContent = templateHeaders.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_acervo.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift()?.trim();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = [
+                'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
+                'tipoDocumento', 'numeroDocumento', 'dataAbrangente', 'descricaoDocumento', 
+                'nomePartePrincipal', 'tipoPartePrincipal', 'documentosRelacionadosIds', 
+                'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
+                'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
+                'digitalizado', 'tipoBaixa', 'dataBaixa', 'classificacaoArquivisticaId', 
+                'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+                'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
+                'numeroListagemEliminacao'
+            ];
+            
+            const missingHeaders = ['status', 'orgao', 'origem', 'tipoMeio', 'categoria', 'tipoDocumento', 'dataAbrangente', 'dataArquivamento', 'classificacaoArquivisticaId', 'segredoJustica', 'grauSigilo'].filter(h => !headers.includes(h));
+            if (missingHeaders.length > 0) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${missingHeaders.join(', ')}.`, duration: 8000 });
+                 return;
+            }
+
+            const newDocsFromCsv: Documento[] = [];
+            rows.forEach((row, index) => {
+                if(!row.trim()) return;
+
+                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const newDocData: { [key: string]: any } = {};
+                headers.forEach((header, i) => {
+                  newDocData[header] = values[i] || "";
+                });
+                
+                const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
+                const classification = classificacoes.find(c => c.id === newDocData.classificacaoArquivisticaId);
+                
+                let prazoCorrente = "";
+                if (classification) {
+                    if (classification.tipoPrazoFaseCorrente === "Anos") {
+                      prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos ?? 'N/A'} Anos`;
+                    } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
+                      prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
+                    }
+                }
+
+                const prazoIntermediario = classification ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` : "";
+                const destinacao = classification?.destinacaoFinal;
+
+                let anoEliminacao = "";
+                if (dataArquivamento && isValid(parseISO(dataArquivamento)) && classification && destinacao === 'Eliminação') {
+                    const dataArquivamentoDate = parseISO(dataArquivamento);
+                    let prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos ?? 0;
+                    const anoArquivamento = getYear(dataArquivamentoDate);
+                    anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
+                }
+
+                const newDoc: Documento = {
+                    id: `DOC_IMP_${Date.now()}_${index}`,
+                    dataCadastro: new Date().toISOString(),
+                    ...initialFormState,
+                    status: newDocData.status || 'Arquivado',
+                    orgao: newDocData.orgao || 'TRF2',
+                    origem: newDocData.origem,
+                    tipoMeio: newDocData.tipoMeio || 'Não digital',
+                    generoDocumental: newDocData.generoDocumental || 'Textual',
+                    categoria: newDocData.categoria || 'Documento',
+                    tipoDocumento: newDocData.tipoDocumento,
+                    numeroDocumento: newDocData.numeroDocumento,
+                    dataAbrangente: newDocData.dataAbrangente,
+                    descricaoDocumento: newDocData.descricaoDocumento,
+                    nomePartePrincipal: newDocData.nomePartePrincipal,
+                    tipoPartePrincipal: newDocData.tipoPartePrincipal,
+                    documentosRelacionadosIds: newDocData.documentosRelacionadosIds,
+                    dataArquivamento,
+                    quantidadeVolumes: newDocData.quantidadeVolumes ? parseInt(newDocData.quantidadeVolumes, 10) : undefined,
+                    quantidadeApensos: newDocData.quantidadeApensos ? parseInt(newDocData.quantidadeApensos, 10) : undefined,
+                    numerosApensos: newDocData.numerosApensos,
+                    totalMidias: newDocData.totalMidias ? parseInt(newDocData.totalMidias, 10) : undefined,
+                    tipoMidiaDetalhe: newDocData.tipoMidiaDetalhe,
+                    numeroMidiaDetalhe: newDocData.numeroMidiaDetalhe,
+                    paginaMidiaDetalhe: newDocData.paginaMidiaDetalhe,
+                    digitalizado: newDocData.digitalizado || 'Não',
+                    tipoBaixa: newDocData.tipoBaixa,
+                    dataBaixa: newDocData.dataBaixa ? new Date(newDocData.dataBaixa).toISOString() : undefined,
+                    classificacaoArquivisticaId: newDocData.classificacaoArquivisticaId,
+                    prazoArquivoCorrenteDisplay: prazoCorrente,
+                    prazoArquivoIntermediarioDisplay: prazoIntermediario,
+                    destinacaoFinalDisplay: destinacao,
+                    alteracaoDestinacaoFinal: newDocData.alteracaoDestinacaoFinal || 'Não Alterar',
+                    anoEliminacaoPrevisto: anoEliminacao,
+                    segredoJustica: newDocData.segredoJustica || 'Não',
+                    grauSigilo: newDocData.grauSigilo || 'Ostensivo',
+                    codigosCaixa: newDocData.codigosCaixa,
+                    codigoAtoM: newDocData.codigoAtoM,
+                    observacoesGerais: newDocData.observacoesGerais,
+                    codigoClassificacaoJudicialId: newDocData.codigoClassificacaoJudicialId,
+                    numeroListagemEliminacao: newDocData.numeroListagemEliminacao,
+                };
+                newDocsFromCsv.push(newDoc);
+            });
+
+            setDocumentos(prev => [...prev, ...newDocsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newDocsFromCsv.length} documentos foram importados com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
@@ -923,387 +1107,408 @@ export default function DocumentosPage() {
         title={pageTitle}
         description={pageDescription}
       >
-        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-          setIsDialogOpen(isOpen);
-          if (!isOpen) {
-            resetForm();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Adicionar ao Acervo
+        <div className="flex flex-wrap items-center gap-2">
+           <Button variant="outline" onClick={handleImportClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar CSV
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-primary">
-                {isFormDisabled ? "Visualizar Documento (Eliminado)" : "Adicionar/Editar Item ao Acervo"}
-              </DialogTitle>
-              <DialogDescription>
-                {isFormDisabled 
-                  ? "Este documento foi eliminado e não pode mais ser alterado. Os dados são somente para consulta." 
-                  : "Preencha as informações abaixo. Campos com * são obrigatórios."
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[75vh] pr-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 py-4">
-              
-              <div className="space-y-2">
-                <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
-                <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status*</Label>
-                <Select onValueChange={handleSelectChange('status')} value={formState.status} disabled={isFormDisabled}>
-                  <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Arquivado">Arquivado</SelectItem>
-                    <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
-                    <SelectItem value="Eliminado">Eliminado</SelectItem>
-                    <SelectItem value="Emprestado">Emprestado</SelectItem>
-                    <SelectItem value="Desarquivado">Desarquivado</SelectItem>
-                    <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="orgao">Órgão*</Label>
-                <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao} disabled={isFormDisabled}>
-                  <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="TRF2">TRF2</SelectItem>
-                    <SelectItem value="SJRJ">SJRJ</SelectItem>
-                    <SelectItem value="SJES">SJES</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="origem">Origem*</Label>
-                <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
-                  <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
-                  <SelectContent>
-                    {tiposOrigem
-                      .filter(o => o && o.nome)
-                      .sort((a,b) => a.nome.localeCompare(b.nome))
-                      .map(o => {
-                        const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
-                        return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>)
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="tipoMeio">Tipo de Meio*</Label>
-                <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio} disabled={isFormDisabled}>
-                  <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Não digital">Não digital</SelectItem>
-                    <SelectItem value="Digital">Digital</SelectItem>
-                    <SelectItem value="Híbrido">Híbrido</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="generoDocumental">Gênero Documental</Label>
-                <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
-                  <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
-                  <SelectContent>
-                    {generosDocumentais.sort((a, b) => a.localeCompare(b)).map(g => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria*</Label>
-                <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria} disabled={isFormDisabled}>
-                  <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Documento">Documento</SelectItem>
-                    <SelectItem value="Dossiê">Dossiê</SelectItem>
-                    <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
-                    <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
-                <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
-                  <SelectTrigger id="tipoDocumento">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
-                        <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
-                <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2 xl:col-span-3">
-                <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nomePartePrincipal">Nome da Parte Principal</Label>
-                <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" disabled={isFormDisabled} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipoPartePrincipal">Tipo da Parte Principal</Label>
-                <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal} disabled={isFormDisabled}>
-                  <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                  <SelectContent>
-                    {tiposParte.sort((a,b) => a.localeCompare(b)).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados</Label>
-                <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
-                    {formState.documentosRelacionadosIds?.split(',').filter(Boolean).map(id => (
-                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                            <Link href={`/documentos?edit=${id.trim()}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
-                                {id.trim()}
-                            </Link>
-                            <button
-                                type="button"
-                                className="rounded-full hover:bg-muted-foreground/20 p-0.5"
-                                onClick={() => handleRemoveRelatedDoc(id.trim())}
-                                aria-label={`Remover ${id.trim()}`}
-                                disabled={isFormDisabled}
-                            >
-                                <X className="h-3 w-3" />
-                            </button>
-                        </Badge>
-                    ))}
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setIsRelatedDocDialogOpen(true)}
-                        disabled={isFormDisabled}
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                        <span className="sr-only">Adicionar documento relacionado</span>
-                    </Button>
-                </div>
-              </div>
-
-
-              <div className="space-y-2">
-                <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
-                 <DateInputPicker 
-                  value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
-                  onChange={(date) => handleDateChange('dataArquivamento')(date)} 
-                  placeholder="dd/mm/aaaa"
-                  disabled={isFormDisabled}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
-                <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" disabled={isFormDisabled} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
-                <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
-              </div>
-
-              { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
-                <div className="space-y-2">
-                  <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
-                  <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="totalMidias">Total de Mídias</Label>
-                <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
-              </div>
-              
-              {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
-                <>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+            />
+            <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Baixar Modelo
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) {
+                resetForm();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar ao Acervo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-primary">
+                    {isFormDisabled ? "Visualizar Documento (Eliminado)" : "Adicionar/Editar Item ao Acervo"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {isFormDisabled 
+                      ? "Este documento foi eliminado e não pode mais ser alterado. Os dados são somente para consulta." 
+                      : "Preencha as informações abaixo. Campos com * são obrigatórios."
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[75vh] pr-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 py-4">
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
-                    <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
-                      <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                    <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
+                    <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status*</Label>
+                    <Select onValueChange={handleSelectChange('status')} value={formState.status} disabled={isFormDisabled}>
+                      <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                       <SelectContent>
-                        {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
-                           <SelectItem key={m} value={m}>{m}</SelectItem>
+                        <SelectItem value="Arquivado">Arquivado</SelectItem>
+                        <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
+                        <SelectItem value="Eliminado">Eliminado</SelectItem>
+                        <SelectItem value="Emprestado">Emprestado</SelectItem>
+                        <SelectItem value="Desarquivado">Desarquivado</SelectItem>
+                        <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="orgao">Órgão*</Label>
+                    <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao} disabled={isFormDisabled}>
+                      <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TRF2">TRF2</SelectItem>
+                        <SelectItem value="SJRJ">SJRJ</SelectItem>
+                        <SelectItem value="SJES">SJES</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="origem">Origem*</Label>
+                    <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
+                      <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
+                      <SelectContent>
+                        {tiposOrigem
+                          .filter(o => o && o.nome)
+                          .sort((a,b) => a.nome.localeCompare(b.nome))
+                          .map(o => {
+                            const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                            return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>)
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoMeio">Tipo de Meio*</Label>
+                    <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio} disabled={isFormDisabled}>
+                      <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Não digital">Não digital</SelectItem>
+                        <SelectItem value="Digital">Digital</SelectItem>
+                        <SelectItem value="Híbrido">Híbrido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="generoDocumental">Gênero Documental</Label>
+                    <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
+                      <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                      <SelectContent>
+                        {generosDocumentais.sort((a, b) => a.localeCompare(b)).map(g => (
+                          <SelectItem key={g} value={g}>{g}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
-                    <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                    <Label htmlFor="categoria">Categoria*</Label>
+                    <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria} disabled={isFormDisabled}>
+                      <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Documento">Documento</SelectItem>
+                        <SelectItem value="Dossiê">Dossiê</SelectItem>
+                        <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                        <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
+                    <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
+                      <SelectTrigger id="tipoDocumento">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="numeroDocumento">Número do Documento</Label>
+                    <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
+                    <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2 xl:col-span-3">
+                    <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
+                    <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nomePartePrincipal">Nome da Parte Principal</Label>
+                    <Input id="nomePartePrincipal" value={formState.nomePartePrincipal || ""} onChange={handleInputChange} placeholder="Nome da parte" disabled={isFormDisabled} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
-                    <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                    <Label htmlFor="tipoPartePrincipal">Tipo da Parte Principal</Label>
+                    <Select onValueChange={handleSelectChange('tipoPartePrincipal')} value={formState.tipoPartePrincipal} disabled={isFormDisabled}>
+                      <SelectTrigger id="tipoPartePrincipal"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                      <SelectContent>
+                        {tiposParte.sort((a,b) => a.localeCompare(b)).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </>
-              )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados</Label>
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
+                        {formState.documentosRelacionadosIds?.split(',').filter(Boolean).map(id => (
+                            <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                                <Link href={`/documentos?edit=${id.trim()}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+                                    {id.trim()}
+                                </Link>
+                                <button
+                                    type="button"
+                                    className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                                    onClick={() => handleRemoveRelatedDoc(id.trim())}
+                                    aria-label={`Remover ${id.trim()}`}
+                                    disabled={isFormDisabled}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                        ))}
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setIsRelatedDocDialogOpen(true)}
+                            disabled={isFormDisabled}
+                        >
+                            <PlusCircle className="h-4 w-4" />
+                            <span className="sr-only">Adicionar documento relacionado</span>
+                        </Button>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="digitalizado">Digitalizado?</Label>
-                <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
-                  <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="dataBaixa">Data da Baixa</Label>
-                <DateInputPicker 
-                  value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
-                  onChange={(date) => handleDateChange('dataBaixa')(date)} 
-                  placeholder="dd/mm/aaaa"
-                  disabled={isFormDisabled}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
-                <Input 
-                  id="codigoClassificacaoArquivisticaInput" 
-                  name="codigoClassificacaoArquivisticaInput"
-                  value={formState.codigoClassificacaoArquivisticaInput || ""} 
-                  onChange={handleInputChange}
-                  onBlur={handleCodigoClassificacaoBlur}
-                  placeholder="Digite o código (ex: 020.1)"
-                  disabled={isFormDisabled}
-                  className={cn(classificationError && "border-destructive focus-visible:ring-destructive")}
-                />
-                {classificationError && (
-                  <p className="text-base font-medium text-destructive">{classificationError}</p>
-                )}
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
-                <Input id="assuntoClassificacaoDisplay" value={formState.assuntoClassificacaoDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
-                <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
-                <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
-                 <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
-                <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
-                  <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Não Alterar">Não Alterar</SelectItem>
-                    <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
-                    <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
+                     <DateInputPicker 
+                      value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
+                      onChange={(date) => handleDateChange('dataArquivamento')(date)} 
+                      placeholder="dd/mm/aaaa"
+                      disabled={isFormDisabled}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
-                <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
-                <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica} disabled={isFormDisabled}>
-                  <SelectTrigger id="segredoJustica"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)*</Label>
-                 <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo} disabled={isFormDisabled}>
-                  <SelectTrigger id="grauSigilo"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ostensivo">Ostensivo</SelectItem>
-                    <SelectItem value="Reservado">Reservado</SelectItem>
-                    <SelectItem value="Secreto">Secreto</SelectItem>
-                    <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
+                    <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" disabled={isFormDisabled} />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="codigosCaixa">Código(s) da(s) Caixa(s)</Label>
-                <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" disabled={isFormDisabled} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="codigoAtoM">Código do AtoM</Label>
-                <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" disabled={isFormDisabled} />
-              </div>
-              
-              <div className="space-y-2 sm:col-span-2 xl:col-span-3">
-                <Label htmlFor="observacoesGerais">Observações Gerais</Label>
-                <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
+                    <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
-                <Input 
-                  id="codigoClassificacaoJudicialId" 
-                  value={formState.codigoClassificacaoJudicialId || ""} 
-                  onChange={handleInputChange} 
-                  placeholder="ID da Classe Judicial" 
-                  disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
-                  className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
-                />
-              </div>
+                  { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
+                      <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
+                    </div>
+                  )}
 
-            </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4">
-              <Button variant="outline" onClick={resetForm} disabled={isFormDisabled}>Limpar</Button>
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleSaveChanges} disabled={isFormDisabled}>Salvar Documento</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalMidias">Total de Mídias</Label>
+                    <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
+                  </div>
+                  
+                  {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
+                        <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
+                          <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                          <SelectContent>
+                            {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
+                               <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
+                        <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
+                        <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="digitalizado">Digitalizado?</Label>
+                    <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
+                      <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sim">Sim</SelectItem>
+                        <SelectItem value="Não">Não</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
+                    <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dataBaixa">Data da Baixa</Label>
+                    <DateInputPicker 
+                      value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
+                      onChange={(date) => handleDateChange('dataBaixa')(date)} 
+                      placeholder="dd/mm/aaaa"
+                      disabled={isFormDisabled}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
+                    <Input 
+                      id="codigoClassificacaoArquivisticaInput" 
+                      name="codigoClassificacaoArquivisticaInput"
+                      value={formState.codigoClassificacaoArquivisticaInput || ""} 
+                      onChange={handleInputChange}
+                      onBlur={handleCodigoClassificacaoBlur}
+                      placeholder="Digite o código (ex: 020.1)"
+                      disabled={isFormDisabled}
+                      className={cn(classificationError && "border-destructive focus-visible:ring-destructive")}
+                    />
+                    {classificationError && (
+                      <p className="text-base font-medium text-destructive">{classificationError}</p>
+                    )}
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
+                    <Input id="assuntoClassificacaoDisplay" value={formState.assuntoClassificacaoDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
+                    <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
+                    <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
+                     <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
+                    <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
+                      <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Não Alterar">Não Alterar</SelectItem>
+                        <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
+                        <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
+                    <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
+                    <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica} disabled={isFormDisabled}>
+                      <SelectTrigger id="segredoJustica"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sim">Sim</SelectItem>
+                        <SelectItem value="Não">Não</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)*</Label>
+                     <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo} disabled={isFormDisabled}>
+                      <SelectTrigger id="grauSigilo"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ostensivo">Ostensivo</SelectItem>
+                        <SelectItem value="Reservado">Reservado</SelectItem>
+                        <SelectItem value="Secreto">Secreto</SelectItem>
+                        <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="codigosCaixa">Código(s) da(s) Caixa(s)</Label>
+                    <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" disabled={isFormDisabled} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="codigoAtoM">Código do AtoM</Label>
+                    <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" disabled={isFormDisabled} />
+                  </div>
+                  
+                  <div className="space-y-2 sm:col-span-2 xl:col-span-3">
+                    <Label htmlFor="observacoesGerais">Observações Gerais</Label>
+                    <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
+                    <Input 
+                      id="codigoClassificacaoJudicialId" 
+                      value={formState.codigoClassificacaoJudicialId || ""} 
+                      onChange={handleInputChange} 
+                      placeholder="ID da Classe Judicial" 
+                      disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
+                      className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
+                    />
+                  </div>
+
+                </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4">
+                  <Button variant="outline" onClick={resetForm} disabled={isFormDisabled}>Limpar</Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancelar</Button>
+                  </DialogClose>
+                  <Button type="button" onClick={handleSaveChanges} disabled={isFormDisabled}>Salvar Documento</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+        </div>
       </PageHeader>
 
       <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
