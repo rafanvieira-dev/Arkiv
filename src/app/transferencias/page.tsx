@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Transferencia } from "@/types";
-import { Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
+import { Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,6 +41,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function TransferenciasManagementPage() {
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [transferencias, setTransferencias] = React.useState<Transferencia[]>([]);
   const [displayedTransferencias, setDisplayedTransferencias] = React.useState<Transferencia[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
@@ -191,6 +192,146 @@ export default function TransferenciasManagementPage() {
     setTransferencias(prev => prev.filter(t => t.id !== id));
     toast({ title: "Transferência Excluída" });
   };
+  
+  const handleExportCSV = () => {
+    const headers = ['id', 'nomeServidor', 'matricula', 'ramal', 'setorRemetente', 'dataTransferencia', 'status', 'observacoes', 'documentos_json'];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedTransferencias.length > 0 ? displayedTransferencias : transferencias;
+
+    dataToExport.forEach(item => {
+      const rowData = {
+        id: item.id,
+        nomeServidor: item.nomeServidor,
+        matricula: item.matricula,
+        ramal: item.ramal || '',
+        setorRemetente: item.setorRemetente,
+        dataTransferencia: item.dataTransferencia,
+        status: item.status,
+        observacoes: item.observacoes || '',
+        documentos_json: JSON.stringify(item.documentos)
+      };
+      const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'transferencias_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de transferências concluída." });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ['nomeServidor', 'matricula', 'ramal', 'setorRemetente', 'dataTransferencia', 'observacoes', 'documentos_json'];
+    const exampleDoc = [{
+        id: "TEMP_DOC_1",
+        categoria: "Processo Judicial",
+        codigoClassificacao: "020.1",
+        descricao: "Descrição de exemplo",
+        dataAbrangente: "01/2024",
+        numeroDocumento: "PJ-2024-001",
+        quantidadeVolumes: 1,
+        quantidadeApensos: 0,
+        numerosApensos: "",
+        digitalizado: "Não",
+        observacoesGerais: "Observação do documento"
+    }];
+    const exampleRow = [
+        "Nome Servidor Exemplo", "12345", "6789", "Setor Exemplo", new Date().toISOString(), "Observação geral da transferência", JSON.stringify(exampleDoc).replace(/"/g, '""')
+    ].map(v => `"${v}"`).join(',');
+
+    const csvContent = `${headers.join(',')}\n${exampleRow}`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_transferencias.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = ['nomeServidor', 'matricula', 'setorRemetente', 'dataTransferencia', 'documentos_json'];
+            
+            const hasRequiredHeaders = expectedHeaders.every(h => headers.includes(h));
+            if (!hasRequiredHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${expectedHeaders.filter(h => !headers.includes(h)).join(', ')}. Por favor, utilize o modelo fornecido.` });
+                 return;
+            }
+
+            const newItemsFromCsv: Transferencia[] = [];
+            rows.forEach((row, index) => {
+                if(!row.trim()) return;
+                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const newItemData: { [key: string]: any } = {};
+                headers.forEach((header, i) => {
+                  newItemData[header] = values[i] || "";
+                });
+
+                if (!newItemData.nomeServidor || !newItemData.matricula || !newItemData.setorRemetente || !newItemData.dataTransferencia || !newItemData.documentos_json) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios faltando.`);
+                }
+                
+                let documents;
+                try {
+                    documents = JSON.parse(newItemData.documentos_json);
+                    if (!Array.isArray(documents)) throw new Error("A coluna 'documentos_json' deve ser um array JSON válido.");
+                } catch (jsonError) {
+                    throw new Error(`Linha ${index + 2}: Erro ao processar a coluna 'documentos_json'. Verifique o formato. Detalhes: ${(jsonError as Error).message}`);
+                }
+
+                const newItem: Transferencia = {
+                    id: `TRANSF_IMP_${Date.now()}_${index}`,
+                    nomeServidor: newItemData.nomeServidor,
+                    matricula: newItemData.matricula,
+                    ramal: newItemData.ramal,
+                    setorRemetente: newItemData.setorRemetente,
+                    dataTransferencia: newItemData.dataTransferencia,
+                    status: 'Pendente', // Imported transfers are always pending
+                    observacoes: newItemData.observacoes,
+                    documentos: documents,
+                };
+                newItemsFromCsv.push(newItem);
+            });
+
+            setTransferencias(prev => [...prev, ...newItemsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newItemsFromCsv.length} transferências foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   const numDisplayed = displayedTransferencias.length;
   const numSelected = selectedRowIds.length;
@@ -198,7 +339,29 @@ export default function TransferenciasManagementPage() {
   return (
     <TooltipProvider>
       <div className="container mx-auto py-2">
-        <PageHeader title="Gerenciamento de Transferências" description="Aprove ou reprove as solicitações de transferência de documentos para o arquivo." />
+        <PageHeader title="Gerenciamento de Transferências" description="Aprove ou reprove as solicitações de transferência de documentos para o arquivo.">
+            <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar CSV
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    className="hidden"
+                />
+                <Button variant="outline" onClick={handleExportCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar CSV
+                </Button>
+                <Button variant="outline" onClick={handleDownloadTemplate}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Baixar Modelo
+                </Button>
+            </div>
+        </PageHeader>
 
         <Card className="mt-6">
           <CardHeader className="flex flex-row items-center justify-between">
