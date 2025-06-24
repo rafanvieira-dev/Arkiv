@@ -253,7 +253,7 @@ export default function PublicSolicitacaoPage() {
                     </SelectContent>
                   </Select>
                   {formState.tipo === 'Empréstimo' && (
-                      <p className="text-sm text-destructive mt-2">Empréstimo é para quando o documento será somente consultado, sem tramitação.</p>
+                      <p className="text-sm text-destructive mt-2">A opção empréstimo deverá ser utilizada quando o documento será somente consultado, sem tramitação.</p>
                   )}
                   {formState.tipo === 'Desarquivamento' && (
                       <p className="text-sm text-destructive mt-2">Essa opção é para quando o documento voltará a tramitar, e implica em nova contagem de prazo após o rearquivamento.</p>
@@ -351,5 +351,4 @@ export default function PublicSolicitacaoPage() {
     </div>
   );
 }
-
     
