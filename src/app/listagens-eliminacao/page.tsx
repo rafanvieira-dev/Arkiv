@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -104,6 +104,22 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     }
   },
   {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'dataProducaoTermoEliminacao',
+    defaultVisible: true,
+    enableSorting: true,
+    cellFormatter: (value, item) => {
+      if (item.dataProducaoTermoEliminacao) {
+        return <Badge variant="destructive">Eliminada</Badge>;
+      }
+      if (item.dataPublicacaoEdital) {
+        return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">Edital Publicado</Badge>;
+      }
+      return <Badge variant="secondary">Aberta</Badge>;
+    }
+  },
+  {
     id: 'dataProducaoListagem',
     header: 'Data Prod. Listagem',
     accessorKey: 'dataProducaoListagem',
@@ -151,6 +167,7 @@ type DialogDocumentColumn = {
 
 export default function ListagensEliminacaoPage() {
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
@@ -606,7 +623,7 @@ export default function ListagensEliminacaoPage() {
         if (newSorting[existingSortIndex].direction === 'asc') newSorting[existingSortIndex].direction = 'desc';
         else newSorting.splice(existingSortIndex, 1);
       } else {
-        newSorting.push({ id: columnId, direction: 'asc' });
+        newSorting = [{ id: columnId, direction: 'asc' }];
       }
       return newSorting;
     });
@@ -650,6 +667,123 @@ export default function ListagensEliminacaoPage() {
       ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {})
     );
   };
+  
+  const handleExportCSV = () => {
+    const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+    const csvRows = [headers.join(',')];
+
+    const dataToExport = displayedListagens.length > 0 ? displayedListagens : listagens;
+
+    dataToExport.forEach(item => {
+        const rowData = {
+            id: item.id,
+            numeroListagem: item.numeroListagem,
+            dataProducaoListagem: item.dataProducaoListagem || '',
+            numeroEditalCiencia: item.numeroEditalCiencia || '',
+            dataPublicacaoEdital: item.dataPublicacaoEdital || '',
+            numeroTermoEliminacao: item.numeroTermoEliminacao || '',
+            dataProducaoTermoEliminacao: item.dataProducaoTermoEliminacao || '',
+            observacoes: item.observacoes || '',
+            documentoIds: item.documentoIds.join(';')
+        };
+        const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'listagens_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Sucesso", description: "Exportação de listagens concluída." });
+  };
+  
+  const handleDownloadTemplate = () => {
+    const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+    const csvContent = `${headers.join(',')}\n"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_listagens.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') return;
+
+        try {
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const headerRow = rows.shift();
+            if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+            
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const expectedHeaders = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+            
+            const hasRequiredHeaders = ['numeroListagem'].every(h => headers.includes(h));
+            if (!hasRequiredHeaders) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Coluna 'numeroListagem' é obrigatória. Por favor, utilize o modelo fornecido." });
+                 return;
+            }
+
+            const newItemsFromCsv: ListagemEliminacao[] = [];
+            rows.forEach((row, index) => {
+                if(!row.trim()) return;
+                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const newItemData: { [key: string]: string } = {};
+                headers.forEach((header, i) => {
+                  newItemData[header] = values[i] || "";
+                });
+
+                if (!newItemData.numeroListagem) {
+                    throw new Error(`Linha ${index + 2}: Campo obrigatório (numeroListagem) faltando.`);
+                }
+                
+                const docIds = newItemData.documentoIds ? newItemData.documentoIds.split(';').map(id => id.trim()).filter(Boolean) : [];
+
+                const newItem: ListagemEliminacao = {
+                    id: `LE_IMP_${Date.now()}_${index}`,
+                    numeroListagem: newItemData.numeroListagem,
+                    dataProducaoListagem: newItemData.dataProducaoListagem || new Date().toISOString(),
+                    numeroEditalCiencia: newItemData.numeroEditalCiencia,
+                    dataPublicacaoEdital: newItemData.dataPublicacaoEdital,
+                    numeroTermoEliminacao: newItemData.numeroTermoEliminacao,
+                    dataProducaoTermoEliminacao: newItemData.dataProducaoTermoEliminacao,
+                    observacoes: newItemData.observacoes,
+                    documentoIds: docIds,
+                };
+                newItemsFromCsv.push(newItem);
+            });
+
+            setListagens(prev => [...prev, ...newItemsFromCsv]);
+            toast({ title: "Importação Concluída", description: `${newItemsFromCsv.length} listagens foram importadas com sucesso.` });
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
+        } finally {
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   const numDisplayed = displayedListagens.length;
   const numSelected = selectedRowIds.length;
@@ -658,150 +792,171 @@ export default function ListagensEliminacaoPage() {
     <TooltipProvider>
       <div className="container mx-auto py-2">
         <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
-          <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-            setIsDialogOpen(isOpen);
-            if (!isOpen) resetFormAndDialogState();
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nova Listagem
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl">
-              <DialogHeader>
-                <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Listagem" : "Nova Listagem de Eliminação"}</DialogTitle>
-                <DialogDescription>
-                  Preencha as informações da listagem e selecione os documentos a serem eliminados.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="numeroListagem">Nº Listagem*</Label>
-                      <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
-                      <DateInputPicker
-                        value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
-                        onChange={(date) => handleDateChange('dataProducaoListagem')(date)}
-                        placeholder="dd/mm/aaaa"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
-                      <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
-                      <DateInputPicker
-                        value={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
-                        onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)}
-                        placeholder="dd/mm/aaaa"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
-                      <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
-                      <DateInputPicker
-                        value={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
-                        onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
-                        placeholder="dd/mm/aaaa"
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="observacoes">Observações</Label>
-                      <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
-                    </div>
-                </div>
-
-                {!isDocumentTableVisible && (
-                  <div className="mt-4 flex justify-center">
-                    <Button
-                      type="button"
-                      onClick={() => setIsDocumentTableVisible(true)}
-                      variant="outline"
-                    >
-                      <ListFilter className="mr-2 h-4 w-4" />
-                      Selecionar Documentos para Eliminação
-                    </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={handleImportClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
+            </Button>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+            />
+            <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+            </Button>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Baixar Modelo
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) resetFormAndDialogState();
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nova Listagem
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Listagem" : "Nova Listagem de Eliminação"}</DialogTitle>
+                  <DialogDescription>
+                    Preencha as informações da listagem e selecione os documentos a serem eliminados.
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="numeroListagem">Nº Listagem*</Label>
+                        <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
+                        <DateInputPicker
+                          value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
+                          onChange={(date) => handleDateChange('dataProducaoListagem')(date)}
+                          placeholder="dd/mm/aaaa"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
+                        <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
+                        <DateInputPicker
+                          value={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
+                          onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)}
+                          placeholder="dd/mm/aaaa"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
+                        <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
+                        <DateInputPicker
+                          value={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
+                          onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
+                          placeholder="dd/mm/aaaa"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="observacoes">Observações</Label>
+                        <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
+                      </div>
                   </div>
-                )}
 
-                {isDocumentTableVisible && (
-                  <div className="mt-4">
-                    <Label className="text-md font-medium">Documentos</Label>
-                    <Card className="mt-2">
-                      <CardHeader className="p-4">
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <Input
-                                type="text"
-                                placeholder="Filtrar Ano Elim. Prev."
-                                value={dialogTableFilters.anoEliminacaoPrevisto}
-                                onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
-                                className="w-full sm:w-[180px]"
-                            />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <ScrollArea className="h-[300px] w-full border-t">
-                          <Table className="min-w-max whitespace-nowrap text-xs">
-                            <TableHeader>
-                              <TableRow>
-                                {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                  <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
-                                    {col.enableSorting ? (
-                                      <Button
-                                        variant="ghost"
-                                        onClick={() => handleDialogTableSort(col.id.toString())}
-                                        className="px-1 py-0 h-auto -ml-1 text-xs"
-                                      >
-                                        {col.header}
-                                        {renderDialogTableSortIcon(col.id.toString())}
-                                      </Button>
-                                    ) : (
-                                      col.header
-                                    )}
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {documentsForDialog.map(doc => (
-                                <TableRow key={doc.id}>
+                  {!isDocumentTableVisible && (
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        type="button"
+                        onClick={() => setIsDocumentTableVisible(true)}
+                        variant="outline"
+                      >
+                        <ListFilter className="mr-2 h-4 w-4" />
+                        Selecionar Documentos para Eliminação
+                      </Button>
+                    </div>
+                  )}
+
+                  {isDocumentTableVisible && (
+                    <div className="mt-4">
+                      <Label className="text-md font-medium">Documentos</Label>
+                      <Card className="mt-2">
+                        <CardHeader className="p-4">
+                          <div className="flex flex-col sm:flex-row gap-2">
+                              <Input
+                                  type="text"
+                                  placeholder="Filtrar Ano Elim. Prev."
+                                  value={dialogTableFilters.anoEliminacaoPrevisto}
+                                  onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
+                                  className="w-full sm:w-[180px]"
+                              />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <ScrollArea className="h-[300px] w-full border-t">
+                            <Table className="min-w-max whitespace-nowrap text-xs">
+                              <TableHeader>
+                                <TableRow>
                                   {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                    <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
-                                      {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
-                                    </TableCell>
+                                    <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
+                                      {col.enableSorting ? (
+                                        <Button
+                                          variant="ghost"
+                                          onClick={() => handleDialogTableSort(col.id.toString())}
+                                          className="px-1 py-0 h-auto -ml-1 text-xs"
+                                        >
+                                          {col.header}
+                                          {renderDialogTableSortIcon(col.id.toString())}
+                                        </Button>
+                                      ) : (
+                                        col.header
+                                      )}
+                                    </TableHead>
                                   ))}
                                 </TableRow>
-                              ))}
-                              {documentsForDialog.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                            Nenhum documento elegível encontrado para os filtros aplicados.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                          </Table>
-                          <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </ScrollArea>
-              <DialogFooter className="pt-6">
-                <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-                <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                              </TableHeader>
+                              <TableBody>
+                                {documentsForDialog.map(doc => (
+                                  <TableRow key={doc.id}>
+                                    {DIALOG_DOCUMENT_COLUMNS.map(col => (
+                                      <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
+                                        {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))}
+                                {documentsForDialog.length === 0 && (
+                                      <TableRow>
+                                          <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
+                                              Nenhum documento elegível encontrado para os filtros aplicados.
+                                          </TableCell>
+                                      </TableRow>
+                                  )}
+                              </TableBody>
+                            </Table>
+                            <ScrollBar orientation="horizontal" />
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </ScrollArea>
+                <DialogFooter className="pt-6">
+                  <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                  <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </PageHeader>
 
         <Card className="mt-6">
