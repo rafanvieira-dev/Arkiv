@@ -200,12 +200,26 @@ export default function DocumentosPage() {
   const handleOpenDialog = React.useCallback((doc?: Documento) => {
     if (doc) {
       const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
+      
+      let assunto = "Não encontrado";
+      let classId = doc.classificacaoArquivisticaId || "";
+      const classCode = existingClassification ? existingClassification.codigo : "";
+
+      if (existingClassification) {
+        if (existingClassification.inativo) {
+          assunto = "Complementar o cadastro";
+          classId = ""; // Force creation of a new one on save
+        } else {
+          assunto = existingClassification.descricao;
+        }
+      }
+
       setFormState({
         ...initialFormState, 
         ...doc,
-        codigoClassificacaoArquivisticaInput: existingClassification ? existingClassification.codigo : "",
-        assuntoClassificacaoDisplay: existingClassification ? (existingClassification.inativo ? `${existingClassification.descricao} (INATIVO)`: existingClassification.descricao) : "Não encontrado",
-        classificacaoArquivisticaId: doc.classificacaoArquivisticaId || "", 
+        codigoClassificacaoArquivisticaInput: classCode,
+        assuntoClassificacaoDisplay: assunto,
+        classificacaoArquivisticaId: classId,
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
@@ -444,7 +458,7 @@ export default function DocumentosPage() {
        if (classification.inativo) {
          setFormState(prev => ({
           ...prev,
-          assuntoClassificacaoDisplay: `${classification.descricao} (INATIVO)`,
+          assuntoClassificacaoDisplay: "Complementar o cadastro",
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
@@ -554,8 +568,12 @@ export default function DocumentosPage() {
         if (foundClassification.inativo) {
             setFormState(prev => ({
                 ...prev,
-                classificacaoArquivisticaId: "", // Will be created on save
-                assuntoClassificacaoDisplay: `${foundClassification.descricao} (INATIVO)`,
+                classificacaoArquivisticaId: "",
+                assuntoClassificacaoDisplay: "Complementar o cadastro",
+                prazoArquivoCorrenteDisplay: "",
+                prazoArquivoIntermediarioDisplay: "",
+                destinacaoFinalDisplay: undefined,
+                anoEliminacaoPrevisto: ""
             }));
         } else {
             setFormState(prev => ({
@@ -563,21 +581,22 @@ export default function DocumentosPage() {
                 classificacaoArquivisticaId: foundClassification.id,
             }));
         }
-      } else {
+      } else { // Not found
         setFormState(prev => ({
           ...prev,
-          classificacaoArquivisticaId: "", // Will be created on save
-          assuntoClassificacaoDisplay: "(Novo - será criado ao salvar)",
+          classificacaoArquivisticaId: "",
+          assuntoClassificacaoDisplay: "Complementar o cadastro",
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
           anoEliminacaoPrevisto: ""
         }));
       }
-    } else {
+    } else { // Empty input
       setFormState(prev => ({
         ...prev,
         classificacaoArquivisticaId: "",
+        codigoClassificacaoArquivisticaInput: "",
         assuntoClassificacaoDisplay: "",
         prazoArquivoCorrenteDisplay: "",
         prazoArquivoIntermediarioDisplay: "",
@@ -1447,7 +1466,15 @@ export default function DocumentosPage() {
                   </div>
                    <div className="space-y-2">
                     <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
-                    <Input id="assuntoClassificacaoDisplay" value={formState.assuntoClassificacaoDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                    <Input 
+                      id="assuntoClassificacaoDisplay" 
+                      value={formState.assuntoClassificacaoDisplay || ""} 
+                      readOnly 
+                      className={cn(
+                        "bg-muted/50 cursor-not-allowed",
+                        formState.assuntoClassificacaoDisplay === 'Complementar o cadastro' && "text-destructive font-semibold"
+                      )} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
