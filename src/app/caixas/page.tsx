@@ -4,11 +4,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Caixa, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -58,6 +58,7 @@ import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
 import { getYear, parseISO } from 'date-fns';
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
@@ -72,6 +73,17 @@ const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazo
   prazosGuarda: "",
   anosEliminacao: "",
 };
+
+const initialFiltersState = {
+  codigoCaixa: "",
+  descricao: "",
+  proveniencia: "",
+  tipo: "",
+  status: "",
+  localizacao: "",
+  situacao: "",
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES"; 
 
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
@@ -101,6 +113,9 @@ export default function CaixasPage() {
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [documentos, setDocumentos] = React.useState<Documento[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+  
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>({});
   const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
@@ -329,17 +344,27 @@ export default function CaixasPage() {
   };
 
 
-  const getSortableValueCaixas = (caixa: Caixa, columnId: string): any => {
+  const getSortableValueCaixas = React.useCallback((caixa: Caixa, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG_CAIXAS.find(col => col.id === columnId);
     if (!column) return null;
     const value = caixa[column.accessorKey as keyof Caixa];
     return value;
-  };
+  }, [ALL_COLUMNS_CONFIG_CAIXAS]);
 
   React.useEffect(() => {
-    let sortedCaixas = [...caixas];
+    let itemsToDisplay = caixas.filter(caixa => {
+        if (filters.codigoCaixa && !caixa.codigoCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
+        if (filters.descricao && !caixa.descricao?.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
+        if (filters.proveniencia && !caixa.proveniencia?.toLowerCase().includes(filters.proveniencia.toLowerCase())) return false;
+        if (filters.tipo && caixa.tipo !== filters.tipo) return false;
+        if (filters.status && caixa.status !== filters.status) return false;
+        if (filters.localizacao && !caixa.localizacao?.toLowerCase().includes(filters.localizacao.toLowerCase())) return false;
+        if (filters.situacao && caixa.situacao !== filters.situacao) return false;
+        return true;
+    });
+
     if (sortingCaixas.length > 0) {
-      sortedCaixas.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sortingCaixas) {
           const valA = getSortableValueCaixas(a, sortConfig.id);
           const valB = getSortableValueCaixas(b, sortConfig.id);
@@ -358,8 +383,8 @@ export default function CaixasPage() {
         return 0;
       });
     }
-    setDisplayedCaixas(sortedCaixas);
-  }, [sortingCaixas, caixas]);
+    setDisplayedCaixas(itemsToDisplay);
+  }, [caixas, filters, sortingCaixas, getSortableValueCaixas]);
 
 
   const handleSortCaixas = (columnId: string) => {
@@ -545,6 +570,18 @@ export default function CaixasPage() {
     reader.readAsText(file);
   };
 
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
 
   const numDisplayed = displayedCaixas.length;
   const numSelected = selectedRowIds.length;
@@ -675,8 +712,80 @@ export default function CaixasPage() {
             </Dialog>
         </div>
       </PageHeader>
+      
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros das Caixas</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de caixas aplicando um ou mais filtros abaixo.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+              <div className="space-y-2">
+                <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
+                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDescricao">Descrição</Label>
+                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterProveniencia">Proveniência</Label>
+                <Input id="filterProveniencia" name="proveniencia" value={filters.proveniencia} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterLocalizacao">Localização</Label>
+                <Input id="filterLocalizacao" name="localizacao" value={filters.localizacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterTipo">Tipo</Label>
+                <Select onValueChange={handleFilterSelectChange('tipo')} value={filters.tipo}>
+                  <SelectTrigger id="filterTipo"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os tipos</SelectItem>
+                    {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterStatus">Status</Label>
+                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                    <SelectItem value="Aberta">Aberta</SelectItem>
+                    <SelectItem value="Fechada">Fechada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterSituacao">Situação</Label>
+                <Select onValueChange={handleFilterSelectChange('situacao')} value={filters.situacao}>
+                  <SelectTrigger id="filterSituacao"><SelectValue placeholder="Todas as situações" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as situações</SelectItem>
+                    <SelectItem value="Completa">Completa</SelectItem>
+                    <SelectItem value="Incompleta">Incompleta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-      <Card className="mt-6">
+      <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
            <div className="flex items-center gap-2">
