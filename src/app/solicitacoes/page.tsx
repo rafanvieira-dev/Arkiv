@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
@@ -528,6 +528,14 @@ export default function SolicitacoesPage() {
     }
     return value === undefined || value === null ? 'N/A' : String(value);
   };
+  
+  const handleDelete = (id: string) => {
+    setSolicitacoes(prev => prev.filter(s => s.id !== id));
+    toast({
+        title: "Solicitação Excluída",
+        description: "A solicitação foi removida com sucesso.",
+    });
+  };
 
   const handleExportCSV = () => {
     const headers = [
@@ -1033,10 +1041,8 @@ export default function SolicitacoesPage() {
                        <div className="flex items-center justify-end">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link href={`/solicitacoes/print/${item.id}`} target="_blank">
-                              <Button variant="ghost" size="icon" aria-label="Imprimir Guia de Remessa">
+                             <Link href={`/solicitacoes/print/${item.id}`} target="_blank" className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Imprimir Guia de Remessa">
                                 <Printer className="h-4 w-4" />
-                              </Button>
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent><p>Imprimir Guia de Remessa</p></TooltipContent>
@@ -1051,7 +1057,7 @@ export default function SolicitacoesPage() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação">
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação" onClick={() => handleDelete(item.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
@@ -1074,5 +1080,6 @@ export default function SolicitacoesPage() {
     </TooltipProvider>
   );
 }
+    
 
     
