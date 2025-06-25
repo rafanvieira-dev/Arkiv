@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { parseCsvRow } from "@/lib/utils";
+import { logAction } from "@/lib/audit";
 
 const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
@@ -109,6 +110,18 @@ export default function ClassesJudiciaisPage() {
   );
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [displayedItems, setDisplayedItems] = React.useState<ClasseJudicial[]>([]);
+  
+  const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
+  const [bulkEditField, setBulkEditField] = React.useState('');
+  const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
+  const bulkEditableFields = [
+    { value: 'prazoGuardaAnos', label: 'Prazo de Guarda (Anos)', type: 'number' },
+    { value: 'destinacaoFinal', label: 'Destinação Final', type: 'select', options: ['Não se Aplica', 'Vide Guia de Aplicação', 'Eliminação', 'Guarda Permanente'] },
+    { value: 'observacoes', label: 'Observações', type: 'text' },
+    { value: 'inativo', label: 'Status', type: 'select', options: ['Ativo', 'Inativo'] },
+  ];
+  const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
 
   React.useEffect(() => {
     try {
@@ -186,6 +199,56 @@ export default function ClassesJudiciaisPage() {
     setClassesJudiciais(prev => prev.filter(c => c.id !== id));
   };
   
+    const handleBulkUpdate = () => {
+    if (!bulkEditField || (bulkEditValue === '' || bulkEditValue === undefined)) {
+      toast({
+        variant: "destructive",
+        title: "Ação Incompleta",
+        description: "Por favor, selecione um campo e forneça o novo valor.",
+      });
+      return;
+    }
+
+    const valueToSet = 
+        bulkEditField === 'inativo' ? (bulkEditValue === 'Inativo') : 
+        bulkEditField === 'prazoGuardaAnos' ? parseInt(bulkEditValue, 10) : 
+        bulkEditValue;
+
+    if (bulkEditField === 'prazoGuardaAnos' && isNaN(valueToSet as number)) {
+        toast({
+            variant: "destructive",
+            title: "Valor Inválido",
+            description: "O prazo de guarda deve ser um número.",
+        });
+        return;
+    }
+
+    logAction('BULK_UPDATE_CLASSES_JUDICIAIS', {
+      count: selectedRowIds.length,
+      field: bulkEditField,
+      classeIds: selectedRowIds,
+    });
+
+    setClassesJudiciais(prevItems =>
+        prevItems.map(item => {
+            if (selectedRowIds.includes(item.id)) {
+                return { ...item, [bulkEditField]: valueToSet };
+            }
+            return item;
+        })
+    );
+    
+    toast({
+      title: "Alteração em Bloco Concluída",
+      description: `${selectedRowIds.length} classe(s) judicial(is) foram atualizadas com sucesso.`,
+    });
+
+    setSelectedRowIds([]);
+    setIsBulkEditOpen(false);
+    setBulkEditField('');
+    setBulkEditValue('');
+  };
+
   const getSortableValue = (item: ClasseJudicial, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
     if (!column) return null;
@@ -392,6 +455,10 @@ export default function ClassesJudiciaisPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
         <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                <PenSquare className="mr-2 h-4 w-4" />
+                Alterar em Bloco ({selectedRowIds.length})
+            </Button>
             <Button variant="outline" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar CSV
@@ -613,6 +680,74 @@ export default function ClassesJudiciaisPage() {
           )}
         </CardContent>
       </Card>
+      
+      <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setBulkEditField('');
+          setBulkEditValue('');
+        }
+        setIsBulkEditOpen(isOpen);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alteração em Bloco</DialogTitle>
+            <DialogDescription>
+              Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} classes judiciais selecionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="bulk-field" className="text-right">
+                Campo a Alterar
+              </Label>
+              <Select onValueChange={(value) => {
+                setBulkEditField(value);
+                setBulkEditValue('');
+              }} value={bulkEditField}>
+                <SelectTrigger id="bulk-field" className="col-span-3">
+                  <SelectValue placeholder="Selecione um campo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bulkEditableFields.map(field => (
+                    <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedBulkField && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bulk-value" className="text-right">
+                  Novo Valor
+                </Label>
+                <div className="col-span-3">
+                  {selectedBulkField.type === 'text' && (
+                    <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                  )}
+                  {selectedBulkField.type === 'number' && (
+                    <Input id="bulk-value" type="number" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                  )}
+                  {selectedBulkField.type === 'select' && (
+                    <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                      <SelectTrigger id="bulk-value">
+                        <SelectValue placeholder="Selecione um valor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedBulkField.options?.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+            <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </TooltipProvider>
   );

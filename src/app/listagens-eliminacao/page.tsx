@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { placeholderDocumentos, placeholderClassificacoesSimulado, simulatedListagensData } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
+import { logAction } from "@/lib/audit";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -48,7 +49,6 @@ type SimulatedDocumentForDialog = Pick<
   'numeroDocumento' |
   'tipoDocumento' |
   'descricaoDocumento' |
-  'nomePartePrincipal' |
   'dataAbrangente' |
   'classificacaoArquivisticaId' |
   'status' |
@@ -158,7 +158,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
 ];
 
 type DialogDocumentColumn = {
-  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status';
+  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | 'partes';
   header: string | React.ReactNode;
   accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string;
   enableSorting: boolean;
@@ -191,6 +191,18 @@ export default function ListagensEliminacaoPage() {
   const [dialogTableSortConfig, setDialogTableSortConfig] = React.useState<DialogTableSortConfig[]>([]);
   const [isDocumentTableVisible, setIsDocumentTableVisible] = React.useState(false);
 
+  const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
+  const [bulkEditField, setBulkEditField] = React.useState('');
+  const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
+  const bulkEditableFields = [
+    { value: 'numeroEditalCiencia', label: 'Nº Edital Ciência', type: 'text' },
+    { value: 'dataPublicacaoEdital', label: 'Data Pub. Edital', type: 'date' },
+    { value: 'numeroTermoEliminacao', label: 'Nº Termo Eliminação', type: 'text' },
+    { value: 'dataProducaoTermoEliminacao', label: 'Data Prod. Termo', type: 'date' },
+    { value: 'observacoes', label: 'Observações', type: 'text' },
+  ];
+  const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
 
   const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
     {
@@ -229,7 +241,7 @@ export default function ListagensEliminacaoPage() {
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-    { id: 'nomePartePrincipal', header: 'Partes', accessorKey: 'nomePartePrincipal', enableSorting: true },
+    { id: 'partes', header: 'Partes', accessorKey: 'partes', enableSorting: true },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },
     {
       id: 'codigoClassificacao',
@@ -575,6 +587,46 @@ export default function ListagensEliminacaoPage() {
     setSelectedRowIds([]);
     setIsDialogOpen(false);
   };
+  
+  const handleBulkUpdate = () => {
+    if (!bulkEditField || (typeof bulkEditValue !== 'boolean' && !bulkEditValue)) {
+      toast({
+        variant: "destructive",
+        title: "Ação Incompleta",
+        description: "Por favor, selecione um campo e forneça o novo valor.",
+      });
+      return;
+    }
+
+    logAction('BULK_UPDATE_LISTAGENS', {
+      count: selectedRowIds.length,
+      field: bulkEditField,
+      listagemIds: selectedRowIds,
+    });
+
+    setListagens(prevItems =>
+        prevItems.map(item => {
+            if (selectedRowIds.includes(item.id)) {
+                const valueToSet = (bulkEditField === 'dataPublicacaoEdital' || bulkEditField === 'dataProducaoTermoEliminacao') && bulkEditValue instanceof Date
+                  ? bulkEditValue.toISOString()
+                  : bulkEditValue;
+                return { ...item, [bulkEditField]: valueToSet };
+            }
+            return item;
+        })
+    );
+    
+    toast({
+      title: "Alteração em Bloco Concluída",
+      description: `${selectedRowIds.length} listagem(ns) foram atualizadas com sucesso.`,
+    });
+
+    setSelectedRowIds([]);
+    setIsBulkEditOpen(false);
+    setBulkEditField('');
+    setBulkEditValue('');
+  };
+
 
   const getSortableValue = (item: ListagemEliminacao, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG_LISTAGENS.find(col => col.id === columnId);
@@ -704,7 +756,8 @@ export default function ListagensEliminacaoPage() {
   
   const handleDownloadTemplate = () => {
     const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
-    const csvContent = `${headers.join(',')}\n"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
+    const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
+    const csvContent = `${headers.join(',')}\n${exampleRow}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -734,7 +787,7 @@ export default function ListagensEliminacaoPage() {
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
             const headers = parseCsvRow(headerRow);
-
+            
             const newItemsFromCsv: ListagemEliminacao[] = [];
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
@@ -783,6 +836,10 @@ export default function ListagensEliminacaoPage() {
       <div className="container mx-auto py-2">
         <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                <PenSquare className="mr-2 h-4 w-4" />
+                Alterar em Bloco ({selectedRowIds.length})
+            </Button>
             <Button variant="outline" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar CSV
@@ -1076,6 +1133,74 @@ export default function ListagensEliminacaoPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setBulkEditField('');
+          setBulkEditValue('');
+        }
+        setIsBulkEditOpen(isOpen);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alteração em Bloco</DialogTitle>
+            <DialogDescription>
+              Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} listagens selecionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="bulk-field" className="text-right">
+                Campo a Alterar
+              </Label>
+              <Select onValueChange={(value) => {
+                setBulkEditField(value);
+                setBulkEditValue('');
+              }} value={bulkEditField}>
+                <SelectTrigger id="bulk-field" className="col-span-3">
+                  <SelectValue placeholder="Selecione um campo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bulkEditableFields.map(field => (
+                    <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedBulkField && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bulk-value" className="text-right">
+                  Novo Valor
+                </Label>
+                <div className="col-span-3">
+                  {selectedBulkField.type === 'text' && (
+                    <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                  )}
+                  {selectedBulkField.type === 'date' && (
+                    <DateInputPicker value={bulkEditValue} onChange={setBulkEditValue} />
+                  )}
+                  {selectedBulkField.type === 'select' && (
+                    <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                      <SelectTrigger id="bulk-value">
+                        <SelectValue placeholder="Selecione um valor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedBulkField.options?.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+            <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

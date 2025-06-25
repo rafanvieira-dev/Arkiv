@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Usuario } from "@/types";
-import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
 import {
   Dialog,
   DialogContent,
