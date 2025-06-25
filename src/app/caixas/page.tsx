@@ -59,6 +59,7 @@ import { getYear, parseISO } from 'date-fns';
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
@@ -103,6 +104,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 export default function CaixasPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; }>(initialFormStateCaixa);
@@ -611,7 +613,7 @@ export default function CaixasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -931,13 +933,13 @@ export default function CaixasPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa">
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" disabled={!permissions.usuarios}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Excluir Caixa</p>
+                              <p>{permissions.usuarios ? "Excluir Caixa" : "Permissão necessária"}</p>
                             </TooltipContent>
                           </Tooltip>
                           <AlertDialogContent>

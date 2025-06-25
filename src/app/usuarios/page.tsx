@@ -55,6 +55,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { initialUsers, allPermissions } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
@@ -131,6 +132,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfigUsuarios[] = [
 export default function UsuariosPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   const [users, setUsers] = React.useState<Usuario[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   const [displayedUsers, setDisplayedUsers] = React.useState<Usuario[]>([]);
@@ -516,7 +518,7 @@ export default function UsuariosPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Usuários" description="Adicione, edite e gerencie os usuários e suas permissões no sistema.">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+          <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Excluir ({selectedRowIds.length})
           </Button>
@@ -791,12 +793,12 @@ export default function UsuariosPage() {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive" disabled={user.id === 'USR001'}>
+                                    <Button variant="ghost" size="icon" className="text-destructive" disabled={user.id === 'USR001' || !permissions.usuarios}>
                                     <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent><p>{user.id === 'USR001' ? 'Administrador não pode ser excluído' : 'Excluir Usuário'}</p></TooltipContent>
+                                <TooltipContent><p>{user.id === 'USR001' ? 'Administrador não pode ser excluído' : (permissions.usuarios ? 'Excluir Usuário' : 'Permissão necessária')}</p></TooltipContent>
                             </Tooltip>
                             <AlertDialogContent>
                                 <AlertDialogHeader>

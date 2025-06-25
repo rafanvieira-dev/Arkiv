@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const initialClassesJudiciais: ClasseJudicial[] = [
@@ -115,6 +116,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 export default function ClassesJudiciaisPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState(initialFormState);
@@ -523,7 +525,7 @@ export default function ClassesJudiciaisPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -794,13 +796,13 @@ export default function ClassesJudiciaisPage() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial">
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.usuarios}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Excluir Classe Judicial</p>
+                                  <p>{permissions.usuarios ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
                                 </TooltipContent>
                               </Tooltip>
                               <AlertDialogContent>

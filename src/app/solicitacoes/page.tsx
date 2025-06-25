@@ -63,6 +63,7 @@ import Link from "next/link";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
@@ -150,6 +151,7 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
 export default function SolicitacoesPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [acervoDocs, setAcervoDocs] = React.useState<SimulatedDocumentForSolicitacaoDialog[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
@@ -828,7 +830,7 @@ export default function SolicitacoesPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Solicitações" description="Cadastre e acompanhe empréstimos e desarquivamentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -1286,12 +1288,12 @@ export default function SolicitacoesPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                                <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação">
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação" disabled={!permissions.usuarios}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                             </TooltipTrigger>
-                            <TooltipContent><p>Excluir Solicitação</p></TooltipContent>
+                            <TooltipContent><p>{permissions.usuarios ? "Excluir Solicitação" : "Permissão necessária"}</p></TooltipContent>
                           </Tooltip>
                            <AlertDialogContent>
                             <AlertDialogHeader>
@@ -1409,4 +1411,5 @@ export default function SolicitacoesPage() {
     
 
     
+
 

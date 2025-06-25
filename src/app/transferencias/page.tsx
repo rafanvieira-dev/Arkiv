@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DateInputPicker } from "@/components/date-input-picker";
 import { isBefore, isAfter, parseISO } from "date-fns";
+import { useUserSession } from "@/hooks/use-user-session";
 
 const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
 
@@ -80,6 +81,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 export default function TransferenciasManagementPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   const [transferencias, setTransferencias] = React.useState<Transferencia[]>([]);
   const [displayedTransferencias, setDisplayedTransferencias] = React.useState<Transferencia[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
@@ -471,7 +473,7 @@ export default function TransferenciasManagementPage() {
       <div className="container mx-auto py-2">
         <PageHeader title="Gerenciamento de Transferências" description="Aprove ou reprove as solicitações de transferência de documentos para o arquivo.">
             <div className="flex flex-wrap items-center gap-2">
-                <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Excluir ({selectedRowIds.length})
                 </Button>
@@ -655,12 +657,12 @@ export default function TransferenciasManagementPage() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência">
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência" disabled={!permissions.usuarios}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent><p>Excluir</p></TooltipContent>
+                                <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
                               </Tooltip>
                               <AlertDialogContent>
                                 <AlertDialogHeader>

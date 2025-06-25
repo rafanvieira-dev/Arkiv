@@ -34,6 +34,7 @@ import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, in
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { TipoOrigem } from "@/types";
 import { parseCsvRow } from "@/lib/utils";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -48,6 +49,7 @@ type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidi
 
 export default function ConfiguracoesPage() {
   const { toast } = useToast();
+  const { permissions } = useUserSession();
   
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
@@ -389,12 +391,12 @@ export default function ConfiguracoesPage() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90">
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" disabled={!permissions.usuarios}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                       </TooltipTrigger>
-                      <TooltipContent><p>Excluir</p></TooltipContent>
+                      <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
                     </Tooltip>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -481,12 +483,12 @@ export default function ConfiguracoesPage() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90">
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" disabled={!permissions.usuarios}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                           </TooltipTrigger>
-                          <TooltipContent><p>Excluir</p></TooltipContent>
+                          <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
                         </Tooltip>
                         <AlertDialogContent>
                           <AlertDialogHeader>
