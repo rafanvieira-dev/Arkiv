@@ -75,7 +75,7 @@ const CustomTooltipContent = ({ active, payload, label }: any) => {
     return null;
   };
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno';
 
 
 export default function EstatisticasPage() {
@@ -89,6 +89,7 @@ export default function EstatisticasPage() {
   const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
   const [destinacaoCaixaData, setDestinacaoCaixaData] = React.useState<ChartData[]>([]);
   const [emprestimosPorSetorData, setEmprestimosPorSetorData] = React.useState<any[]>([]);
+  const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
@@ -372,6 +373,27 @@ export default function EstatisticasPage() {
         setEmprestimosPorSetorData(emprestimosChartData);
         setEmprestimoChartConfig(emprestimoFinalChartConfig);
 
+      // Process "Documentos Eliminados por Ano"
+      const eliminatedDocs = allDocs.filter(doc => doc.status === 'Eliminado' && doc.dataBaixa && isValid(parseISO(doc.dataBaixa)));
+      const totalEliminatedDocs = eliminatedDocs.length;
+      
+      const eliminadoPorAnoCounts = eliminatedDocs
+        .reduce((acc, doc) => {
+          const year = getYear(parseISO(doc.dataBaixa!)).toString();
+          acc[year] = (acc[year] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+      const eliminadoPorAnoChartData = Object.entries(eliminadoPorAnoCounts)
+        .map(([name, value]) => ({
+            name,
+            value,
+            percentage: totalEliminatedDocs > 0 ? (value / totalEliminatedDocs) * 100 : 0,
+            fill: "hsl(var(--chart-5))"
+        }))
+        .sort((a,b) => parseInt(a.name) - parseInt(b.name));
+      setEliminadoPorAnoData(eliminadoPorAnoChartData);
+
 
     } catch (error) {
       console.error("Failed to process chart data:", error);
@@ -416,6 +438,18 @@ export default function EstatisticasPage() {
             <YAxis />
             <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
             <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} name="Documentos"/>
+        </BarChart>
+    </ChartContainer>
+  );
+
+  const EliminadoPorAnoChart = (
+    <ChartContainer config={{}} className="h-full w-full">
+        <BarChart data={eliminadoPorAnoData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+            <Bar dataKey="value" fill="hsl(var(--chart-5))" radius={4} name="Documentos Eliminados"/>
         </BarChart>
     </ChartContainer>
   );
@@ -523,6 +557,14 @@ export default function EstatisticasPage() {
           </CardHeader>
           <CardContent className="h-[300px]">{AnoEliminacaoChart}</CardContent>
         </Card>
+
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Eliminados por Ano", "Quantidade de documentos efetivamente eliminados por ano.", 'eliminadoPorAno')}>
+          <CardHeader>
+            <CardTitle>Documentos Eliminados por Ano</CardTitle>
+            <CardDescription>Quantidade de documentos efetivamente eliminados por ano.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">{EliminadoPorAnoChart}</CardContent>
+        </Card>
         
         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
           <CardHeader>
@@ -591,6 +633,7 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'classification' && ClassificationChart}
                     {modalContent?.chartType === 'tipoDocumento' && TipoDocumentoChart}
                     {modalContent?.chartType === 'emprestimoPorSetor' && EmprestimoPorSetorChart}
+                    {modalContent?.chartType === 'eliminadoPorAno' && EliminadoPorAnoChart}
                 </div>
                 <DialogFooter className="sm:justify-end shrink-0 pt-4">
                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
