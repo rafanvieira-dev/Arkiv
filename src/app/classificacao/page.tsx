@@ -531,10 +531,6 @@ export default function ClassificacaoPage() {
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.codigo || !newItemData.descricao || !newItemData.destinacaoFinal || !newItemData.status) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, status, destinacaoFinal) faltando.`);
-                }
                 
                 const prazoCorrenteAnos = newItemData.prazoGuardaFaseCorrenteAnos ? parseInt(newItemData.prazoGuardaFaseCorrenteAnos, 10) : undefined;
                 const prazoIntermediarioAnos = parseInt(newItemData.prazoGuardaFaseIntermediariaAnos, 10);
@@ -544,12 +540,12 @@ export default function ClassificacaoPage() {
                     tipoPlanoClassificacao: newItemData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] || 'Administrativo',
                     codigo: newItemData.codigo,
                     descricao: newItemData.descricao,
-                    status: newItemData.status as Classificacao['status'],
+                    status: (newItemData.status as Classificacao['status']) || 'Pendente de Complemento',
                     tipoPrazoFaseCorrente: newItemData.tipoPrazoFaseCorrente as Classificacao['tipoPrazoFaseCorrente'] || 'Anos',
                     prazoGuardaFaseCorrenteAnos: isNaN(prazoCorrenteAnos as number) ? undefined : prazoCorrenteAnos,
                     prazoGuardaFaseCorrenteCondicaoTextual: newItemData.prazoGuardaFaseCorrenteCondicaoTextual,
                     prazoGuardaFaseIntermediariaAnos: isNaN(prazoIntermediarioAnos) ? 0 : prazoIntermediarioAnos,
-                    destinacaoFinal: newItemData.destinacaoFinal as Classificacao['destinacaoFinal'],
+                    destinacaoFinal: (newItemData.destinacaoFinal as Classificacao['destinacaoFinal']) || 'Eliminação',
                     observacoes: newItemData.observacoes,
                 };
                 newItemsFromCsv.push(newItem);

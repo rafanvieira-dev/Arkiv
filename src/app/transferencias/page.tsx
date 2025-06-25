@@ -25,6 +25,7 @@ import { ClientSideDateFormatter } from "@/components/client-side-date-formatter
 import { useToast } from "@/hooks/use-toast";
 import { initialTransferencias } from "@/lib/mock-data";
 import Link from "next/link";
+import { parseCsvRow } from "@/lib/utils";
 
 const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
 
@@ -274,31 +275,20 @@ export default function TransferenciasManagementPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
-            const expectedHeaders = ['nomeServidor', 'matricula', 'setorRemetente', 'dataTransferencia', 'documentos_json'];
+            const headers = parseCsvRow(headerRow);
             
-            const hasRequiredHeaders = expectedHeaders.every(h => headers.includes(h));
-            if (!hasRequiredHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${expectedHeaders.filter(h => !headers.includes(h)).join(', ')}. Por favor, utilize o modelo fornecido.` });
-                 return;
-            }
-
             const newItemsFromCsv: Transferencia[] = [];
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
-                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const values = parseCsvRow(row);
                 const newItemData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.nomeServidor || !newItemData.matricula || !newItemData.setorRemetente || !newItemData.dataTransferencia || !newItemData.documentos_json) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios faltando.`);
-                }
                 
                 let documents;
                 try {
-                    documents = JSON.parse(newItemData.documentos_json);
+                    documents = newItemData.documentos_json ? JSON.parse(newItemData.documentos_json) : [];
                     if (!Array.isArray(documents)) throw new Error("A coluna 'documentos_json' deve ser um array JSON válido.");
                 } catch (jsonError) {
                     throw new Error(`Linha ${index + 2}: Erro ao processar a coluna 'documentos_json'. Verifique o formato. Detalhes: ${(jsonError as Error).message}`);

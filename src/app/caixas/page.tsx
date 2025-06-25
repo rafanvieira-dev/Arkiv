@@ -45,6 +45,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
 import { getYear, parseISO } from 'date-fns';
+import { parseCsvRow } from "@/lib/utils";
 
 
 const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
@@ -426,7 +427,7 @@ export default function CaixasPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const headers = parseCsvRow(headerRow);
             const expectedHeaders = ['codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao'];
             
             const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
@@ -437,24 +438,20 @@ export default function CaixasPage() {
 
             const newCaixasFromCsv: Caixa[] = [];
             rows.forEach((row, index) => {
-                const values = row.split(',');
+                const values = parseCsvRow(row);
                 const newCaixaData: { [key: string]: string } = {};
                 headers.forEach((header, i) => {
-                  newCaixaData[header] = values[i]?.trim().replace(/"/g, '') || "";
+                  newCaixaData[header] = values[i] || "";
                 });
-
-                if (!newCaixaData.codigoCaixa || !newCaixaData.tipo || !newCaixaData.status || !newCaixaData.situacao) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigoCaixa, tipo, status, situacao) faltando.`);
-                }
 
                 const newCaixa: Caixa = {
                     id: `CX_IMP_${Date.now()}_${index}`,
                     codigoCaixa: newCaixaData.codigoCaixa,
                     descricao: newCaixaData.descricao,
                     tipo: newCaixaData.tipo,
-                    status: newCaixaData.status as Caixa['status'],
+                    status: (newCaixaData.status as Caixa['status']) || 'Aberta',
                     localizacao: newCaixaData.localizacao,
-                    situacao: newCaixaData.situacao as Caixa['situacao'],
+                    situacao: (newCaixaData.situacao as Caixa['situacao']) || 'Incompleta',
                     documentoIds: []
                 };
                 newCaixasFromCsv.push(newCaixa);

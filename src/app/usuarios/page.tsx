@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { initialUsers, allPermissions } from "@/lib/mock-data";
+import { parseCsvRow } from "@/lib/utils";
 
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
@@ -133,14 +134,6 @@ export default function UsuariosPage() {
   };
 
   const handleSaveChanges = () => {
-    if (!formState.nomeCompleto || !formState.email) {
-      toast({ variant: "destructive", title: "Erro", description: "Nome completo e e-mail são obrigatórios." });
-      return;
-    }
-    if (!isEditing && !formState.senha) {
-      toast({ variant: "destructive", title: "Erro", description: "A senha é obrigatória para novos usuários." });
-      return;
-    }
     if (formState.senha !== formState.confirmarSenha) {
       toast({ variant: "destructive", title: "Erro", description: "As senhas não coincidem." });
       return;
@@ -259,29 +252,18 @@ export default function UsuariosPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const headers = parseCsvRow(headerRow);
             const permissionKeys = allPermissions.map(p => p.id);
-            const requiredHeaders = ['nomeCompleto', 'email', 'senha'];
             
-            const hasRequiredHeaders = requiredHeaders.every(h => headers.includes(h));
-            if (!hasRequiredHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${requiredHeaders.filter(h => !headers.includes(h)).join(', ')}.` });
-                 return;
-            }
-
             const newItemsFromCsv: Usuario[] = [];
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
-                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const values = parseCsvRow(row);
                 const newItemData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.nomeCompleto || !newItemData.email || !newItemData.senha) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (nomeCompleto, email, senha) faltando.`);
-                }
-
+                
                 const permissoes: Usuario['permissoes'] = {} as any;
                 permissionKeys.forEach(key => {
                     permissoes[key as keyof Usuario['permissoes']] = newItemData[key]?.toLowerCase() === 'true';

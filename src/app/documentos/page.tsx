@@ -58,7 +58,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, parseCsvRow } from "@/lib/utils";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -1086,13 +1086,7 @@ export default function DocumentosPage() {
             const headerRow = rows.shift()?.trim();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, '""'));
-            
-            const missingHeaders = ['status', 'orgao', 'origem', 'tipoMeio', 'categoria', 'tipoDocumento', 'dataAbrangente', 'dataArquivamento', 'classificacaoArquivisticaId', 'segredoJustica', 'grauSigilo'].filter(h => !headers.includes(h));
-            if (missingHeaders.length > 0) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${missingHeaders.join(', ')}.`, duration: 8000 });
-                 return;
-            }
+            const headers = parseCsvRow(headerRow);
 
             const newDocsFromCsv: Documento[] = [];
             const newTiposDocSet = new Set<string>();
@@ -1112,7 +1106,7 @@ export default function DocumentosPage() {
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
 
-                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const values = parseCsvRow(row);
                 const newDocData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
                   newDocData[header] = values[i] || "";
@@ -2238,5 +2232,6 @@ export default function DocumentosPage() {
 
 
     
+
 
 

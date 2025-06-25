@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { TipoOrigem } from "@/types";
+import { parseCsvRow } from "@/lib/utils";
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -246,10 +247,10 @@ export default function ConfiguracoesPage() {
         if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
 
         if (type === 'simple') {
-          const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+          const headers = parseCsvRow(headerRow);
           if (headers[0] !== 'nome') throw new Error("Cabeçalho inválido. A primeira coluna deve ser 'nome'.");
           
-          const newItems = rows.map(row => row.trim().replace(/"/g, '')).filter(Boolean);
+          const newItems = rows.map(row => parseCsvRow(row)[0] || '');
           (setter as React.Dispatch<React.SetStateAction<string[]>>)(prev => {
             const existing = new Set(prev.map(i => i.toLowerCase()));
             const uniqueNewItems = newItems.filter(item => !existing.has(item.toLowerCase()));
@@ -257,17 +258,15 @@ export default function ConfiguracoesPage() {
           });
           toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
         } else if (type === 'origem') {
-          const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+          const headers = parseCsvRow(headerRow);
           const requiredHeaders = ['nome'];
           if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. A coluna 'nome' é necessária.");
 
           const newItems: TipoOrigem[] = [];
           rows.forEach((row, index) => {
-            const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            const values = parseCsvRow(row);
             const newItemData: { [key: string]: string } = {};
             headers.forEach((h, i) => newItemData[h] = values[i] || "");
-
-            if (!newItemData.nome) throw new Error(`Linha ${index + 2}: a coluna 'nome' é obrigatória.`);
 
             newItems.push({
               id: `to_imp_${Date.now()}_${index}`,

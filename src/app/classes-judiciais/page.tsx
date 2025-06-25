@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { parseCsvRow } from "@/lib/utils";
 
 const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
@@ -337,7 +338,7 @@ export default function ClassesJudiciaisPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const headers = parseCsvRow(headerRow);
             const expectedHeaders = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
             
             const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
@@ -348,15 +349,11 @@ export default function ClassesJudiciaisPage() {
 
             const newItemsFromCsv: ClasseJudicial[] = [];
             rows.forEach((row, index) => {
-                const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+                const values = parseCsvRow(row);
                 const newItemData: { [key: string]: string } = {};
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.codigo || !newItemData.descricao || !newItemData.destinacaoFinal) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, destinacaoFinal) faltando.`);
-                }
                 
                 const prazoAnos = newItemData.prazoGuardaAnos ? parseInt(newItemData.prazoGuardaAnos, 10) : undefined;
 
@@ -365,7 +362,7 @@ export default function ClassesJudiciaisPage() {
                     codigo: newItemData.codigo,
                     descricao: newItemData.descricao,
                     prazoGuardaAnos: isNaN(prazoAnos as number) ? undefined : prazoAnos,
-                    destinacaoFinal: newItemData.destinacaoFinal as ClasseJudicial['destinacaoFinal'],
+                    destinacaoFinal: (newItemData.destinacaoFinal as ClasseJudicial['destinacaoFinal']) || 'Não se Aplica',
                     observacoes: newItemData.observacoes,
                     inativo: newItemData.inativo.toLowerCase() === 'true',
                 };

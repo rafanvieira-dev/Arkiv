@@ -49,6 +49,7 @@ import {
   type SimulatedDocumentForSolicitacaoDialog
 } from "@/lib/mock-data";
 import Link from "next/link";
+import { parseCsvRow } from "@/lib/utils";
 
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
@@ -623,29 +624,16 @@ export default function SolicitacoesPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
-            const expectedHeaders = [
-                'nomeSolicitante', 'tipo', 'dataSolicitacao', 'documentoIds'
-            ];
-            
-            const hasRequiredHeaders = expectedHeaders.every(h => headers.includes(h));
-            if (!hasRequiredHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. Colunas obrigatórias faltando: ${expectedHeaders.filter(h => !headers.includes(h)).join(', ')}.`, duration: 8000 });
-                 return;
-            }
+            const headers = parseCsvRow(headerRow);
 
             const newItemsFromCsv: Solicitacao[] = [];
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
-                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const values = parseCsvRow(row);
                 const newItemData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.nomeSolicitante || !newItemData.tipo || !newItemData.dataSolicitacao || !newItemData.documentoIds) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (nomeSolicitante, tipo, dataSolicitacao, documentoIds) faltando.`);
-                }
                 
                 const docIds = newItemData.documentoIds ? newItemData.documentoIds.split(';').map((id: string) => id.trim()).filter(Boolean) : [];
 
@@ -665,8 +653,8 @@ export default function SolicitacoesPage() {
                     matriculaSolicitante: newItemData.matriculaSolicitante,
                     ramal: newItemData.ramal,
                     emailContato: newItemData.emailContato,
-                    tipo: newItemData.tipo as Solicitacao['tipo'],
-                    dataSolicitacao: newItemData.dataSolicitacao,
+                    tipo: newItemData.tipo as Solicitacao['tipo'] || 'Empréstimo',
+                    dataSolicitacao: newItemData.dataSolicitacao || new Date().toISOString(),
                     dataAtendimento: newItemData.dataAtendimento || undefined,
                     dataDevolucao: newItemData.dataDevolucao || undefined,
                     documentoIds: docIds,

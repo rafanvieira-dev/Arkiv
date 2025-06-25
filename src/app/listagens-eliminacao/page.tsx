@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { placeholderDocumentos, placeholderClassificacoesSimulado, simulatedListagensData } from "@/lib/mock-data";
+import { parseCsvRow } from "@/lib/utils";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -732,27 +733,16 @@ export default function ListagensEliminacaoPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
-            const expectedHeaders = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
-            
-            const hasRequiredHeaders = ['numeroListagem'].every(h => headers.includes(h));
-            if (!hasRequiredHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Coluna 'numeroListagem' é obrigatória. Por favor, utilize o modelo fornecido." });
-                 return;
-            }
+            const headers = parseCsvRow(headerRow);
 
             const newItemsFromCsv: ListagemEliminacao[] = [];
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
-                const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                const values = parseCsvRow(row);
                 const newItemData: { [key: string]: string } = {};
                 headers.forEach((header, i) => {
                   newItemData[header] = values[i] || "";
                 });
-
-                if (!newItemData.numeroListagem) {
-                    throw new Error(`Linha ${index + 2}: Campo obrigatório (numeroListagem) faltando.`);
-                }
                 
                 const docIds = newItemData.documentoIds ? newItemData.documentoIds.split(';').map(id => id.trim()).filter(Boolean) : [];
 
