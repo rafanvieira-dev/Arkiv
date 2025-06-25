@@ -86,3 +86,23 @@
     @apply bg-background text-foreground font-body;
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .non-printable {
+    display: none !important;
+  }
+  .printable-area {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 1rem;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
