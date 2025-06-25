@@ -532,8 +532,8 @@ export default function ClassificacaoPage() {
                   newItemData[header] = values[i] || "";
                 });
 
-                if (!newItemData.codigo || !newItemData.descricao || !newItemData.prazoGuardaFaseIntermediariaAnos || !newItemData.destinacaoFinal || !newItemData.status) {
-                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, status, prazoGuardaFaseIntermediariaAnos, destinacaoFinal) faltando.`);
+                if (!newItemData.codigo || !newItemData.descricao || !newItemData.destinacaoFinal || !newItemData.status) {
+                    throw new Error(`Linha ${index + 2}: Campos obrigatórios (codigo, descricao, status, destinacaoFinal) faltando.`);
                 }
                 
                 const prazoCorrenteAnos = newItemData.prazoGuardaFaseCorrenteAnos ? parseInt(newItemData.prazoGuardaFaseCorrenteAnos, 10) : undefined;
