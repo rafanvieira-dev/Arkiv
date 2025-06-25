@@ -627,13 +627,13 @@ export default function ClassificacaoPage() {
               <DialogHeader>
                 <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
                 <DialogDescription>
-                  Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação. Campos com * são obrigatórios.
+                  Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação.
                 </DialogDescription>
               </DialogHeader>
               <ScrollArea className="max-h-[70vh] pr-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
+                  <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano</Label>
                   <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
                     <SelectTrigger id="tipoPlanoClassificacao">
                       <SelectValue placeholder="Selecione o tipo de plano" />
@@ -645,15 +645,15 @@ export default function ClassificacaoPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="codigo">Código*</Label>
+                  <Label htmlFor="codigo">Código</Label>
                   <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="descricao">Assunto*</Label>
+                  <Label htmlFor="descricao">Assunto</Label>
                   <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="status">Status*</Label>
+                    <Label htmlFor="status">Status</Label>
                     <Select onValueChange={handleSelectChange('status')} value={formState.status}>
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Selecione o status" />
@@ -702,12 +702,12 @@ export default function ClassificacaoPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)*</Label>
+                  <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)</Label>
                   <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
+                  <Label htmlFor="destinacaoFinal">Destinação Final</Label>
                   <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
                     <SelectTrigger id="destinacaoFinal">
                       <SelectValue placeholder="Selecione a destinação" />
