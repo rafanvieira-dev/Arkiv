@@ -6,9 +6,9 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import type { Documento, Classificacao, Caixa } from "@/types";
+import type { Documento, Classificacao, Caixa, Solicitacao } from "@/types";
 import { getYear, parseISO, isValid } from "date-fns";
-import { placeholderDocumentos, initialClassificacoes, initialCaixas } from "@/lib/mock-data";
+import { placeholderDocumentos, initialClassificacoes, initialCaixas, placeholderSolicitacoesInitial } from "@/lib/mock-data";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 
 
 interface ChartData {
@@ -74,7 +75,7 @@ const CustomTooltipContent = ({ active, payload, label }: any) => {
     return null;
   };
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor';
 
 
 export default function EstatisticasPage() {
@@ -87,12 +88,15 @@ export default function EstatisticasPage() {
   const [classificationData, setClassificationData] = React.useState<ChartData[]>([]);
   const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
   const [destinacaoCaixaData, setDestinacaoCaixaData] = React.useState<ChartData[]>([]);
+  const [emprestimosPorSetorData, setEmprestimosPorSetorData] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoChartConfig, setDestinacaoChartConfig] = React.useState<ChartConfig>({});
   const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
+  const [emprestimoChartConfig, setEmprestimoChartConfig] = React.useState<ChartConfig>({});
+
 
   const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chartType: ChartType } | null>(null);
   const chartRef = React.useRef<HTMLDivElement>(null);
@@ -131,6 +135,10 @@ export default function EstatisticasPage() {
       
       const storedCaixas = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
       const allCaixas: Caixa[] = storedCaixas ? JSON.parse(storedCaixas) : initialCaixas;
+      
+      const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
+      const allSolicitacoes: Solicitacao[] = storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial;
+
 
       // Process status data
       const statusCounts = allDocs.reduce((acc, doc) => {
@@ -319,6 +327,50 @@ export default function EstatisticasPage() {
         .sort((a,b) => b.value - a.value)
         .slice(0,10);
       setTipoDocumentoData(tipoDocumentoChartData);
+      
+      // Process "Empréstimos por Setor e Ano"
+        const emprestimosCounts: { [year: string]: { [setor: string]: number } } = {};
+        const allSetores = new Set<string>();
+
+        allSolicitacoes
+          .filter(s => s.dataAtendimento && s.documentoIds?.length > 0)
+          .forEach(s => {
+            const year = getYear(parseISO(s.dataSolicitacao)).toString();
+            const setor = s.setorSolicitante || "Não especificado";
+
+            if (!emprestimosCounts[year]) {
+              emprestimosCounts[year] = {};
+            }
+            if (!emprestimosCounts[year][setor]) {
+              emprestimosCounts[year][setor] = 0;
+            }
+
+            emprestimosCounts[year][setor] += s.documentoIds.length;
+            allSetores.add(setor);
+          });
+
+        const sortedSetores = Array.from(allSetores).sort();
+
+        const emprestimosChartData = Object.keys(emprestimosCounts)
+          .map(year => {
+            const yearData: { [key: string]: string | number } = { name: year };
+            sortedSetores.forEach(setor => {
+              yearData[setor] = emprestimosCounts[year][setor] || 0;
+            });
+            return yearData;
+          })
+          .sort((a, b) => parseInt(a.name as string) - parseInt(b.name as string));
+        
+        const emprestimoFinalChartConfig = sortedSetores.reduce((acc, setor, index) => {
+            acc[setor] = {
+                label: setor,
+                color: chartColors[index % chartColors.length],
+            };
+            return acc;
+        }, {} as ChartConfig);
+
+        setEmprestimosPorSetorData(emprestimosChartData);
+        setEmprestimoChartConfig(emprestimoFinalChartConfig);
 
 
     } catch (error) {
@@ -428,6 +480,21 @@ export default function EstatisticasPage() {
     </ChartContainer>
   );
   
+    const EmprestimoPorSetorChart = (
+    <ChartContainer config={emprestimoChartConfig} className="h-full w-full">
+        <BarChart data={emprestimosPorSetorData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} name="Ano" />
+            <YAxis />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
+            {Object.keys(emprestimoChartConfig).map(setor => (
+                <Bar key={setor} dataKey={setor} stackId="a" fill={`var(--color-${setor})`} radius={4} name={setor} />
+            ))}
+        </BarChart>
+    </ChartContainer>
+  );
+
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
@@ -496,6 +563,16 @@ export default function EstatisticasPage() {
           </CardHeader>
           <CardContent className="h-[350px]">{TipoDocumentoChart}</CardContent>
         </Card>
+        
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-3" onClick={() => handleChartClick("Documentos Emprestados por Setor/Ano", "Quantidade de documentos emprestados, agrupados por setor solicitante e ano da solicitação.", 'emprestimoPorSetor')}>
+          <CardHeader>
+            <CardTitle>Empréstimos por Setor e Ano</CardTitle>
+            <CardDescription>Quantidade de documentos emprestados por setor solicitante ao longo dos anos.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            {EmprestimoPorSetorChart}
+          </CardContent>
+        </Card>
       </div>
 
        <Dialog open={!!modalContent} onOpenChange={(isOpen) => !isOpen && setModalContent(null)}>
@@ -513,6 +590,7 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'destinacaoCaixa' && DestinacaoCaixaChart}
                     {modalContent?.chartType === 'classification' && ClassificationChart}
                     {modalContent?.chartType === 'tipoDocumento' && TipoDocumentoChart}
+                    {modalContent?.chartType === 'emprestimoPorSetor' && EmprestimoPorSetorChart}
                 </div>
                 <DialogFooter className="sm:justify-end shrink-0 pt-4">
                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
