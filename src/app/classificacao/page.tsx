@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -280,6 +280,7 @@ export default function ClassificacaoPage() {
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'tipoPlanoClassificacao', label: 'Tipo de Plano', type: 'select', options: ['Administrativo', 'Judicial'] },
@@ -526,7 +527,11 @@ export default function ClassificacaoPage() {
     );
   };
 
-  const handleExportCSV = () => {
+  const handleCsvExport = (dataToExport: Classificacao[]) => {
+    if (dataToExport.length === 0) {
+      toast({ variant: "destructive", description: "Nenhuma classificação selecionada para exportar." });
+      return;
+    }
     const headers = [
       'id', 'tipoPlanoClassificacao', 'codigo', 'descricao', 'status',
       'tipoPrazoFaseCorrente', 'prazoGuardaFaseCorrenteAnos', 
@@ -534,8 +539,6 @@ export default function ClassificacaoPage() {
       'destinacaoFinal', 'observacoes'
     ];
     const csvRows = [headers.join(',')];
-
-    const dataToExport = displayedClassificacoes.length > 0 ? displayedClassificacoes : classificacoes;
 
     dataToExport.forEach(item => {
         const rowData = {
@@ -564,6 +567,16 @@ export default function ClassificacaoPage() {
     link.click();
     document.body.removeChild(link);
     toast({ title: "Sucesso", description: "Exportação de classificações concluída." });
+  };
+  
+  const handleExportAllCSV = () => {
+    const dataToExport = displayedClassificacoes.length > 0 ? displayedClassificacoes : classificacoes;
+    handleCsvExport(dataToExport);
+  };
+  
+  const handleExportSelectedCSV = () => {
+    const selectedData = classificacoes.filter(item => selectedRowIds.includes(item.id));
+    handleCsvExport(selectedData);
   };
 
   const handleDownloadTemplate = () => {
@@ -680,346 +693,391 @@ export default function ClassificacaoPage() {
     return ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]);
   }, [columnVisibilityClassificacoes]);
 
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]), [columnVisibilityClassificacoes]);
+  const dataToPrint = React.useMemo(() => classificacoes.filter(c => selectedRowIds.includes(c.id)), [classificacoes, selectedRowIds]);
+
 
   return (
     <TooltipProvider>
-    <div className="container mx-auto py-2">
-      <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
-        <div className="flex flex-wrap items-center gap-2">
-           <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedRowIds.length})
-            </Button>
-           <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
-                <PenSquare className="mr-2 h-4 w-4" />
-                Alterar em Bloco ({selectedRowIds.length})
-            </Button>
-          <Button variant="outline" onClick={handleImportClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar CSV
-          </Button>
-          <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".csv"
-              className="hidden"
-          />
-          <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar CSV
-          </Button>
-          <Button variant="outline" onClick={handleDownloadTemplate}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Baixar Modelo
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-            setIsDialogOpen(isOpen);
-            if (!isOpen) {
-              resetForm();
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nova Classificação
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px]">
-              <DialogHeader>
-                <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
-                <DialogDescription>
-                  Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[70vh] pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano</Label>
-                  <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
-                    <SelectTrigger id="tipoPlanoClassificacao">
-                      <SelectValue placeholder="Selecione o tipo de plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Administrativo">Administrativo</SelectItem>
-                      <SelectItem value="Judicial">Judicial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="codigo">Código</Label>
-                  <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="descricao">Assunto</Label>
-                  <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select onValueChange={handleSelectChange('status')} value={formState.status}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Ativo">Ativo</SelectItem>
-                        <SelectItem value="Inativo">Inativo</SelectItem>
-                        <SelectItem value="Pendente de Complemento">Pendente de Complemento</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
-                  <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
-                    <SelectTrigger id="tipoPrazoFaseCorrente">
-                      <SelectValue placeholder="Selecione o tipo de prazo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Anos">Anos</SelectItem>
-                      <SelectItem value="Condição Textual">Condição Textual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formState.tipoPrazoFaseCorrente === "Anos" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="prazoGuardaFaseCorrenteAnos">Prazo Corrente (Anos)</Label>
-                    <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
-                  </div>
-                )}
-
-                {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual">Prazo Corrente (Condição)</Label>
-                    <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
-                      <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual">
-                        <SelectValue placeholder="Selecione a condição textual" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-48 overflow-y-auto">
-                        {opcoesCondicaoTextualFaseCorrente.map(opcao => (
-                          <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)</Label>
-                  <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="destinacaoFinal">Destinação Final</Label>
-                  <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
-                    <SelectTrigger id="destinacaoFinal">
-                      <SelectValue placeholder="Selecione a destinação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Eliminação">Eliminação</SelectItem>
-                      <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
-                </div>
-
+      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
+        {isPrinting ? (
+           <Card>
+            <CardHeader className="non-printable flex-row items-center justify-between">
+              <div>
+                <CardTitle>Relatório de Classificações Selecionadas</CardTitle>
+                <CardDescription>Exibindo {dataToPrint.length} classificações para impressão.</CardDescription>
               </div>
-              </ScrollArea>
-              <DialogFooter className="pt-4">
-                <DialogClose asChild>
-                  <Button variant="outline">Cancelar</Button>
-                </DialogClose>
-                <Button type="button" onClick={handleSaveChanges}>Salvar Classificação</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </PageHeader>
-
-      <Card className="mt-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Classificações</CardTitle>
-           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <ColumnsIcon className="mr-2 h-4 w-4" />
-                  Colunas
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={handleSelectAllColumnsClassificacoes} className="cursor-pointer">
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Selecionar Todas
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleDeselectAllColumnsClassificacoes} className="cursor-pointer">
-                  <Square className="mr-2 h-4 w-4" />
-                  Limpar Todas
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id as string}
-                    checked={columnVisibilityClassificacoes[column.id as string]}
-                    onCheckedChange={() => toggleColumnVisibilityClassificacoes(column.id as string)}
-                  >
-                    {column.header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        <CardContent>
-           <ScrollArea className="w-full">
-            <Table className="min-w-full whitespace-nowrap">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="py-2 px-3 w-12">
-                    <Checkbox
-                      checked={
-                        numDisplayed > 0 && numSelected === numDisplayed
-                          ? true
-                          : numSelected > 0 ? 'indeterminate' : false
-                      }
-                      onCheckedChange={(value) => {
-                        if (value === true) {
-                          setSelectedRowIds(displayedClassificacoes.map(c => c.id));
-                        } else {
-                          setSelectedRowIds([]);
-                        }
-                      }}
-                      aria-label="Selecionar todas as linhas"
-                    />
-                  </TableHead>
-                  {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
-                    columnVisibilityClassificacoes[column.id as string] ? (
-                      <TableHead key={column.id as string} className="py-2 px-3">
-                        {column.enableSorting ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleSortClassificacoes(column.id as string)}
-                            className="px-1 py-1 h-auto -ml-2"
-                          >
-                            {column.header}
-                            {renderSortIconClassificacoes(column.id as string)}
-                          </Button>
-                        ) : (
-                          column.header
-                        )}
-                      </TableHead>
-                    ) : null
-                  )}
-                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedClassificacoes.map((item) => (
-                  <MemoizedClassificacaoRow
-                    key={item.id}
-                    item={item}
-                    isSelected={selectedRowIds.includes(item.id)}
-                    onToggleSelected={handleToggleSelectedRow}
-                    visibleColumns={visibleColumnsForMemo}
-                    onEditClick={handleOpenDialog}
-                    onDeleteClick={handleDeleteRow}
-                    hasDeletePermission={permissions.exclusaoDados}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-          {displayedClassificacoes.length === 0 && (
-            <p className="text-center text-muted-foreground py-4">Nenhuma classificação encontrada.</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setBulkEditField('');
-          setBulkEditValue('');
-        }
-        setIsBulkEditOpen(isOpen);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alteração em Bloco</DialogTitle>
-            <DialogDescription>
-              Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} classificações selecionadas.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bulk-field" className="text-right">
-                Campo a Alterar
-              </Label>
-              <Select onValueChange={(value) => {
-                setBulkEditField(value);
-                setBulkEditValue('');
-              }} value={bulkEditField}>
-                <SelectTrigger id="bulk-field" className="col-span-3">
-                  <SelectValue placeholder="Selecione um campo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {bulkEditableFields.map(field => (
-                    <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dataToPrint.map(item => (
+                    <TableRow key={item.id}>
+                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValueClassificacoes(item, column)}</TableCell>)}
+                    </TableRow>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedBulkField && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bulk-value" className="text-right">
-                  Novo Valor
-                </Label>
-                <div className="col-span-3">
-                  {selectedBulkField.type === 'text' && (
-                    <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
-                  )}
-                  {selectedBulkField.type === 'select' && (
-                    <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
-                      <SelectTrigger id="bulk-value">
-                        <SelectValue placeholder="Selecione um valor..." />
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir ({selectedRowIds.length})
+                  </Button>
+                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                      <PenSquare className="mr-2 h-4 w-4" />
+                      Alterar em Bloco ({selectedRowIds.length})
+                  </Button>
+                 <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir Seleção ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" onClick={handleExportSelectedCSV} disabled={selectedRowIds.length === 0}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Seleção ({selectedRowIds.length})
+                  </Button>
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar CSV
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    className="hidden"
+                />
+                <Button variant="outline" onClick={handleExportAllCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Tudo
+                </Button>
+                <Button variant="outline" onClick={handleDownloadTemplate}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Baixar Modelo
+                </Button>
+                <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                  setIsDialogOpen(isOpen);
+                  if (!isOpen) {
+                    resetForm();
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenDialog()}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Nova Classificação
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[625px]">
+                    <DialogHeader>
+                      <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Classificação" : "Nova Classificação"}</DialogTitle>
+                      <DialogDescription>
+                        Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} classificação.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[70vh] pr-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano</Label>
+                        <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao}>
+                          <SelectTrigger id="tipoPlanoClassificacao">
+                            <SelectValue placeholder="Selecione o tipo de plano" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Administrativo">Administrativo</SelectItem>
+                            <SelectItem value="Judicial">Judicial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="codigo">Código</Label>
+                        <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 020.1" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="descricao">Assunto</Label>
+                        <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Processos Judiciais Cíveis" />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select onValueChange={handleSelectChange('status')} value={formState.status}>
+                            <SelectTrigger id="status">
+                              <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Ativo">Ativo</SelectItem>
+                              <SelectItem value="Inativo">Inativo</SelectItem>
+                              <SelectItem value="Pendente de Complemento">Pendente de Complemento</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoPrazoFaseCorrente">Tipo Prazo Corrente</Label>
+                        <Select onValueChange={handleSelectChange('tipoPrazoFaseCorrente')} value={formState.tipoPrazoFaseCorrente}>
+                          <SelectTrigger id="tipoPrazoFaseCorrente">
+                            <SelectValue placeholder="Selecione o tipo de prazo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Anos">Anos</SelectItem>
+                            <SelectItem value="Condição Textual">Condição Textual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {formState.tipoPrazoFaseCorrente === "Anos" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="prazoGuardaFaseCorrenteAnos">Prazo Corrente (Anos)</Label>
+                          <Input id="prazoGuardaFaseCorrenteAnos" type="number" value={formState.prazoGuardaFaseCorrenteAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
+                        </div>
+                      )}
+
+                      {formState.tipoPrazoFaseCorrente === "Condição Textual" && (
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="prazoGuardaFaseCorrenteCondicaoTextual">Prazo Corrente (Condição)</Label>
+                          <Select onValueChange={handleSelectChange('prazoGuardaFaseCorrenteCondicaoTextual')} value={formState.prazoGuardaFaseCorrenteCondicaoTextual}>
+                            <SelectTrigger id="prazoGuardaFaseCorrenteCondicaoTextual">
+                              <SelectValue placeholder="Selecione a condição textual" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-48 overflow-y-auto">
+                              {opcoesCondicaoTextualFaseCorrente.map(opcao => (
+                                <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="prazoGuardaFaseIntermediariaAnos">Prazo Intermed. (Anos)</Label>
+                        <Input id="prazoGuardaFaseIntermediariaAnos" type="number" value={formState.prazoGuardaFaseIntermediariaAnos} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 15, pode ser 0)" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="destinacaoFinal">Destinação Final</Label>
+                        <Select onValueChange={handleSelectChange('destinacaoFinal')} value={formState.destinacaoFinal}>
+                          <SelectTrigger id="destinacaoFinal">
+                            <SelectValue placeholder="Selecione a destinação" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Eliminação">Eliminação</SelectItem>
+                            <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="observacoes">Observações</Label>
+                        <Textarea id="observacoes" value={formState.observacoes} onChange={handleInputChange} placeholder="Detalhes adicionais" />
+                      </div>
+
+                    </div>
+                    </ScrollArea>
+                    <DialogFooter className="pt-4">
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancelar</Button>
+                      </DialogClose>
+                      <Button type="button" onClick={handleSaveChanges}>Salvar Classificação</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </PageHeader>
+
+            <Card className="mt-6">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="font-headline text-primary">Lista de Classificações</CardTitle>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <ColumnsIcon className="mr-2 h-4 w-4" />
+                        Colunas
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                      <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={handleSelectAllColumnsClassificacoes} className="cursor-pointer">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Selecionar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDeselectAllColumnsClassificacoes} className="cursor-pointer">
+                        <Square className="mr-2 h-4 w-4" />
+                        Limpar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id as string}
+                          checked={columnVisibilityClassificacoes[column.id as string]}
+                          onCheckedChange={() => toggleColumnVisibilityClassificacoes(column.id as string)}
+                        >
+                          {column.header}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  <Table className="min-w-full whitespace-nowrap">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2 px-3 w-12">
+                          <Checkbox
+                            checked={
+                              numDisplayed > 0 && numSelected === numDisplayed
+                                ? true
+                                : numSelected > 0 ? 'indeterminate' : false
+                            }
+                            onCheckedChange={(value) => {
+                              if (value === true) {
+                                setSelectedRowIds(displayedClassificacoes.map(c => c.id));
+                              } else {
+                                setSelectedRowIds([]);
+                              }
+                            }}
+                            aria-label="Selecionar todas as linhas"
+                          />
+                        </TableHead>
+                        {ALL_COLUMNS_CONFIG_CLASSIFICACOES.map((column) =>
+                          columnVisibilityClassificacoes[column.id as string] ? (
+                            <TableHead key={column.id as string} className="py-2 px-3">
+                              {column.enableSorting ? (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleSortClassificacoes(column.id as string)}
+                                  className="px-1 py-1 h-auto -ml-2"
+                                >
+                                  {column.header}
+                                  {renderSortIconClassificacoes(column.id as string)}
+                                </Button>
+                              ) : (
+                                column.header
+                              )}
+                            </TableHead>
+                          ) : null
+                        )}
+                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedClassificacoes.map((item) => (
+                        <MemoizedClassificacaoRow
+                          key={item.id}
+                          item={item}
+                          isSelected={selectedRowIds.includes(item.id)}
+                          onToggleSelected={handleToggleSelectedRow}
+                          visibleColumns={visibleColumnsForMemo}
+                          onEditClick={handleOpenDialog}
+                          onDeleteClick={handleDeleteRow}
+                          hasDeletePermission={permissions.exclusaoDados}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                {displayedClassificacoes.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">Nenhuma classificação encontrada.</p>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                setBulkEditField('');
+                setBulkEditValue('');
+              }
+              setIsBulkEditOpen(isOpen);
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Alteração em Bloco</DialogTitle>
+                  <DialogDescription>
+                    Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} classificações selecionadas.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="bulk-field" className="text-right">
+                      Campo a Alterar
+                    </Label>
+                    <Select onValueChange={(value) => {
+                      setBulkEditField(value);
+                      setBulkEditValue('');
+                    }} value={bulkEditField}>
+                      <SelectTrigger id="bulk-field" className="col-span-3">
+                        <SelectValue placeholder="Selecione um campo..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {selectedBulkField.options?.map(option => (
-                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        {bulkEditableFields.map(field => (
+                          <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  {selectedBulkField && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="bulk-value" className="text-right">
+                        Novo Valor
+                      </Label>
+                      <div className="col-span-3">
+                        {selectedBulkField.type === 'text' && (
+                          <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                        )}
+                        {selectedBulkField.type === 'select' && (
+                          <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                            <SelectTrigger id="bulk-value">
+                              <SelectValue placeholder="Selecione um valor..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedBulkField.options?.map(option => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classificação(ões) selecionada(s).
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classificação(ões) selecionada(s).
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
     </TooltipProvider>
   );
 }
+

@@ -94,7 +94,7 @@ export default function RelatoriosPage() {
 
     // State for custom report
     const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
-    const [isCustomReportVisible, setIsCustomReportVisible] = React.useState(false);
+    const [isPrinting, setIsPrinting] = React.useState(false);
     const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({});
 
     React.useEffect(() => {
@@ -238,7 +238,7 @@ export default function RelatoriosPage() {
     }, [visibleColumns]);
 
     return (
-        <div className="container mx-auto py-2">
+        <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
             <div className="non-printable">
                 <PageHeader title="Relatórios Gerenciais" description="Quantitativos de documentos por tipo de caixa, destinação e previsão de eliminação." />
                 
@@ -374,12 +374,12 @@ export default function RelatoriosPage() {
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button onClick={() => setIsCustomReportVisible(true)}>Gerar Relatório</Button>
+                        <Button onClick={() => setIsPrinting(true)}>Gerar Relatório</Button>
                     </CardContent>
                 </Card>
             </div>
 
-            {isCustomReportVisible && (
+            {isPrinting && (
                 <div className="printable-area">
                     <Card>
                         <CardHeader className="non-printable flex flex-row items-center justify-between">
@@ -387,10 +387,13 @@ export default function RelatoriosPage() {
                                 <CardTitle>Relatório Customizado de Acervo</CardTitle>
                                 <CardDescription>Exibindo {allDocuments.length} documentos com as colunas selecionadas.</CardDescription>
                             </div>
-                            <Button onClick={() => window.print()}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Imprimir / Salvar PDF
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                              <Button onClick={() => window.print()}>
+                                  <Printer className="mr-2 h-4 w-4" />
+                                  Imprimir / Salvar PDF
+                              </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="w-full">
@@ -423,4 +426,5 @@ export default function RelatoriosPage() {
         </div>
     );
 }
+
 

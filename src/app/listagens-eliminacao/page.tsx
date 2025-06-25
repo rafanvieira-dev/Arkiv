@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -61,6 +61,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -201,6 +202,7 @@ type DialogDocumentColumn = {
 export default function ListagensEliminacaoPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
@@ -230,6 +232,7 @@ export default function ListagensEliminacaoPage() {
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'numeroEditalCiencia', label: 'Nº Edital Ciência', type: 'text' },
@@ -814,11 +817,13 @@ export default function ListagensEliminacaoPage() {
     );
   };
   
-  const handleExportCSV = () => {
+  const handleCsvExport = (dataToExport: ListagemEliminacao[]) => {
+    if (dataToExport.length === 0) {
+      toast({ variant: "destructive", description: "Nenhuma listagem selecionada para exportar." });
+      return;
+    }
     const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
     const csvRows = [headers.join(',')];
-
-    const dataToExport = displayedListagens.length > 0 ? displayedListagens : listagens;
 
     dataToExport.forEach(item => {
         const rowData = {
@@ -847,6 +852,16 @@ export default function ListagensEliminacaoPage() {
     toast({ title: "Sucesso", description: "Exportação de listagens concluída." });
   };
   
+  const handleExportAllCSV = () => {
+    const dataToExport = displayedListagens.length > 0 ? displayedListagens : listagens;
+    handleCsvExport(dataToExport);
+  };
+
+  const handleExportSelectedCSV = () => {
+    const selectedData = listagens.filter(item => selectedRowIds.includes(item.id));
+    handleCsvExport(selectedData);
+  };
+
   const handleDownloadTemplate = () => {
     const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
     const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
@@ -928,396 +943,440 @@ export default function ListagensEliminacaoPage() {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
 
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG_LISTAGENS.filter(col => columnVisibilityListagens[col.id as string]), [columnVisibilityListagens]);
+  const dataToPrint = React.useMemo(() => listagens.filter(c => selectedRowIds.includes(c.id)), [listagens, selectedRowIds]);
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto py-2">
-        <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
-                <PenSquare className="mr-2 h-4 w-4" />
-                Alterar em Bloco ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" onClick={handleImportClick}>
-                <Upload className="mr-2 h-4 w-4" />
-                Importar CSV
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-            />
-            <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Baixar Modelo
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-              setIsDialogOpen(isOpen);
-              if (!isOpen) resetFormAndDialogState();
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Nova Listagem
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl">
-                <DialogHeader>
-                  <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Listagem" : "Nova Listagem de Eliminação"}</DialogTitle>
-                  <DialogDescription>
-                    Preencha as informações da listagem e selecione os documentos a serem eliminados.
-                  </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="numeroListagem">Nº Listagem*</Label>
-                        <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
-                        <DateInputPicker
-                          value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
-                          onChange={(date) => handleDateChange('dataProducaoListagem')(date)}
-                          placeholder="dd/mm/aaaa"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
-                        <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
-                        <DateInputPicker
-                          value={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
-                          onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)}
-                          placeholder="dd/mm/aaaa"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
-                        <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
-                        <DateInputPicker
-                          value={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
-                          onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
-                          placeholder="dd/mm/aaaa"
-                        />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="observacoes">Observações</Label>
-                        <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
-                      </div>
-                  </div>
-
-                  {!isDocumentTableVisible && (
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        type="button"
-                        onClick={() => setIsDocumentTableVisible(true)}
-                        variant="outline"
-                      >
-                        <ListFilter className="mr-2 h-4 w-4" />
-                        Selecionar Documentos para Eliminação
-                      </Button>
-                    </div>
-                  )}
-
-                  {isDocumentTableVisible && (
-                    <div className="mt-4">
-                      <Label className="text-md font-medium">Documentos</Label>
-                      <Card className="mt-2">
-                        <CardHeader className="p-4">
-                          <div className="flex flex-col sm:flex-row gap-2">
-                              <Input
-                                  type="text"
-                                  placeholder="Filtrar Ano Elim. Prev."
-                                  value={dialogTableFilters.anoEliminacaoPrevisto}
-                                  onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
-                                  className="w-full sm:w-[180px]"
-                              />
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <ScrollArea className="h-[300px] w-full border-t">
-                            <Table className="min-w-max whitespace-nowrap text-xs">
-                              <TableHeader>
-                                <TableRow>
-                                  {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                    <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
-                                      {col.enableSorting ? (
-                                        <Button
-                                          variant="ghost"
-                                          onClick={() => handleDialogTableSort(col.id.toString())}
-                                          className="px-1 py-0 h-auto -ml-1 text-xs"
-                                        >
-                                          {col.header}
-                                          {renderDialogTableSortIcon(col.id.toString())}
-                                        </Button>
-                                      ) : (
-                                        col.header
-                                      )}
-                                    </TableHead>
-                                  ))}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {documentsForDialog.map(doc => (
-                                  <TableRow key={doc.id}>
-                                    {DIALOG_DOCUMENT_COLUMNS.map(col => (
-                                      <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
-                                        {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
-                                      </TableCell>
-                                    ))}
-                                  </TableRow>
-                                ))}
-                                {documentsForDialog.length === 0 && (
-                                      <TableRow>
-                                          <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
-                                              Nenhum documento elegível encontrado para os filtros aplicados.
-                                          </TableCell>
-                                      </TableRow>
-                                  )}
-                              </TableBody>
-                            </Table>
-                            <ScrollBar orientation="horizontal" />
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-                </ScrollArea>
-                <DialogFooter className="pt-6">
-                  <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-                  <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </PageHeader>
-        
-      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
-        <AccordionItem value="filters" className="border rounded-lg">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <FilterIcon className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline text-primary text-xl">Filtros das Listagens</CardTitle>
-            </div>
-            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </AccordionTrigger>
-          <AccordionContent>
-            <CardDescription className="px-6 pb-4 text-sm">
-              Refine a lista de listagens de eliminação aplicando um ou mais filtros abaixo.
-            </CardDescription>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="filterNumeroListagem">Nº da Listagem</Label>
-                <Input id="filterNumeroListagem" name="numeroListagem" value={filters.numeroListagem} onChange={handleFilterInputChange} placeholder="Contém..." />
+      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
+        {isPrinting ? (
+           <Card>
+            <CardHeader className="non-printable flex-row items-center justify-between">
+              <div>
+                <CardTitle>Relatório de Listagens Selecionadas</CardTitle>
+                <CardDescription>Exibindo {dataToPrint.length} listagens para impressão.</CardDescription>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterStatus">Status</Label>
-                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
-                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
-                    <SelectItem value="Tramitando">Tramitando</SelectItem>
-                    <SelectItem value="Edital Publicado">Edital Publicado</SelectItem>
-                    <SelectItem value="Efetivada">Efetivada</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterNumeroEditalCiencia">Nº do Edital</Label>
-                <Input id="filterNumeroEditalCiencia" name="numeroEditalCiencia" value={filters.numeroEditalCiencia} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterNumeroTermoEliminacao">Nº do Termo</Label>
-                <Input id="filterNumeroTermoEliminacao" name="numeroTermoEliminacao" value={filters.numeroTermoEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDataProducaoDe">Data de Produção (De)</Label>
-                <DateInputPicker value={filters.dataProducaoDe} onChange={handleFilterDateChange('dataProducaoDe')} placeholder="dd/mm/aaaa" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDataProducaoAte">Data de Produção (Até)</Label>
-                <DateInputPicker value={filters.dataProducaoAte} onChange={handleFilterDateChange('dataProducaoAte')} placeholder="dd/mm/aaaa" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDataPublicacaoDe">Data de Publicação (De)</Label>
-                <DateInputPicker value={filters.dataPublicacaoDe} onChange={handleFilterDateChange('dataPublicacaoDe')} placeholder="dd/mm/aaaa" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDataPublicacaoAte">Data de Publicação (Até)</Label>
-                <DateInputPicker value={filters.dataPublicacaoAte} onChange={handleFilterDateChange('dataPublicacaoAte')} placeholder="dd/mm/aaaa" />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
-              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-            </CardFooter>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-        <Card className="mt-0">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="font-headline text-primary">Listagens Cadastradas</CardTitle>
-              <CardDescription className="mt-1 text-sm text-muted-foreground">
-                {filtersAreActive
-                  ? `Exibindo ${displayedListagens.length} de ${listagens.length} listagens com base nos filtros aplicados.`
-                  : `Exibindo todas as ${listagens.length} listagens cadastradas.`}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <ColumnsIcon className="mr-2 h-4 w-4" />
-                    Colunas
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-                  <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-                  <DropdownMenuItem onSelect={handleSelectAllColumnsListagens} className="cursor-pointer">
-                    <CheckSquare className="mr-2 h-4 w-4" />
-                    Selecionar Todas
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleDeselectAllColumnsListagens} className="cursor-pointer">
-                    <Square className="mr-2 h-4 w-4" />
-                    Limpar Todas
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id as string}
-                      checked={columnVisibilityListagens[column.id as string]}
-                      onCheckedChange={() => toggleColumnVisibilityListagens(column.id as string)}
-                    >
-                      {column.header}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="w-full">
-              <Table className="min-w-full whitespace-nowrap">
+            </CardHeader>
+            <CardContent>
+              <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12 py-2 px-3">
-                      <Checkbox
-                        checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
-                        onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedListagens.map(item => item.id) : [])}
-                        aria-label="Selecionar todas as linhas"
-                      />
-                    </TableHead>
-                    {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
-                      columnVisibilityListagens[column.id as string] ? (
-                        <TableHead key={column.id as string} className="py-2 px-3">
-                          {column.enableSorting ? (
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort(column.id as string)}
-                              className="px-1 py-1 h-auto -ml-2"
-                            >
-                              {column.header}
-                              {renderSortIcon(column.id as string)}
-                            </Button>
-                          ) : (
-                            column.header
-                          )}
-                        </TableHead>
-                      ) : null
-                    )}
-                    <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedListagens.map((item) => (
-                    <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                      <TableCell className="py-2 px-3">
-                        <Checkbox
-                          checked={selectedRowIds.includes(item.id)}
-                          onCheckedChange={(value) => setSelectedRowIds(prev => value ? [...prev, item.id] : prev.filter(id => id !== item.id))}
-                          aria-label={`Selecionar listagem ${item.numeroListagem}`}
-                        />
-                      </TableCell>
-                      {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
-                        columnVisibilityListagens[column.id as string] ? (
-                          <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
-                            {getCellValueListagens(item, column)}
-                          </TableCell>
-                        ) : null
-                      )}
-                      <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
-                        <div className="flex items-center justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                               <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(item.numeroListagem)}`} passHref>
-                                <Button variant="ghost" size="icon" aria-label="Ver Documentos da Listagem" disabled={!item.documentoIds || item.documentoIds.length === 0}>
-                                    <FileSearch className="h-4 w-4" />
-                                </Button>
-                               </Link>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Ver Documentos da Listagem</p></TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Editar Listagem" onClick={() => handleOpenDialog(item)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Editar Listagem</p></TooltipContent>
-                          </Tooltip>
-                           <AlertDialog>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Listagem">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent><p>Excluir Listagem</p></TooltipContent>
-                              </Tooltip>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a listagem "{item.numeroListagem}".
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                      </TableCell>
+                  {dataToPrint.map(item => (
+                    <TableRow key={item.id}>
+                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValueListagens(item, column)}</TableCell>)}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-            {displayedListagens.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">Nenhuma listagem encontrada.</p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir ({selectedRowIds.length})
+                </Button>
+                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                    <PenSquare className="mr-2 h-4 w-4" />
+                    Alterar em Bloco ({selectedRowIds.length})
+                </Button>
+                <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir Seleção ({selectedRowIds.length})
+                </Button>
+                <Button variant="outline" onClick={handleExportSelectedCSV} disabled={selectedRowIds.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Seleção ({selectedRowIds.length})
+                </Button>
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar CSV
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    className="hidden"
+                />
+                <Button variant="outline" onClick={handleExportAllCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Tudo
+                </Button>
+                <Button variant="outline" onClick={handleDownloadTemplate}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Baixar Modelo
+                </Button>
+                <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                  setIsDialogOpen(isOpen);
+                  if (!isOpen) resetFormAndDialogState();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenDialog()}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Nova Listagem
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-4xl">
+                    <DialogHeader>
+                      <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Listagem" : "Nova Listagem de Eliminação"}</DialogTitle>
+                      <DialogDescription>
+                        Preencha as informações da listagem e selecione os documentos a serem eliminados.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="numeroListagem">Nº Listagem*</Label>
+                            <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
+                            <DateInputPicker
+                              value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
+                              onChange={(date) => handleDateChange('dataProducaoListagem')(date)}
+                              placeholder="dd/mm/aaaa"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
+                            <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ""} onChange={handleInputChange} placeholder="Ex: EDITAL-001/2024" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
+                            <DateInputPicker
+                              value={formState.dataPublicacaoEdital ? new Date(formState.dataPublicacaoEdital) : undefined}
+                              onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)}
+                              placeholder="dd/mm/aaaa"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
+                            <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ""} onChange={handleInputChange} placeholder="Ex: TE-2024-001" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
+                            <DateInputPicker
+                              value={formState.dataProducaoTermoEliminacao ? new Date(formState.dataProducaoTermoEliminacao) : undefined}
+                              onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
+                              placeholder="dd/mm/aaaa"
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="observacoes">Observações</Label>
+                            <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
+                          </div>
+                      </div>
+
+                      {!isDocumentTableVisible && (
+                        <div className="mt-4 flex justify-center">
+                          <Button
+                            type="button"
+                            onClick={() => setIsDocumentTableVisible(true)}
+                            variant="outline"
+                          >
+                            <ListFilter className="mr-2 h-4 w-4" />
+                            Selecionar Documentos para Eliminação
+                          </Button>
+                        </div>
+                      )}
+
+                      {isDocumentTableVisible && (
+                        <div className="mt-4">
+                          <Label className="text-md font-medium">Documentos</Label>
+                          <Card className="mt-2">
+                            <CardHeader className="p-4">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                  <Input
+                                      type="text"
+                                      placeholder="Filtrar Ano Elim. Prev."
+                                      value={dialogTableFilters.anoEliminacaoPrevisto}
+                                      onChange={(e) => setDialogTableFilters(prev => ({...prev, anoEliminacaoPrevisto: e.target.value}))}
+                                      className="w-full sm:w-[180px]"
+                                  />
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <ScrollArea className="h-[300px] w-full border-t">
+                                <Table className="min-w-max whitespace-nowrap text-xs">
+                                  <TableHeader>
+                                    <TableRow>
+                                      {DIALOG_DOCUMENT_COLUMNS.map(col => (
+                                        <TableHead key={col.id.toString()} className="py-1 px-2 h-8">
+                                          {col.enableSorting ? (
+                                            <Button
+                                              variant="ghost"
+                                              onClick={() => handleDialogTableSort(col.id.toString())}
+                                              className="px-1 py-0 h-auto -ml-1 text-xs"
+                                            >
+                                              {col.header}
+                                              {renderDialogTableSortIcon(col.id.toString())}
+                                            </Button>
+                                          ) : (
+                                            col.header
+                                          )}
+                                        </TableHead>
+                                      ))}
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {documentsForDialog.map(doc => (
+                                      <TableRow key={doc.id}>
+                                        {DIALOG_DOCUMENT_COLUMNS.map(col => (
+                                          <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
+                                            {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
+                                          </TableCell>
+                                        ))}
+                                      </TableRow>
+                                    ))}
+                                    {documentsForDialog.length === 0 && (
+                                          <TableRow>
+                                              <TableCell colSpan={DIALOG_DOCUMENT_COLUMNS.length} className="h-24 text-center">
+                                                  Nenhum documento elegível encontrado para os filtros aplicados.
+                                              </TableCell>
+                                          </TableRow>
+                                      )}
+                                  </TableBody>
+                                </Table>
+                                <ScrollBar orientation="horizontal" />
+                              </ScrollArea>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+                    </ScrollArea>
+                    <DialogFooter className="pt-6">
+                      <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                      <Button type="button" onClick={handleSaveChanges}>Salvar Listagem</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </PageHeader>
+            
+          <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+            <AccordionItem value="filters" className="border rounded-lg">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <FilterIcon className="h-5 w-5 text-primary" />
+                  <CardTitle className="font-headline text-primary text-xl">Filtros das Listagens</CardTitle>
+                </div>
+                {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardDescription className="px-6 pb-4 text-sm">
+                  Refine a lista de listagens de eliminação aplicando um ou mais filtros abaixo.
+                </CardDescription>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="filterNumeroListagem">Nº da Listagem</Label>
+                    <Input id="filterNumeroListagem" name="numeroListagem" value={filters.numeroListagem} onChange={handleFilterInputChange} placeholder="Contém..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterStatus">Status</Label>
+                    <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                      <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                        <SelectItem value="Tramitando">Tramitando</SelectItem>
+                        <SelectItem value="Edital Publicado">Edital Publicado</SelectItem>
+                        <SelectItem value="Efetivada">Efetivada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterNumeroEditalCiencia">Nº do Edital</Label>
+                    <Input id="filterNumeroEditalCiencia" name="numeroEditalCiencia" value={filters.numeroEditalCiencia} onChange={handleFilterInputChange} placeholder="Contém..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterNumeroTermoEliminacao">Nº do Termo</Label>
+                    <Input id="filterNumeroTermoEliminacao" name="numeroTermoEliminacao" value={filters.numeroTermoEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterDataProducaoDe">Data de Produção (De)</Label>
+                    <DateInputPicker value={filters.dataProducaoDe} onChange={handleFilterDateChange('dataProducaoDe')} placeholder="dd/mm/aaaa" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterDataProducaoAte">Data de Produção (Até)</Label>
+                    <DateInputPicker value={filters.dataProducaoAte} onChange={handleFilterDateChange('dataProducaoAte')} placeholder="dd/mm/aaaa" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterDataPublicacaoDe">Data de Publicação (De)</Label>
+                    <DateInputPicker value={filters.dataPublicacaoDe} onChange={handleFilterDateChange('dataPublicacaoDe')} placeholder="dd/mm/aaaa" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filterDataPublicacaoAte">Data de Publicação (Até)</Label>
+                    <DateInputPicker value={filters.dataPublicacaoAte} onChange={handleFilterDateChange('dataPublicacaoAte')} placeholder="dd/mm/aaaa" />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                  <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                </CardFooter>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+            <Card className="mt-0">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="font-headline text-primary">Listagens Cadastradas</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    {filtersAreActive
+                      ? `Exibindo ${displayedListagens.length} de ${listagens.length} listagens com base nos filtros aplicados.`
+                      : `Exibindo todas as ${listagens.length} listagens cadastradas.`}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <ColumnsIcon className="mr-2 h-4 w-4" />
+                        Colunas
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                      <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={handleSelectAllColumnsListagens} className="cursor-pointer">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Selecionar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDeselectAllColumnsListagens} className="cursor-pointer">
+                        <Square className="mr-2 h-4 w-4" />
+                        Limpar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id as string}
+                          checked={columnVisibilityListagens[column.id as string]}
+                          onCheckedChange={() => toggleColumnVisibilityListagens(column.id as string)}
+                        >
+                          {column.header}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  <Table className="min-w-full whitespace-nowrap">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 py-2 px-3">
+                          <Checkbox
+                            checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
+                            onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedListagens.map(item => item.id) : [])}
+                            aria-label="Selecionar todas as linhas"
+                          />
+                        </TableHead>
+                        {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
+                          columnVisibilityListagens[column.id as string] ? (
+                            <TableHead key={column.id as string} className="py-2 px-3">
+                              {column.enableSorting ? (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleSort(column.id as string)}
+                                  className="px-1 py-1 h-auto -ml-2"
+                                >
+                                  {column.header}
+                                  {renderSortIcon(column.id as string)}
+                                </Button>
+                              ) : (
+                                column.header
+                              )}
+                            </TableHead>
+                          ) : null
+                        )}
+                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedListagens.map((item) => (
+                        <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                          <TableCell className="py-2 px-3">
+                            <Checkbox
+                              checked={selectedRowIds.includes(item.id)}
+                              onCheckedChange={(value) => setSelectedRowIds(prev => value ? [...prev, item.id] : prev.filter(id => id !== item.id))}
+                              aria-label={`Selecionar listagem ${item.numeroListagem}`}
+                            />
+                          </TableCell>
+                          {ALL_COLUMNS_CONFIG_LISTAGENS.map((column) =>
+                            columnVisibilityListagens[column.id as string] ? (
+                              <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                                {getCellValueListagens(item, column)}
+                              </TableCell>
+                            ) : null
+                          )}
+                          <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                            <div className="flex items-center justify-end">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(item.numeroListagem)}`} passHref>
+                                    <Button variant="ghost" size="icon" aria-label="Ver Documentos da Listagem" disabled={!item.documentoIds || item.documentoIds.length === 0}>
+                                        <FileSearch className="h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Ver Documentos da Listagem</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" aria-label="Editar Listagem" onClick={() => handleOpenDialog(item)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Editar Listagem</p></TooltipContent>
+                              </Tooltip>
+                              <AlertDialog>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Listagem" disabled={!permissions.exclusaoDados}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Excluir Listagem</p></TooltipContent>
+                                  </Tooltip>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a listagem "{item.numeroListagem}".
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                {displayedListagens.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">Nenhuma listagem encontrada.</p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
        <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
@@ -1405,3 +1464,4 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Caixa, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -130,6 +130,8 @@ export default function CaixasPage() {
   
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
+  const [isPrinting, setIsPrinting] = React.useState(false);
+  
   const bulkEditableFields = [
     { value: 'proveniencia', label: 'Proveniência', type: 'text' },
     { value: 'tipo', label: 'Tipo', type: 'select', options: tiposCaixa.sort((a,b) => a.localeCompare(b)) },
@@ -476,11 +478,13 @@ export default function CaixasPage() {
     };
   }, [documentos]);
 
-  const handleExportCSV = () => {
+  const handleCsvExport = (dataToExport: Caixa[]) => {
+    if(dataToExport.length === 0) {
+        toast({variant: "destructive", description: "Nenhuma caixa selecionada para exportar."});
+        return;
+    }
     const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
     const csvRows = [headers.join(',')];
-
-    const dataToExport = displayedCaixas.length > 0 ? displayedCaixas : caixas;
 
     dataToExport.forEach(caixa => {
         const derived = getDerivedData(caixa);
@@ -511,7 +515,17 @@ export default function CaixasPage() {
     document.body.removeChild(link);
     toast({ title: "Sucesso", description: "Exportação de caixas concluída." });
   };
+  
+  const handleExportSelectedCSV = () => {
+    const selectedData = caixas.filter(c => selectedRowIds.includes(c.id));
+    handleCsvExport(selectedData);
+  };
 
+  const handleExportAllCSV = () => {
+    const dataToExport = displayedCaixas.length > 0 ? displayedCaixas : caixas;
+    handleCsvExport(dataToExport);
+  };
+  
   const handleDownloadTemplate = () => {
     const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao'];
     const csvContent = headers.join(',');
@@ -608,448 +622,497 @@ export default function CaixasPage() {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
 
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG_CAIXAS.filter(col => columnVisibilityCaixas[col.id as string]), [columnVisibilityCaixas]);
+  const dataToPrint = React.useMemo(() => caixas.filter(c => selectedRowIds.includes(c.id)), [caixas, selectedRowIds]);
+
   return (
     <TooltipProvider>
-    <div className="container mx-auto py-2">
-      <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
-        <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
-                <PenSquare className="mr-2 h-4 w-4" />
-                Alterar em Bloco ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" onClick={handleImportClick}>
-                <Upload className="mr-2 h-4 w-4" />
-                Importar CSV
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-            />
-            <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Baixar Modelo
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-              setIsDialogOpen(isOpen);
-              if (!isOpen) {
-                resetFormAndDialogState();
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Nova Caixa
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px]">
-                <DialogHeader>
-                  <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
-                  <DialogDescription>
-                    Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa.
-                  </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-[70vh] pr-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="codigoCaixa">Código</Label>
-                    <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
+      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
+        {isPrinting ? (
+          <Card>
+            <CardHeader className="non-printable flex-row items-center justify-between">
+              <div>
+                <CardTitle>Relatório de Caixas Selecionadas</CardTitle>
+                <CardDescription>Exibindo {dataToPrint.length} caixas para impressão.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dataToPrint.map(item => (
+                    <TableRow key={item.id}>
+                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValueCaixas(item, column)}</TableCell>)}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
+              <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                      <PenSquare className="mr-2 h-4 w-4" />
+                      Alterar em Bloco ({selectedRowIds.length})
+                  </Button>
+                   <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir Seleção ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" onClick={handleExportSelectedCSV} disabled={selectedRowIds.length === 0}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Seleção ({selectedRowIds.length})
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Mais Exportações
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={handleExportAllCSV}>Exportar Tudo (CSV)</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDownloadTemplate}>Baixar Modelo de Importação</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button variant="outline" onClick={handleImportClick}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importar CSV
+                  </Button>
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept=".csv"
+                      className="hidden"
+                  />
+                  <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                    setIsDialogOpen(isOpen);
+                    if (!isOpen) {
+                      resetFormAndDialogState();
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => handleOpenDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Nova Caixa
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[625px]">
+                      <DialogHeader>
+                        <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
+                        <DialogDescription>
+                          Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ScrollArea className="max-h-[70vh] pr-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="codigoCaixa">Código</Label>
+                          <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="descricao">Descrição</Label>
+                          <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="proveniencia">Proveniência</Label>
+                          <Input id="proveniencia" placeholder="Origem da caixa, ex: Vara Federal, Gabinete..." value={formStateCaixa.proveniencia || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
+                          <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
+                          <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
+                          <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tipo">Tipo</Label>
+                          <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
+                            <SelectTrigger id="tipo">
+                              <SelectValue placeholder="Selecione o tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
+                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="localizacao">Localização</Label>
+                          <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
+                            <SelectTrigger id="status">
+                              <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Aberta">Aberta</SelectItem>
+                              <SelectItem value="Fechada">Fechada</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="situacao">Situação</Label>
+                          <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
+                            <SelectTrigger id="situacao">
+                              <SelectValue placeholder="Selecione a situação" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Completa">Completa</SelectItem>
+                              <SelectItem value="Incompleta">Incompleta</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      </ScrollArea>
+                      <DialogFooter className="pt-4">
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancelar</Button>
+                        </DialogClose>
+                        <Button type="button" onClick={handleSaveChanges}>Salvar Caixa</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+              </div>
+            </PageHeader>
+            
+            <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+              <AccordionItem value="filters" className="border rounded-lg">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FilterIcon className="h-5 w-5 text-primary" />
+                    <CardTitle className="font-headline text-primary text-xl">Filtros das Caixas</CardTitle>
                   </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="descricao">Descrição</Label>
-                    <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
-                  </div>
-                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="proveniencia">Proveniência</Label>
-                    <Input id="proveniencia" placeholder="Origem da caixa, ex: Vara Federal, Gabinete..." value={formStateCaixa.proveniencia || ""} onChange={handleFormInputChange} />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
-                    <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
-                    <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
-                    <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo</Label>
-                    <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
-                      <SelectTrigger id="tipo">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
-                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="localizacao">Localização</Label>
-                    <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Aberta">Aberta</SelectItem>
-                        <SelectItem value="Fechada">Fechada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="situacao">Situação</Label>
-                    <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
-                      <SelectTrigger id="situacao">
-                        <SelectValue placeholder="Selecione a situação" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Completa">Completa</SelectItem>
-                        <SelectItem value="Incompleta">Incompleta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardDescription className="px-6 pb-4 text-sm">
+                    Refine a lista de caixas aplicando um ou mais filtros abaixo.
+                  </CardDescription>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
+                      <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDescricao">Descrição</Label>
+                      <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterProveniencia">Proveniência</Label>
+                      <Input id="filterProveniencia" name="proveniencia" value={filters.proveniencia} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterLocalizacao">Localização</Label>
+                      <Input id="filterLocalizacao" name="localizacao" value={filters.localizacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterTipo">Tipo</Label>
+                      <Select onValueChange={handleFilterSelectChange('tipo')} value={filters.tipo}>
+                        <SelectTrigger id="filterTipo"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os tipos</SelectItem>
+                          {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStatus">Status</Label>
+                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                        <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                          <SelectItem value="Aberta">Aberta</SelectItem>
+                          <SelectItem value="Fechada">Fechada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterSituacao">Situação</Label>
+                      <Select onValueChange={handleFilterSelectChange('situacao')} value={filters.situacao}>
+                        <SelectTrigger id="filterSituacao"><SelectValue placeholder="Todas as situações" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as situações</SelectItem>
+                          <SelectItem value="Completa">Completa</SelectItem>
+                          <SelectItem value="Incompleta">Incompleta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                    <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                  </CardFooter>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            <Card className="mt-0">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    {filtersAreActive
+                      ? `Exibindo ${displayedCaixas.length} de ${caixas.length} caixas com base nos filtros aplicados.`
+                      : `Exibindo todas as ${caixas.length} caixas cadastradas.`}
+                  </CardDescription>
                 </div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <ColumnsIcon className="mr-2 h-4 w-4" />
+                        Colunas
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                      <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={handleSelectAllColumnsCaixas} className="cursor-pointer">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Selecionar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDeselectAllColumnsCaixas} className="cursor-pointer">
+                        <Square className="mr-2 h-4 w-4" />
+                        Limpar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {ALL_COLUMNS_CONFIG_CAIXAS.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id as string}
+                          checked={columnVisibilityCaixas[column.id as string]}
+                          onCheckedChange={() => toggleColumnVisibilityCaixas(column.id as string)}
+                        >
+                          {column.header}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  <Table className="min-w-full whitespace-nowrap">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2 px-3 w-12">
+                          <Checkbox
+                            checked={
+                              numDisplayed > 0 && numSelected === numDisplayed
+                                ? true
+                                : numSelected > 0 ? 'indeterminate' : false
+                            }
+                            onCheckedChange={(value) => {
+                              if (value === true) {
+                                setSelectedRowIds(displayedCaixas.map(c => c.id));
+                              } else {
+                                setSelectedRowIds([]);
+                              }
+                            }}
+                            aria-label="Selecionar todas as linhas"
+                          />
+                        </TableHead>
+                        {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
+                          columnVisibilityCaixas[column.id as string] ? (
+                            <TableHead key={column.id as string} className="py-2 px-3">
+                              {column.enableSorting ? (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleSortCaixas(column.id as string)}
+                                  className="px-1 py-1 h-auto -ml-2"
+                                >
+                                  {column.header}
+                                  {renderSortIconCaixas(column.id as string)}
+                                </Button>
+                              ) : (
+                                column.header
+                              )}
+                            </TableHead>
+                          ) : null
+                        )}
+                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedCaixas.map((item) => (
+                        <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                          <TableCell className="py-2 px-3">
+                            <Checkbox
+                              checked={selectedRowIds.includes(item.id)}
+                              onCheckedChange={(value) => {
+                                setSelectedRowIds(prev =>
+                                  value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                                );
+                              }}
+                              aria-label={`Selecionar caixa ${item.codigoCaixa}`}
+                            />
+                          </TableCell>
+                          {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
+                            columnVisibilityCaixas[column.id as string] ? (
+                              <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                                {getCellValueCaixas(item, column)}
+                              </TableCell>
+                            ) : null
+                          )}
+                          <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                            <div className="flex items-center justify-end">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" aria-label="Editar Caixa" onClick={() => handleOpenDialog(item)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Editar Caixa</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <AlertDialog>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" disabled={!permissions.exclusaoDados}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{permissions.exclusaoDados ? "Excluir Caixa" : "Permissão necessária"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta ação não pode ser desfeita. Isso excluirá permanentemente a caixa "{item.codigoCaixa}".
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
-                <DialogFooter className="pt-4">
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancelar</Button>
-                  </DialogClose>
-                  <Button type="button" onClick={handleSaveChanges}>Salvar Caixa</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-        </div>
-      </PageHeader>
-      
-      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
-        <AccordionItem value="filters" className="border rounded-lg">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <FilterIcon className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline text-primary text-xl">Filtros das Caixas</CardTitle>
-            </div>
-            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </AccordionTrigger>
-          <AccordionContent>
-            <CardDescription className="px-6 pb-4 text-sm">
-              Refine a lista de caixas aplicando um ou mais filtros abaixo.
-            </CardDescription>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
-                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDescricao">Descrição</Label>
-                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterProveniencia">Proveniência</Label>
-                <Input id="filterProveniencia" name="proveniencia" value={filters.proveniencia} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterLocalizacao">Localização</Label>
-                <Input id="filterLocalizacao" name="localizacao" value={filters.localizacao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterTipo">Tipo</Label>
-                <Select onValueChange={handleFilterSelectChange('tipo')} value={filters.tipo}>
-                  <SelectTrigger id="filterTipo"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+                {displayedCaixas.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">Nenhuma caixa encontrada.</p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+        
+        <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setBulkEditField('');
+            setBulkEditValue('');
+          }
+          setIsBulkEditOpen(isOpen);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alteração em Bloco</DialogTitle>
+              <DialogDescription>
+                Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} caixas selecionadas.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bulk-field" className="text-right">
+                  Campo a Alterar
+                </Label>
+                <Select onValueChange={(value) => {
+                  setBulkEditField(value);
+                  setBulkEditValue('');
+                }} value={bulkEditField}>
+                  <SelectTrigger id="bulk-field" className="col-span-3">
+                    <SelectValue placeholder="Selecione um campo..." />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os tipos</SelectItem>
-                    {tiposCaixa.sort((a,b) => a.localeCompare(b)).map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    {bulkEditableFields.map(field => (
+                      <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterStatus">Status</Label>
-                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
-                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
-                    <SelectItem value="Aberta">Aberta</SelectItem>
-                    <SelectItem value="Fechada">Fechada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterSituacao">Situação</Label>
-                <Select onValueChange={handleFilterSelectChange('situacao')} value={filters.situacao}>
-                  <SelectTrigger id="filterSituacao"><SelectValue placeholder="Todas as situações" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as situações</SelectItem>
-                    <SelectItem value="Completa">Completa</SelectItem>
-                    <SelectItem value="Incompleta">Incompleta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
-              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-            </CardFooter>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <Card className="mt-0">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
-            <CardDescription className="mt-1 text-sm text-muted-foreground">
-              {filtersAreActive
-                ? `Exibindo ${displayedCaixas.length} de ${caixas.length} caixas com base nos filtros aplicados.`
-                : `Exibindo todas as ${caixas.length} caixas cadastradas.`}
-            </CardDescription>
-          </div>
-           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <ColumnsIcon className="mr-2 h-4 w-4" />
-                  Colunas
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={handleSelectAllColumnsCaixas} className="cursor-pointer">
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Selecionar Todas
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleDeselectAllColumnsCaixas} className="cursor-pointer">
-                  <Square className="mr-2 h-4 w-4" />
-                  Limpar Todas
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {ALL_COLUMNS_CONFIG_CAIXAS.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id as string}
-                    checked={columnVisibilityCaixas[column.id as string]}
-                    onCheckedChange={() => toggleColumnVisibilityCaixas(column.id as string)}
-                  >
-                    {column.header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="w-full">
-            <Table className="min-w-full whitespace-nowrap">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="py-2 px-3 w-12">
-                    <Checkbox
-                      checked={
-                        numDisplayed > 0 && numSelected === numDisplayed
-                          ? true
-                          : numSelected > 0 ? 'indeterminate' : false
-                      }
-                      onCheckedChange={(value) => {
-                        if (value === true) {
-                          setSelectedRowIds(displayedCaixas.map(c => c.id));
-                        } else {
-                          setSelectedRowIds([]);
-                        }
-                      }}
-                      aria-label="Selecionar todas as linhas"
-                    />
-                  </TableHead>
-                  {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
-                    columnVisibilityCaixas[column.id as string] ? (
-                      <TableHead key={column.id as string} className="py-2 px-3">
-                        {column.enableSorting ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleSortCaixas(column.id as string)}
-                            className="px-1 py-1 h-auto -ml-2"
-                          >
-                            {column.header}
-                            {renderSortIconCaixas(column.id as string)}
-                          </Button>
-                        ) : (
-                          column.header
-                        )}
-                      </TableHead>
-                    ) : null
-                  )}
-                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedCaixas.map((item) => (
-                  <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                    <TableCell className="py-2 px-3">
-                      <Checkbox
-                        checked={selectedRowIds.includes(item.id)}
-                        onCheckedChange={(value) => {
-                          setSelectedRowIds(prev =>
-                            value ? [...prev, item.id] : prev.filter(id => id !== item.id)
-                          );
-                        }}
-                        aria-label={`Selecionar caixa ${item.codigoCaixa}`}
-                      />
-                    </TableCell>
-                    {ALL_COLUMNS_CONFIG_CAIXAS.map((column) =>
-                      columnVisibilityCaixas[column.id as string] ? (
-                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
-                           {getCellValueCaixas(item, column)}
-                        </TableCell>
-                      ) : null
+              {selectedBulkField && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="bulk-value" className="text-right">
+                    Novo Valor
+                  </Label>
+                  <div className="col-span-3">
+                    {selectedBulkField.type === 'text' && (
+                      <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
                     )}
-                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
-                      <div className="flex items-center justify-end">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Editar Caixa" onClick={() => handleOpenDialog(item)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Editar Caixa</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <AlertDialog>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" disabled={!permissions.exclusaoDados}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{permissions.exclusaoDados ? "Excluir Caixa" : "Permissão necessária"}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a caixa "{item.codigoCaixa}".
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-          {displayedCaixas.length === 0 && (
-            <p className="text-center text-muted-foreground py-4">Nenhuma caixa encontrada.</p>
-          )}
-        </CardContent>
-      </Card>
-      
-    <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
-      if (!isOpen) {
-        setBulkEditField('');
-        setBulkEditValue('');
-      }
-      setIsBulkEditOpen(isOpen);
-    }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Alteração em Bloco</DialogTitle>
-          <DialogDescription>
-            Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} caixas selecionadas.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="bulk-field" className="text-right">
-              Campo a Alterar
-            </Label>
-            <Select onValueChange={(value) => {
-              setBulkEditField(value);
-              setBulkEditValue('');
-            }} value={bulkEditField}>
-              <SelectTrigger id="bulk-field" className="col-span-3">
-                <SelectValue placeholder="Selecione um campo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {bulkEditableFields.map(field => (
-                  <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedBulkField && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bulk-value" className="text-right">
-                Novo Valor
-              </Label>
-              <div className="col-span-3">
-                {selectedBulkField.type === 'text' && (
-                  <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
-                )}
-                {selectedBulkField.type === 'select' && (
-                  <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
-                    <SelectTrigger id="bulk-value">
-                      <SelectValue placeholder="Selecione um valor..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedBulkField.options?.map(option => (
-                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+                    {selectedBulkField.type === 'select' && (
+                      <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                        <SelectTrigger id="bulk-value">
+                          <SelectValue placeholder="Selecione um valor..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedBulkField.options?.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
-          <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+              <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} caixa(s) selecionada(s).
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+        <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} caixa(s) selecionada(s).
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
-    </div>
+      </div>
     </TooltipProvider>
   );
 }
+

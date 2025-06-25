@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -139,6 +139,7 @@ export default function ClassesJudiciaisPage() {
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
   
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
@@ -393,11 +394,13 @@ export default function ClassesJudiciaisPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
 
-  const handleExportCSV = () => {
+  const handleCsvExport = (dataToExport: ClasseJudicial[]) => {
+    if (dataToExport.length === 0) {
+      toast({ variant: "destructive", description: "Nenhuma classe judicial selecionada para exportar." });
+      return;
+    }
     const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
     const csvRows = [headers.join(',')];
-
-    const dataToExport = displayedItems.length > 0 ? displayedItems : classesJudiciais;
 
     dataToExport.forEach(item => {
         const rowData = {
@@ -423,7 +426,17 @@ export default function ClassesJudiciaisPage() {
     document.body.removeChild(link);
     toast({ title: "Sucesso", description: "Exportação concluída." });
   };
+  
+  const handleExportAllCSV = () => {
+    const dataToExport = displayedItems.length > 0 ? displayedItems : classesJudiciais;
+    handleCsvExport(dataToExport);
+  };
 
+  const handleExportSelectedCSV = () => {
+    const selectedData = classesJudiciais.filter(item => selectedRowIds.includes(item.id));
+    handleCsvExport(selectedData);
+  };
+  
   const handleDownloadTemplate = () => {
     const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
     const csvContent = headers.join(',');
@@ -520,401 +533,446 @@ export default function ClassesJudiciaisPage() {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
 
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [columnVisibility]);
+  const dataToPrint = React.useMemo(() => classesJudiciais.filter(c => selectedRowIds.includes(c.id)), [classesJudiciais, selectedRowIds]);
+
   return (
     <TooltipProvider>
-    <div className="container mx-auto py-2">
-      <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
-        <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
-                <PenSquare className="mr-2 h-4 w-4" />
-                Alterar em Bloco ({selectedRowIds.length})
-            </Button>
-            <Button variant="outline" onClick={handleImportClick}>
-                <Upload className="mr-2 h-4 w-4" />
-                Importar CSV
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-            />
-            <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Baixar Modelo
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-              setIsDialogOpen(isOpen);
+      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
+        {isPrinting ? (
+          <Card>
+            <CardHeader className="non-printable flex-row items-center justify-between">
+              <div>
+                <CardTitle>Relatório de Classes Judiciais Selecionadas</CardTitle>
+                <CardDescription>Exibindo {dataToPrint.length} classes para impressão.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dataToPrint.map(item => (
+                    <TableRow key={item.id}>
+                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValue(item, column)}</TableCell>)}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
+              <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                      <PenSquare className="mr-2 h-4 w-4" />
+                      Alterar em Bloco ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir Seleção ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" onClick={handleExportSelectedCSV} disabled={selectedRowIds.length === 0}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Seleção ({selectedRowIds.length})
+                  </Button>
+                  <Button variant="outline" onClick={handleImportClick}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importar CSV
+                  </Button>
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept=".csv"
+                      className="hidden"
+                  />
+                  <Button variant="outline" onClick={handleExportAllCSV}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Tudo
+                  </Button>
+                  <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Baixar Modelo
+                  </Button>
+                  <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                    setIsDialogOpen(isOpen);
+                    if (!isOpen) {
+                      resetForm();
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => handleOpenDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Nova Classe Judicial
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[525px]">
+                      <DialogHeader>
+                        <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
+                        <DialogDescription>
+                          Preencha as informações abaixo. Campos com * são obrigatórios.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ScrollArea className="max-h-[70vh] pr-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="codigo">Código Judicial*</Label>
+                          <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="descricao">Nome da Classe*</Label>
+                          <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
+                          <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
+                          <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
+                            <SelectTrigger id="destinacaoFinal">
+                              <SelectValue placeholder="Selecione a destinação" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                              <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                              <SelectItem value="Eliminação">Eliminação</SelectItem>
+                              <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="observacoes">Observações</Label>
+                          <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2 flex items-center gap-2">
+                          <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
+                          <Label htmlFor="inativo" className="mb-0">Inativo</Label>
+                        </div>
+                      </div>
+                      </ScrollArea>
+                      <DialogFooter className="pt-4">
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancelar</Button>
+                        </DialogClose>
+                        <Button type="button" onClick={handleSaveChanges}>Salvar Classe Judicial</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+              </div>
+            </PageHeader>
+
+            <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+              <AccordionItem value="filters" className="border rounded-lg">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FilterIcon className="h-5 w-5 text-primary" />
+                    <CardTitle className="font-headline text-primary text-xl">Filtros das Classes Judiciais</CardTitle>
+                  </div>
+                  {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardDescription className="px-6 pb-4 text-sm">
+                    Refine a lista de classes judiciais aplicando um ou mais filtros abaixo.
+                  </CardDescription>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodigo">Código</Label>
+                      <Input id="filterCodigo" name="codigo" value={filters.codigo} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDescricao">Nome da Classe</Label>
+                      <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
+                      <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                        <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
+                          <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                          <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                          <SelectItem value="Eliminação">Eliminação</SelectItem>
+                          <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStatus">Status</Label>
+                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                        <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Inativo">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                    <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                  </CardFooter>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            <Card className="mt-0">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="font-headline text-primary">Lista de Classes Judiciais</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    {filtersAreActive
+                      ? `Exibindo ${displayedItems.length} de ${classesJudiciais.length} classes com base nos filtros aplicados.`
+                      : `Exibindo todas as ${classesJudiciais.length} classes cadastradas.`}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <ColumnsIcon className="mr-2 h-4 w-4" />
+                        Colunas
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                      <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Selecionar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
+                        <Square className="mr-2 h-4 w-4" />
+                        Limpar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {ALL_COLUMNS_CONFIG.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id as string}
+                          checked={columnVisibility[column.id as string]}
+                          onCheckedChange={() => toggleColumnVisibility(column.id as string)}
+                        >
+                          {column.header}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  <Table className="min-w-full whitespace-nowrap">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 py-2 px-3">
+                          <Checkbox
+                            checked={
+                              numDisplayed > 0 && numSelected === numDisplayed
+                                ? true
+                                : numSelected > 0 ? 'indeterminate' : false
+                            }
+                            onCheckedChange={(value) => {
+                              if (value === true) {
+                                setSelectedRowIds(displayedItems.map(item => item.id));
+                              } else {
+                                setSelectedRowIds([]);
+                              }
+                            }}
+                            aria-label="Selecionar todas as linhas"
+                          />
+                        </TableHead>
+                        {ALL_COLUMNS_CONFIG.map((column) =>
+                          columnVisibility[column.id as string] ? (
+                            <TableHead key={column.id as string} className="py-2 px-3">
+                              {column.enableSorting ? (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleSort(column.id as string)}
+                                  className="px-1 py-1 h-auto -ml-2"
+                                >
+                                  {column.header}
+                                  {renderSortIcon(column.id as string)}
+                                </Button>
+                              ) : (
+                                column.header
+                              )}
+                            </TableHead>
+                          ) : null
+                        )}
+                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedItems.map((item) => (
+                        <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
+                          <TableCell className="py-2 px-3">
+                            <Checkbox
+                              checked={selectedRowIds.includes(item.id)}
+                              onCheckedChange={(value) => {
+                                setSelectedRowIds(prev =>
+                                  value ? [...prev, item.id] : prev.filter(id => id !== item.id)
+                                );
+                              }}
+                              aria-label={`Selecionar classe judicial ${item.codigo}`}
+                            />
+                          </TableCell>
+                          {ALL_COLUMNS_CONFIG.map((column) =>
+                            columnVisibility[column.id as string] ? (
+                              <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                                {getCellValue(item, column)}
+                              </TableCell>
+                            ) : null
+                          )}
+                          <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                            <div className="flex items-center justify-end">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial" onClick={() => handleOpenDialog(item)}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Editar Classe Judicial</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <AlertDialog>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.exclusaoDados}>
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{permissions.exclusaoDados ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta ação não pode ser desfeita. Isso excluirá permanentemente a classe judicial "{item.descricao}".
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                              </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                {displayedItems.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">Nenhuma classe judicial encontrada.</p>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
               if (!isOpen) {
-                resetForm();
+                setBulkEditField('');
+                setBulkEditValue('');
               }
+              setIsBulkEditOpen(isOpen);
             }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Nova Classe Judicial
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[525px]">
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
+                  <DialogTitle>Alteração em Bloco</DialogTitle>
                   <DialogDescription>
-                    Preencha as informações abaixo. Campos com * são obrigatórios.
+                    Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} classes judiciais selecionadas.
                   </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh] pr-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="codigo">Código Judicial*</Label>
-                    <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="descricao">Nome da Classe*</Label>
-                    <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
-                    <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
-                    <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
-                      <SelectTrigger id="destinacaoFinal">
-                        <SelectValue placeholder="Selecione a destinação" />
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="bulk-field" className="text-right">
+                      Campo a Alterar
+                    </Label>
+                    <Select onValueChange={(value) => {
+                      setBulkEditField(value);
+                      setBulkEditValue('');
+                    }} value={bulkEditField}>
+                      <SelectTrigger id="bulk-field" className="col-span-3">
+                        <SelectValue placeholder="Selecione um campo..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                        <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                        <SelectItem value="Eliminação">Eliminação</SelectItem>
-                        <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2 flex items-center gap-2">
-                    <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
-                    <Label htmlFor="inativo" className="mb-0">Inativo</Label>
-                  </div>
-                </div>
-                </ScrollArea>
-                <DialogFooter className="pt-4">
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancelar</Button>
-                  </DialogClose>
-                  <Button type="button" onClick={handleSaveChanges}>Salvar Classe Judicial</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-        </div>
-      </PageHeader>
-
-      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
-        <AccordionItem value="filters" className="border rounded-lg">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <FilterIcon className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline text-primary text-xl">Filtros das Classes Judiciais</CardTitle>
-            </div>
-            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </AccordionTrigger>
-          <AccordionContent>
-            <CardDescription className="px-6 pb-4 text-sm">
-              Refine a lista de classes judiciais aplicando um ou mais filtros abaixo.
-            </CardDescription>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="filterCodigo">Código</Label>
-                <Input id="filterCodigo" name="codigo" value={filters.codigo} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDescricao">Nome da Classe</Label>
-                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
-                <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
-                  <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
-                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterStatus">Status</Label>
-                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
-                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
-              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-            </CardFooter>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <Card className="mt-0">
-        <CardHeader className="flex flex-row items-center justify-between">
-           <div>
-            <CardTitle className="font-headline text-primary">Lista de Classes Judiciais</CardTitle>
-            <CardDescription className="mt-1 text-sm text-muted-foreground">
-              {filtersAreActive
-                ? `Exibindo ${displayedItems.length} de ${classesJudiciais.length} classes com base nos filtros aplicados.`
-                : `Exibindo todas as ${classesJudiciais.length} classes cadastradas.`}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <ColumnsIcon className="mr-2 h-4 w-4" />
-                  Colunas
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Selecionar Todas
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
-                  <Square className="mr-2 h-4 w-4" />
-                  Limpar Todas
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {ALL_COLUMNS_CONFIG.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id as string}
-                    checked={columnVisibility[column.id as string]}
-                    onCheckedChange={() => toggleColumnVisibility(column.id as string)}
-                  >
-                    {column.header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="w-full">
-            <Table className="min-w-full whitespace-nowrap">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 py-2 px-3">
-                    <Checkbox
-                      checked={
-                        numDisplayed > 0 && numSelected === numDisplayed
-                          ? true
-                          : numSelected > 0 ? 'indeterminate' : false
-                      }
-                      onCheckedChange={(value) => {
-                        if (value === true) {
-                          setSelectedRowIds(displayedItems.map(item => item.id));
-                        } else {
-                          setSelectedRowIds([]);
-                        }
-                      }}
-                      aria-label="Selecionar todas as linhas"
-                    />
-                  </TableHead>
-                   {ALL_COLUMNS_CONFIG.map((column) =>
-                    columnVisibility[column.id as string] ? (
-                      <TableHead key={column.id as string} className="py-2 px-3">
-                        {column.enableSorting ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleSort(column.id as string)}
-                            className="px-1 py-1 h-auto -ml-2"
-                          >
-                            {column.header}
-                            {renderSortIcon(column.id as string)}
-                          </Button>
-                        ) : (
-                          column.header
-                        )}
-                      </TableHead>
-                    ) : null
-                  )}
-                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedItems.map((item) => (
-                  <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                    <TableCell className="py-2 px-3">
-                      <Checkbox
-                        checked={selectedRowIds.includes(item.id)}
-                        onCheckedChange={(value) => {
-                          setSelectedRowIds(prev =>
-                            value ? [...prev, item.id] : prev.filter(id => id !== item.id)
-                          );
-                        }}
-                        aria-label={`Selecionar classe judicial ${item.codigo}`}
-                      />
-                    </TableCell>
-                    {ALL_COLUMNS_CONFIG.map((column) =>
-                      columnVisibility[column.id as string] ? (
-                        <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
-                          {getCellValue(item, column)}
-                        </TableCell>
-                      ) : null
-                    )}
-                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
-                       <div className="flex items-center justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial" onClick={() => handleOpenDialog(item)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Editar Classe Judicial</p>
-                            </TooltipContent>
-                          </Tooltip>
-                           <AlertDialog>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.exclusaoDados}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{permissions.exclusaoDados ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a classe judicial "{item.descricao}".
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-           </ScrollArea>
-           {displayedItems.length === 0 && (
-            <p className="text-center text-muted-foreground py-4">Nenhuma classe judicial encontrada.</p>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setBulkEditField('');
-          setBulkEditValue('');
-        }
-        setIsBulkEditOpen(isOpen);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alteração em Bloco</DialogTitle>
-            <DialogDescription>
-              Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} classes judiciais selecionadas.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bulk-field" className="text-right">
-                Campo a Alterar
-              </Label>
-              <Select onValueChange={(value) => {
-                setBulkEditField(value);
-                setBulkEditValue('');
-              }} value={bulkEditField}>
-                <SelectTrigger id="bulk-field" className="col-span-3">
-                  <SelectValue placeholder="Selecione um campo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {bulkEditableFields.map(field => (
-                    <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedBulkField && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="bulk-value" className="text-right">
-                  Novo Valor
-                </Label>
-                <div className="col-span-3">
-                  {selectedBulkField.type === 'text' && (
-                    <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
-                  )}
-                  {selectedBulkField.type === 'number' && (
-                    <Input id="bulk-value" type="number" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
-                  )}
-                  {selectedBulkField.type === 'select' && (
-                    <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
-                      <SelectTrigger id="bulk-value">
-                        <SelectValue placeholder="Selecione um valor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedBulkField.options?.map(option => (
-                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        {bulkEditableFields.map(field => (
+                          <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  {selectedBulkField && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="bulk-value" className="text-right">
+                        Novo Valor
+                      </Label>
+                      <div className="col-span-3">
+                        {selectedBulkField.type === 'text' && (
+                          <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                        )}
+                        {selectedBulkField.type === 'number' && (
+                          <Input id="bulk-value" type="number" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                        )}
+                        {selectedBulkField.type === 'select' && (
+                          <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                            <SelectTrigger id="bulk-value">
+                              <SelectValue placeholder="Selecione um valor..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedBulkField.options?.map(option => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classe(s) judicial(is) selecionada(s).
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+          <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classe(s) judicial(is) selecionada(s).
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
     </TooltipProvider>
   );
 }
+

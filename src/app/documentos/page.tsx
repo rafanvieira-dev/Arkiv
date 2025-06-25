@@ -12,7 +12,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOri
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -71,6 +71,7 @@ import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesI
 import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -175,6 +176,7 @@ export default function DocumentosPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
   
   const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
@@ -224,6 +226,7 @@ export default function DocumentosPage() {
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
 
 
   const resetForm = React.useCallback(() => {
@@ -1128,11 +1131,10 @@ export default function DocumentosPage() {
     return <ArrowDown className="ml-2 h-4 w-4" />; 
   };
   
-  const handleExportCSV = () => {
-    const dataToExport = displayedDocumentos.length > 0 ? displayedDocumentos : processedDocumentos;
+  const handleCsvExport = (dataToExport: Documento[]) => {
     if (dataToExport.length === 0) {
-        toast({ variant: "destructive", title: "Nenhum dado para exportar", description: "Filtre os dados ou adicione documentos antes de exportar." });
-        return;
+      toast({ variant: "destructive", title: "Nenhum dado para exportar." });
+      return;
     }
 
     const headers = Object.keys(placeholderDocumentos[0]).filter(key => !key.startsWith('outro'));
@@ -1157,7 +1159,17 @@ export default function DocumentosPage() {
     document.body.removeChild(link);
     toast({ title: "Sucesso", description: "Exportação de documentos concluída." });
   };
+  
+  const handleExportSelectedCSV = () => {
+    const selectedData = documentos.filter(doc => selectedRowIds.includes(doc.id));
+    handleCsvExport(selectedData);
+  };
 
+  const handleExportAllCSV = () => {
+    const dataToExport = displayedDocumentos.length > 0 ? displayedDocumentos : processedDocumentos;
+    handleCsvExport(dataToExport);
+  };
+  
   const handleDownloadTemplate = () => {
     const templateHeaders = [
         'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
@@ -1491,955 +1503,1000 @@ export default function DocumentosPage() {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
 
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [ALL_COLUMNS_CONFIG, columnVisibility]);
+  const dataToPrint = React.useMemo(() => documentos.filter(doc => selectedRowIds.includes(doc.id)), [documentos, selectedRowIds]);
+
+
   return (
     <TooltipProvider>
-    <div className="container mx-auto py-2">
-      <PageHeader 
-        title={pageTitle}
-        description={pageDescription}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-           <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir ({selectedRowIds.length})
-            </Button>
-           <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
-              <PenSquare className="mr-2 h-4 w-4" />
-              Alterar em Bloco ({selectedRowIds.length})
-            </Button>
-           <Button variant="outline" onClick={handleImportClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importar CSV
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-            />
-            <Button variant="outline" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Baixar Modelo
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-              setIsDialogOpen(isOpen);
-              if (!isOpen) {
-                resetForm();
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar ao Acervo
+      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
+        {isPrinting ? (
+           <Card>
+            <CardHeader className="non-printable flex-row items-center justify-between">
+              <div>
+                <CardTitle>Relatório de Documentos Selecionados</CardTitle>
+                <CardDescription>Exibindo {dataToPrint.length} documentos para impressão.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dataToPrint.map(item => (
+                    <TableRow key={item.id}>
+                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValue(item, column)}</TableCell>)}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <PageHeader 
+              title={pageTitle}
+              description={pageDescription}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir ({selectedRowIds.length})
+                  </Button>
+                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+                    <PenSquare className="mr-2 h-4 w-4" />
+                    Alterar em Bloco ({selectedRowIds.length})
+                  </Button>
+                <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir Seleção ({selectedRowIds.length})
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl">
-                <DialogHeader>
-                  <DialogTitle className="font-headline text-primary">
-                    {isFormDisabled ? "Visualizar Documento (Eliminado)" : "Adicionar/Editar Item ao Acervo"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {isFormDisabled 
-                      ? "Este documento foi eliminado e não pode mais ser alterado. Os dados são somente para consulta." 
-                      : "Preencha as informações abaixo. Campos com * são obrigatórios."
+                <Button variant="outline" onClick={handleExportSelectedCSV} disabled={selectedRowIds.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Seleção ({selectedRowIds.length})
+                </Button>
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar CSV
+                </Button>
+                  <Button variant="outline" onClick={handleExportAllCSV}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Tudo
+                  </Button>
+                  <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Baixar Modelo
+                  </Button>
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept=".csv"
+                      className="hidden"
+                  />
+                  <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                    setIsDialogOpen(isOpen);
+                    if (!isOpen) {
+                      resetForm();
                     }
-                  </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-[75vh] pr-6">
-                    <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4"]} className="w-full">
-                        <AccordionItem value="item-1">
-                            <AccordionTrigger className="font-semibold">Identificação Principal</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
-                                        <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status">Status*</Label>
-                                        <Select onValueChange={handleSelectChange('status')} value={formState.status} disabled={isFormDisabled}>
-                                        <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Arquivado">Arquivado</SelectItem>
-                                            <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
-                                            <SelectItem value="Eliminado">Eliminado</SelectItem>
-                                            <SelectItem value="Emprestado">Emprestado</SelectItem>
-                                            <SelectItem value="Desarquivado">Desarquivado</SelectItem>
-                                            <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="orgao">Órgão*</Label>
-                                        <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao} disabled={isFormDisabled}>
-                                        <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="TRF2">TRF2</SelectItem>
-                                            <SelectItem value="SJRJ">SJRJ</SelectItem>
-                                            <SelectItem value="SJES">SJES</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="origem">Origem*</Label>
-                                        <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
-                                        <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
-                                        <SelectContent>
-                                            {tiposOrigem
-                                            .filter(o => o && o.nome)
-                                            .sort((a,b) => a.nome.localeCompare(b.nome))
-                                            .map(o => {
-                                                const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
-                                                return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>)
-                                            })}
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="categoria">Categoria*</Label>
-                                        <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria} disabled={isFormDisabled}>
-                                        <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Documento">Documento</SelectItem>
-                                            <SelectItem value="Dossiê">Dossiê</SelectItem>
-                                            <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
-                                            <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
-                                        <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
-                                        <SelectTrigger id="tipoDocumento"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                                        <SelectContent>
-                                            {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
-                                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                                        <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
-                                        <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
-                                        <DateInputPicker 
-                                        value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
-                                        onChange={(date) => handleDateChange('dataArquivamento')(date)} 
-                                        placeholder="dd/mm/aaaa"
-                                        disabled={isFormDisabled}
-                                        />
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-2">
-                            <AccordionTrigger className="font-semibold">Descrição e Partes</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4">
-                                     <div className="space-y-2 sm:col-span-2">
-                                        <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                                        <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
-                                    </div>
-                                     <div className="space-y-2 sm:col-span-2">
-                                        <Label htmlFor="observacoesGerais">Observações Gerais</Label>
-                                        <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2 sm:col-span-2">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <Label>Partes Envolvidas</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={() => handleOpenParteDialog()} disabled={isFormDisabled}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Parte</Button>
-                                        </div>
-                                        <Card>
-                                            <CardContent className="p-2 space-y-2">
-                                                {formState.partes && formState.partes.length > 0 ? (
-                                                    formState.partes.map(parte => (
-                                                        <div key={parte.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
-                                                            <div>
-                                                                <p className="font-medium">{parte.nome}</p>
-                                                                <p className="text-muted-foreground">{parte.tipoParte} {parte.cpfCnpj && `(${parte.cpfCnpj})`}</p>
-                                                            </div>
-                                                            {!isFormDisabled && (
-                                                            <div>
-                                                                <Button variant="ghost" size="icon" onClick={() => handleOpenParteDialog(parte)}><Edit className="h-4 w-4" /></Button>
-                                                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveParte(parte.id)}><Trash2 className="h-4 w-4" /></Button>
-                                                            </div>
-                                                            )}
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <p className="text-center text-sm text-muted-foreground p-4">Nenhuma parte adicionada.</p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                    <div className="space-y-2 sm:col-span-2">
-                                        <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados</Label>
-                                        <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
-                                            {formState.documentosRelacionadosIds?.split(',').filter(Boolean).map(id => (
-                                                <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                                                    <Link href={`/documentos?edit=${id.trim()}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
-                                                        {id.trim()}
-                                                    </Link>
-                                                    <button type="button" className="rounded-full hover:bg-muted-foreground/20 p-0.5" onClick={() => handleRemoveRelatedDoc(id.trim())} aria-label={`Remover ${id.trim()}`} disabled={isFormDisabled}>
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
-                                            ))}
-                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsRelatedDocDialogOpen(true)} disabled={isFormDisabled}>
-                                                <PlusCircle className="h-4 w-4" /><span className="sr-only">Adicionar documento relacionado</span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-3">
-                            <AccordionTrigger className="font-semibold">Detalhes Físicos, Mídias e Digitalização</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="tipoMeio">Tipo de Meio*</Label>
-                                        <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio} disabled={isFormDisabled}>
-                                        <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Não digital">Não digital</SelectItem>
-                                            <SelectItem value="Digital">Digital</SelectItem>
-                                            <SelectItem value="Híbrido">Híbrido</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="generoDocumental">Gênero Documental</Label>
-                                        <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
-                                        <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
-                                        <SelectContent>
-                                            {generosDocumentais.sort((a, b) => a.localeCompare(b)).map(g => (
-                                            <SelectItem key={g} value={g}>{g}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
-                                        <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
-                                        <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
-                                    </div>
-                                    { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
-                                        <div className="space-y-2">
-                                        <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
-                                        <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
-                                        </div>
-                                    )}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="totalMidias">Total de Mídias</Label>
-                                        <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
-                                    </div>
-                                    {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
-                                        <>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
-                                            <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
-                                            <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                                            <SelectContent>
-                                                {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
-                                                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
-                                            <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
-                                            <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                        </div>
-                                        </>
-                                    )}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="digitalizado">Digitalizado?</Label>
-                                        <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
-                                        <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Sim">Sim</SelectItem>
-                                            <SelectItem value="Não">Não</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-4">
-                            <AccordionTrigger className="font-semibold">Classificação Arquivística</AccordionTrigger>
-                            <AccordionContent>
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
-                                        <Input 
-                                        id="codigoClassificacaoArquivisticaInput" 
-                                        name="codigoClassificacaoArquivisticaInput"
-                                        value={formState.codigoClassificacaoArquivisticaInput || ""} 
-                                        onChange={handleInputChange}
-                                        onBlur={handleCodigoClassificacaoBlur}
-                                        placeholder="Digite o código (ex: 020.1)"
-                                        disabled={isFormDisabled}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
-                                        <Input 
-                                        id="assuntoClassificacaoDisplay" 
-                                        value={formState.assuntoClassificacaoDisplay || ""} 
-                                        readOnly 
-                                        className={cn("bg-muted/50 cursor-not-allowed", {
-                                            "text-destructive": formState.assuntoClassificacaoDisplay?.includes('inválido')
-                                        })}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
-                                        <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
-                                        <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
-                                        <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
-                                        <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
-                                        <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Não Alterar">Não Alterar</SelectItem>
-                                            <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
-                                            <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
-                                        <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                    </div>
-                                 </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-5">
-                            <AccordionTrigger className="font-semibold">Informações Adicionais (Sigilo, Judicial)</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
-                                        <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica} disabled={isFormDisabled}>
-                                        <SelectTrigger id="segredoJustica"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Sim">Sim</SelectItem>
-                                            <SelectItem value="Não">Não</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)*</Label>
-                                        <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo} disabled={isFormDisabled}>
-                                        <SelectTrigger id="grauSigilo"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Ostensivo">Ostensivo</SelectItem>
-                                            <SelectItem value="Reservado">Reservado</SelectItem>
-                                            <SelectItem value="Secreto">Secreto</SelectItem>
-                                            <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
-                                        </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
-                                        <Input 
-                                        id="codigoClassificacaoJudicialId" 
-                                        value={formState.codigoClassificacaoJudicialId || ""} 
-                                        onChange={handleInputChange} 
-                                        placeholder="ID da Classe Judicial" 
-                                        disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
-                                        className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
-                                        />
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="item-6">
-                             <AccordionTrigger className="font-semibold">Localização e Baixa</AccordionTrigger>
-                             <AccordionContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="codigosCaixa">Código(s) da(s) Caixa(s)</Label>
-                                        <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="codigoAtoM">Código do AtoM</Label>
-                                        <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="numeroListagemEliminacao">Nº Listagem Eliminação</Label>
-                                        <Input id="numeroListagemEliminacao" value={formState.numeroListagemEliminacao || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" disabled={isFormDisabled} />
-                                    </div>
-                                     <div className="space-y-2">
-                                        <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                                        <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="dataBaixa">Data da Baixa</Label>
-                                        <DateInputPicker 
-                                        value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
-                                        onChange={(date) => handleDateChange('dataBaixa')(date)} 
-                                        placeholder="dd/mm/aaaa"
-                                        disabled={isFormDisabled}
-                                        />
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                </ScrollArea>
-                <DialogFooter className="pt-4">
-                  <Button variant="outline" onClick={resetForm} disabled={isFormDisabled}>Limpar</Button>
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancelar</Button>
-                  </DialogClose>
-                  <Button type="button" onClick={handleSaveChanges} disabled={isFormDisabled}>Salvar Documento</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-        </div>
-      </PageHeader>
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => handleOpenDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Adicionar ao Acervo
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle className="font-headline text-primary">
+                          {isFormDisabled ? "Visualizar Documento (Eliminado)" : "Adicionar/Editar Item ao Acervo"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {isFormDisabled 
+                            ? "Este documento foi eliminado e não pode mais ser alterado. Os dados são somente para consulta." 
+                            : "Preencha as informações abaixo. Campos com * são obrigatórios."
+                          }
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ScrollArea className="max-h-[75vh] pr-6">
+                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4"]} className="w-full">
+                              <AccordionItem value="item-1">
+                                  <AccordionTrigger className="font-semibold">Identificação Principal</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="idDisplay">ID do Documento (Sistema)</Label>
+                                              <Input id="idDisplay" value={documentIdToDisplay} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="status">Status*</Label>
+                                              <Select onValueChange={handleSelectChange('status')} value={formState.status} disabled={isFormDisabled}>
+                                              <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Arquivado">Arquivado</SelectItem>
+                                                  <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
+                                                  <SelectItem value="Eliminado">Eliminado</SelectItem>
+                                                  <SelectItem value="Emprestado">Emprestado</SelectItem>
+                                                  <SelectItem value="Desarquivado">Desarquivado</SelectItem>
+                                                  <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="orgao">Órgão*</Label>
+                                              <Select onValueChange={handleSelectChange('orgao')} value={formState.orgao} disabled={isFormDisabled}>
+                                              <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="TRF2">TRF2</SelectItem>
+                                                  <SelectItem value="SJRJ">SJRJ</SelectItem>
+                                                  <SelectItem value="SJES">SJES</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="origem">Origem*</Label>
+                                              <Select onValueChange={handleSelectChange('origem')} value={formState.origem} disabled={isFormDisabled}>
+                                              <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
+                                              <SelectContent>
+                                                  {tiposOrigem
+                                                  .filter(o => o && o.nome)
+                                                  .sort((a,b) => a.nome.localeCompare(b.nome))
+                                                  .map(o => {
+                                                      const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                                                      return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>)
+                                                  })}
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="categoria">Categoria*</Label>
+                                              <Select onValueChange={handleSelectChange('categoria')} value={formState.categoria} disabled={isFormDisabled}>
+                                              <SelectTrigger id="categoria"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Documento">Documento</SelectItem>
+                                                  <SelectItem value="Dossiê">Dossiê</SelectItem>
+                                                  <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                                                  <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
+                                              <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
+                                              <SelectTrigger id="tipoDocumento"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                                              <SelectContent>
+                                                  {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
+                                                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="numeroDocumento">Número do Documento</Label>
+                                              <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
+                                              <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
+                                              <DateInputPicker 
+                                              value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
+                                              onChange={(date) => handleDateChange('dataArquivamento')(date)} 
+                                              placeholder="dd/mm/aaaa"
+                                              disabled={isFormDisabled}
+                                              />
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-2">
+                                  <AccordionTrigger className="font-semibold">Descrição e Partes</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2 sm:col-span-2">
+                                              <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
+                                              <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2 sm:col-span-2">
+                                              <Label htmlFor="observacoesGerais">Observações Gerais</Label>
+                                              <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2 sm:col-span-2">
+                                              <div className="flex justify-between items-center mb-2">
+                                                  <Label>Partes Envolvidas</Label>
+                                                  <Button type="button" variant="outline" size="sm" onClick={() => handleOpenParteDialog()} disabled={isFormDisabled}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Parte</Button>
+                                              </div>
+                                              <Card>
+                                                  <CardContent className="p-2 space-y-2">
+                                                      {formState.partes && formState.partes.length > 0 ? (
+                                                          formState.partes.map(parte => (
+                                                              <div key={parte.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                                                                  <div>
+                                                                      <p className="font-medium">{parte.nome}</p>
+                                                                      <p className="text-muted-foreground">{parte.tipoParte} {parte.cpfCnpj && `(${parte.cpfCnpj})`}</p>
+                                                                  </div>
+                                                                  {!isFormDisabled && (
+                                                                  <div>
+                                                                      <Button variant="ghost" size="icon" onClick={() => handleOpenParteDialog(parte)}><Edit className="h-4 w-4" /></Button>
+                                                                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveParte(parte.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                                  </div>
+                                                                  )}
+                                                              </div>
+                                                          ))
+                                                      ) : (
+                                                          <p className="text-center text-sm text-muted-foreground p-4">Nenhuma parte adicionada.</p>
+                                                      )}
+                                                  </CardContent>
+                                              </Card>
+                                          </div>
+                                          <div className="space-y-2 sm:col-span-2">
+                                              <Label htmlFor="documentosRelacionadosIds">Documentos Relacionados</Label>
+                                              <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
+                                                  {formState.documentosRelacionadosIds?.split(',').filter(Boolean).map(id => (
+                                                      <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                                                          <Link href={`/documentos?edit=${id.trim()}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+                                                              {id.trim()}
+                                                          </Link>
+                                                          <button type="button" className="rounded-full hover:bg-muted-foreground/20 p-0.5" onClick={() => handleRemoveRelatedDoc(id.trim())} aria-label={`Remover ${id.trim()}`} disabled={isFormDisabled}>
+                                                              <X className="h-3 w-3" />
+                                                          </button>
+                                                      </Badge>
+                                                  ))}
+                                                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsRelatedDocDialogOpen(true)} disabled={isFormDisabled}>
+                                                      <PlusCircle className="h-4 w-4" /><span className="sr-only">Adicionar documento relacionado</span>
+                                                  </Button>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-3">
+                                  <AccordionTrigger className="font-semibold">Detalhes Físicos, Mídias e Digitalização</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="tipoMeio">Tipo de Meio*</Label>
+                                              <Select onValueChange={handleSelectChange('tipoMeio')} value={formState.tipoMeio} disabled={isFormDisabled}>
+                                              <SelectTrigger id="tipoMeio"><SelectValue placeholder="Selecione o tipo de meio" /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Não digital">Não digital</SelectItem>
+                                                  <SelectItem value="Digital">Digital</SelectItem>
+                                                  <SelectItem value="Híbrido">Híbrido</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="generoDocumental">Gênero Documental</Label>
+                                              <Select onValueChange={handleSelectChange('generoDocumental')} value={formState.generoDocumental} disabled={isFormDisabled}>
+                                              <SelectTrigger id="generoDocumental"><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                                              <SelectContent>
+                                                  {generosDocumentais.sort((a, b) => a.localeCompare(b)).map(g => (
+                                                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="quantidadeVolumes">Quantidade de Volumes</Label>
+                                              <Input id="quantidadeVolumes" type="number" value={formState.quantidadeVolumes === undefined ? "" : formState.quantidadeVolumes} onChange={handleNumericInputChange} placeholder="Ex: 2 (0 se não houver)" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
+                                              <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
+                                          </div>
+                                          { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
+                                              <div className="space-y-2">
+                                              <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
+                                              <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
+                                              </div>
+                                          )}
+                                          <div className="space-y-2">
+                                              <Label htmlFor="totalMidias">Total de Mídias</Label>
+                                              <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
+                                          </div>
+                                          {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
+                                              <>
+                                              <div className="space-y-2">
+                                                  <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
+                                                  <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
+                                                  <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                                                  <SelectContent>
+                                                      {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
+                                                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                      ))}
+                                                  </SelectContent>
+                                                  </Select>
+                                              </div>
+                                              <div className="space-y-2">
+                                                  <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
+                                                  <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                              </div>
+                                              <div className="space-y-2">
+                                                  <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
+                                                  <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                              </div>
+                                              </>
+                                          )}
+                                          <div className="space-y-2">
+                                              <Label htmlFor="digitalizado">Digitalizado?</Label>
+                                              <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
+                                              <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Sim">Sim</SelectItem>
+                                                  <SelectItem value="Não">Não</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-4">
+                                  <AccordionTrigger className="font-semibold">Classificação Arquivística</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
+                                              <Input 
+                                              id="codigoClassificacaoArquivisticaInput" 
+                                              name="codigoClassificacaoArquivisticaInput"
+                                              value={formState.codigoClassificacaoArquivisticaInput || ""} 
+                                              onChange={handleInputChange}
+                                              onBlur={handleCodigoClassificacaoBlur}
+                                              placeholder="Digite o código (ex: 020.1)"
+                                              disabled={isFormDisabled}
+                                              />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="assuntoClassificacaoDisplay">Assunto da Classificação</Label>
+                                              <Input 
+                                              id="assuntoClassificacaoDisplay" 
+                                              value={formState.assuntoClassificacaoDisplay || ""} 
+                                              readOnly 
+                                              className={cn("bg-muted/50 cursor-not-allowed", {
+                                                  "text-destructive": formState.assuntoClassificacaoDisplay?.includes('inválido')
+                                              })}
+                                              />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="prazoArquivoCorrenteDisplay">Prazo Arquivo Corrente</Label>
+                                              <Input id="prazoArquivoCorrenteDisplay" value={formState.prazoArquivoCorrenteDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="prazoArquivoIntermediarioDisplay">Prazo Arquivo Intermediário</Label>
+                                              <Input id="prazoArquivoIntermediarioDisplay" value={formState.prazoArquivoIntermediarioDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
+                                              <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
+                                              <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
+                                              <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Não Alterar">Não Alterar</SelectItem>
+                                                  <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
+                                                  <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
+                                              <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-5">
+                                  <AccordionTrigger className="font-semibold">Informações Adicionais (Sigilo, Judicial)</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="segredoJustica">Segredo de Justiça*</Label>
+                                              <Select onValueChange={handleSelectChange('segredoJustica')} value={formState.segredoJustica} disabled={isFormDisabled}>
+                                              <SelectTrigger id="segredoJustica"><SelectValue /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Sim">Sim</SelectItem>
+                                                  <SelectItem value="Não">Não</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="grauSigilo">Grau de Sigilo (LAI)*</Label>
+                                              <Select onValueChange={handleSelectChange('grauSigilo')} value={formState.grauSigilo} disabled={isFormDisabled}>
+                                              <SelectTrigger id="grauSigilo"><SelectValue /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Ostensivo">Ostensivo</SelectItem>
+                                                  <SelectItem value="Reservado">Reservado</SelectItem>
+                                                  <SelectItem value="Secreto">Secreto</SelectItem>
+                                                  <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
+                                              <Input 
+                                              id="codigoClassificacaoJudicialId" 
+                                              value={formState.codigoClassificacaoJudicialId || ""} 
+                                              onChange={handleInputChange} 
+                                              placeholder="ID da Classe Judicial" 
+                                              disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
+                                              className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
+                                              />
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-6">
+                                  <AccordionTrigger className="font-semibold">Localização e Baixa</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="codigosCaixa">Código(s) da(s) Caixa(s)</Label>
+                                              <Input id="codigosCaixa" value={formState.codigosCaixa || ""} onChange={handleInputChange} placeholder="Ex: CX-A-001, CX-B-002" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="codigoAtoM">Código do AtoM</Label>
+                                              <Input id="codigoAtoM" value={formState.codigoAtoM || ""} onChange={handleInputChange} placeholder="Código do AtoM (se aplicável)" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="numeroListagemEliminacao">Nº Listagem Eliminação</Label>
+                                              <Input id="numeroListagemEliminacao" value={formState.numeroListagemEliminacao || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
+                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataBaixa">Data da Baixa</Label>
+                                              <DateInputPicker 
+                                              value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
+                                              onChange={(date) => handleDateChange('dataBaixa')(date)} 
+                                              placeholder="dd/mm/aaaa"
+                                              disabled={isFormDisabled}
+                                              />
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                          </Accordion>
+                      </ScrollArea>
+                      <DialogFooter className="pt-4">
+                        <Button variant="outline" onClick={resetForm} disabled={isFormDisabled}>Limpar</Button>
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancelar</Button>
+                        </DialogClose>
+                        <Button type="button" onClick={handleSaveChanges} disabled={isFormDisabled}>Salvar Documento</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+              </div>
+            </PageHeader>
 
-      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
-        <AccordionItem value="filters" className="border rounded-lg">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <FilterIcon className="h-5 w-5 text-primary" />
-              <CardTitle className="font-headline text-primary text-xl">Filtros do Acervo</CardTitle>
-            </div>
-            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </AccordionTrigger>
-          <AccordionContent>
-            <CardDescription className="px-6 pb-4 text-sm">
-              Refine a lista de documentos aplicando um ou mais filtros abaixo.
-            </CardDescription>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="filterStatus">Status</Label>
-                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
-                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+            <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+              <AccordionItem value="filters" className="border rounded-lg">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FilterIcon className="h-5 w-5 text-primary" />
+                    <CardTitle className="font-headline text-primary text-xl">Filtros do Acervo</CardTitle>
+                  </div>
+                  {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardDescription className="px-6 pb-4 text-sm">
+                    Refine a lista de documentos aplicando um ou mais filtros abaixo.
+                  </CardDescription>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStatus">Status</Label>
+                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                        <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                          <SelectItem value="Arquivado">Arquivado</SelectItem>
+                          <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
+                          <SelectItem value="Eliminado">Eliminado</SelectItem>
+                          <SelectItem value="Emprestado">Emprestado</SelectItem>
+                          <SelectItem value="Desarquivado">Desarquivado</SelectItem>
+                          <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterOrigemDocumento">Origem do Documento</Label>
+                      <Input id="filterOrigemDocumento" name="origemDocumento" value={filters.origemDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
+                      <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDescricao">Descrição</Label>
+                      <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodClassificacao">Cód. Classificação</Label>
+                      <Input id="filterCodClassificacao" name="codClassificacao" value={filters.codClassificacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
+                      <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                        <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
+                          <SelectItem value="Eliminação">Eliminação</SelectItem>
+                          <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterAnoProducao">Ano de Produção</Label>
+                      <Input id="filterAnoProducao" name="anoProducao" type="number" value={filters.anoProducao} onChange={handleFilterInputChange} placeholder="AAAA" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterAnoArquivamento">Ano de Arquivamento</Label>
+                      <Input id="filterAnoArquivamento" name="anoArquivamento" type="number" value={filters.anoArquivamento} onChange={handleFilterInputChange} placeholder="AAAA" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterAnoElimPrevistoExato">Ano Elim. Previsto (Exato)</Label>
+                      <Input id="filterAnoElimPrevistoExato" name="anoElimPrevistoExato" type="number" value={filters.anoElimPrevistoExato} onChange={handleFilterInputChange} placeholder="AAAA" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterAnoElimPrevistoAte">Ano Elim. Previsto (Até)</Label>
+                      <Input id="filterAnoElimPrevistoAte" name="anoElimPrevistoAte" type="number" value={filters.anoElimPrevistoAte} onChange={handleFilterInputChange} placeholder="AAAA" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
+                      <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." disabled={!!codigoCaixaFromUrl} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterGeneroDocumental">Gênero Documental</Label>
+                      <Select onValueChange={handleFilterSelectChange('generoDocumental')} value={filters.generoDocumental}>
+                        <SelectTrigger id="filterGeneroDocumental"><SelectValue placeholder="Todos os gêneros" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os gêneros</SelectItem>
+                          {generosDocumentais.map(g => (
+                            <SelectItem key={g} value={g}>{g}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCategoriaDocumento">Categoria Documento</Label>
+                      <Select onValueChange={handleFilterSelectChange('categoriaDocumento')} value={filters.categoriaDocumento}>
+                        <SelectTrigger id="filterCategoriaDocumento"><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as categorias</SelectItem>
+                          <SelectItem value="Documento">Documento</SelectItem>
+                          <SelectItem value="Dossiê">Dossiê</SelectItem>
+                          <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
+                          <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterTipoDocumento">Espécie de Documento</Label>
+                      <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPessoasReferidas">Pessoas Referidas</Label>
+                      <Input id="filterPessoasReferidas" name="pessoasReferidas" value={filters.pessoasReferidas} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodigoAtoM">Código AtoM</Label>
+                      <Input id="filterCodigoAtoM" name="codigoAtoM" value={filters.codigoAtoM} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterSegredoJustica">Segredo de Justiça</Label>
+                      <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
+                        <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Ambos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Ambos</SelectItem>
+                          <SelectItem value="Sim">Sim</SelectItem>
+                          <SelectItem value="Não">Não</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterGrauSigilo">Grau de Sigilo LAI</Label>
+                      <Select onValueChange={handleFilterSelectChange('grauSigilo')} value={filters.grauSigilo}>
+                        <SelectTrigger id="filterGrauSigilo"><SelectValue placeholder="Todos os graus" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os graus</SelectItem>
+                          <SelectItem value="Ostensivo">Ostensivo</SelectItem>
+                          <SelectItem value="Reservado">Reservado</SelectItem>
+                          <SelectItem value="Secreto">Secreto</SelectItem>
+                          <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDigitalizado">Digitalizado</Label>
+                      <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
+                        <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
+                          <SelectItem value="Sim">Sim</SelectItem>
+                          <SelectItem value="Não">Não</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arq.)</Label>
+                      <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="AAAA" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
+                      <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
+                      <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterNumeroListagemEliminacao">Nº Listagem Eliminação</Label>
+                      <Input id="filterNumeroListagemEliminacao" name="numeroListagemEliminacao" value={filters.numeroListagemEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                    <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                    <Button onClick={applyFiltersAndSorting}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
+                  </CardFooter>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+
+            <Card className="mt-0">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="font-headline text-primary">
+                    {pageTitle}
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    {filtersAreActive || codigoCaixaFromUrl || isFilteredByListagem || isFilteredByReport
+                      ? `Exibindo ${displayedDocumentos.length} de ${processedDocumentos.length} documento(s) com base nos filtros e parâmetros aplicados.`
+                      : `Exibindo todos os ${processedDocumentos.length} documento(s) do acervo.`}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        <ColumnsIcon className="mr-2 h-4 w-4" />
+                        Colunas
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                      <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Selecionar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
+                        <Square className="mr-2 h-4 w-4" />
+                        Limpar Todas
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {ALL_COLUMNS_CONFIG.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id as string}
+                          checked={columnVisibility[column.id as string]}
+                          onCheckedChange={() => toggleColumnVisibility(column.id as string)}
+                        >
+                          {column.header}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="w-full">
+                  <Table className="min-w-full whitespace-nowrap">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2 px-3 w-12">
+                          <Checkbox
+                            checked={
+                              numDisp > 0 && numSel === numDisp
+                                ? true
+                                : numSel > 0 ? 'indeterminate' : false
+                            }
+                            onCheckedChange={(value) => {
+                              if (value === true) {
+                                setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
+                              } else {
+                                setSelectedRowIds([]);
+                              }
+                            }}
+                            aria-label="Selecionar todas as linhas"
+                          />
+                        </TableHead>
+                        {ALL_COLUMNS_CONFIG.map((column) =>
+                          columnVisibility[column.id as string] ? (
+                            <TableHead key={column.id as string} className="py-2 px-3">
+                              {column.enableSorting ? (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => handleSort(column.id as string)}
+                                  className="px-1 py-1 h-auto -ml-2"
+                                >
+                                  {column.header}
+                                  {renderSortIcon(column.id as string)}
+                                </Button>
+                              ) : (
+                                column.header
+                              )}
+                            </TableHead>
+                          ) : null
+                        )}
+                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedDocumentos.map((doc) => (
+                        <TableRow key={doc.id} data-state={selectedRowIds.includes(doc.id) ? "selected" : ""}>
+                          <TableCell className="py-2 px-3">
+                            <Checkbox
+                              checked={selectedRowIds.includes(doc.id)}
+                              onCheckedChange={(value) => {
+                                setSelectedRowIds(prev =>
+                                  value ? [...prev, doc.id] : prev.filter(id => id !== doc.id)
+                                );
+                              }}
+                              aria-label={`Selecionar documento ${doc.numeroDocumento || doc.id}`}
+                            />
+                          </TableCell>
+                          {ALL_COLUMNS_CONFIG.map((column) =>
+                            columnVisibility[column.id as string] ? (
+                              <TableCell key={`${doc.id}-${column.id as string}`} className="py-2 px-3">
+                                {getCellValue(doc, column)}
+                              </TableCell>
+                            ) : null
+                          )}
+                          <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+                            <div className="flex items-center justify-end">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" aria-label="Editar Documento" onClick={() => handleOpenDialog(doc)}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>{doc.status === 'Eliminado' ? 'Visualizar Documento' : 'Editar Documento'}</p></TooltipContent>
+                                </Tooltip>
+                                <AlertDialog>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" disabled={doc.status === 'Eliminado' || !permissions.exclusaoDados}>
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent><p>{doc.status === 'Eliminado' ? 'Não pode ser excluído' : (permissions.exclusaoDados ? 'Excluir Documento' : 'Permissão necessária')}</p></TooltipContent>
+                                    </Tooltip>
+                                      <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                              Esta ação não pode ser desfeita. Isso excluirá permanentemente o documento "{doc.numeroDocumento || doc.id}".
+                                          </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(doc.id)}>Sim, excluir</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
+                              </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                {displayedDocumentos.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    {isFilteredByListagem ? `Nenhum documento encontrado na listagem de eliminação.` : (codigoCaixaFromUrl ? `Nenhum documento encontrado na caixa ${codigoCaixaFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados.")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+        
+        <Dialog open={isRelatedDocDialogOpen} onOpenChange={setIsRelatedDocDialogOpen}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Selecionar Documento Relacionado</DialogTitle>
+                    <DialogDescription>
+                        Busque e selecione um documento existente para relacionar.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input 
+                        placeholder="Buscar por ID, número, ou descrição..."
+                        value={relatedDocSearchTerm}
+                        onChange={(e) => setRelatedDocSearchTerm(e.target.value)}
+                    />
+                    <ScrollArea className="h-72 mt-4 border rounded-md">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Número</TableHead>
+                                    <TableHead>Descrição</TableHead>
+                                    <TableHead className="text-right">Ação</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {documentos
+                                    .filter(doc => {
+                                        const searchTerm = relatedDocSearchTerm.toLowerCase();
+                                        if (doc.id === documentIdToDisplay) return false;
+                                        if (!searchTerm) return true;
+                                        return (
+                                            doc.id.toLowerCase().includes(searchTerm) ||
+                                            doc.numeroDocumento?.toLowerCase().includes(searchTerm) ||
+                                            doc.descricaoDocumento?.toLowerCase().includes(searchTerm)
+                                        );
+                                    })
+                                    .map(doc => (
+                                    <TableRow key={doc.id}>
+                                        <TableCell>{doc.id}</TableCell>
+                                        <TableCell>{doc.numeroDocumento}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{doc.descricaoDocumento}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => handleAddRelatedDoc(doc.id)}
+                                                disabled={formState.documentosRelacionadosIds?.split(',').map(s=>s.trim()).includes(doc.id)}
+                                            >
+                                                Adicionar
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsRelatedDocDialogOpen(false)}>Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isParteDialogOpen} onOpenChange={setIsParteDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                <DialogTitle>{isEditingParte ? 'Editar Parte' : 'Adicionar Nova Parte'}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="parte-nome" className="text-right">Nome*</Label>
+                    <Input id="parte-nome" value={parteFormState.nome} onChange={e => setParteFormState(p => ({...p, nome: e.target.value}))} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="parte-cpf" className="text-right">CPF/CNPJ</Label>
+                    <Input id="parte-cpf" value={parteFormState.cpfCnpj || ''} onChange={e => setParteFormState(p => ({...p, cpfCnpj: e.target.value}))} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="parte-tipo" className="text-right">Tipo</Label>
+                    <Select onValueChange={(value) => setParteFormState(p => ({...p, tipoParte: value}))} value={parteFormState.tipoParte}>
+                        <SelectTrigger className="col-span-3" id="parte-tipo">
+                            <SelectValue placeholder="Selecione o tipo de parte" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {tiposParte.sort().map(tipo => (
+                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                </div>
+                <DialogFooter>
+                <Button variant="outline" onClick={() => setIsParteDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSaveParte}>Salvar Parte</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setBulkEditField('');
+            setBulkEditValue('');
+          }
+          setIsBulkEditOpen(isOpen);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alteração em Bloco</DialogTitle>
+              <DialogDescription>
+                Selecione o campo e o novo valor para aplicar a todos os {selectedRowIds.length} documentos selecionados.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bulk-field" className="text-right">
+                  Campo a Alterar
+                </Label>
+                <Select onValueChange={(value) => {
+                  setBulkEditField(value);
+                  setBulkEditValue('');
+                }} value={bulkEditField}>
+                  <SelectTrigger id="bulk-field" className="col-span-3">
+                    <SelectValue placeholder="Selecione um campo..." />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
-                    <SelectItem value="Arquivado">Arquivado</SelectItem>
-                    <SelectItem value="Pendente de Conferência">Pendente de Conferência</SelectItem>
-                    <SelectItem value="Eliminado">Eliminado</SelectItem>
-                    <SelectItem value="Emprestado">Emprestado</SelectItem>
-                    <SelectItem value="Desarquivado">Desarquivado</SelectItem>
-                    <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterOrigemDocumento">Origem do Documento</Label>
-                <Input id="filterOrigemDocumento" name="origemDocumento" value={filters.origemDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
-                <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDescricao">Descrição</Label>
-                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterCodClassificacao">Cód. Classificação</Label>
-                <Input id="filterCodClassificacao" name="codClassificacao" value={filters.codClassificacao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
-                <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
-                  <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
-                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="filterAnoProducao">Ano de Produção</Label>
-                <Input id="filterAnoProducao" name="anoProducao" type="number" value={filters.anoProducao} onChange={handleFilterInputChange} placeholder="AAAA" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterAnoArquivamento">Ano de Arquivamento</Label>
-                <Input id="filterAnoArquivamento" name="anoArquivamento" type="number" value={filters.anoArquivamento} onChange={handleFilterInputChange} placeholder="AAAA" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterAnoElimPrevistoExato">Ano Elim. Previsto (Exato)</Label>
-                <Input id="filterAnoElimPrevistoExato" name="anoElimPrevistoExato" type="number" value={filters.anoElimPrevistoExato} onChange={handleFilterInputChange} placeholder="AAAA" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterAnoElimPrevistoAte">Ano Elim. Previsto (Até)</Label>
-                <Input id="filterAnoElimPrevistoAte" name="anoElimPrevistoAte" type="number" value={filters.anoElimPrevistoAte} onChange={handleFilterInputChange} placeholder="AAAA" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterCodigoCaixa">Código da Caixa</Label>
-                <Input id="filterCodigoCaixa" name="codigoCaixa" value={filters.codigoCaixa} onChange={handleFilterInputChange} placeholder="Contém..." disabled={!!codigoCaixaFromUrl} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterGeneroDocumental">Gênero Documental</Label>
-                <Select onValueChange={handleFilterSelectChange('generoDocumental')} value={filters.generoDocumental}>
-                  <SelectTrigger id="filterGeneroDocumental"><SelectValue placeholder="Todos os gêneros" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os gêneros</SelectItem>
-                    {generosDocumentais.map(g => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    {bulkEditableFields.map(field => (
+                      <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterCategoriaDocumento">Categoria Documento</Label>
-                <Select onValueChange={handleFilterSelectChange('categoriaDocumento')} value={filters.categoriaDocumento}>
-                  <SelectTrigger id="filterCategoriaDocumento"><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as categorias</SelectItem>
-                    <SelectItem value="Documento">Documento</SelectItem>
-                    <SelectItem value="Dossiê">Dossiê</SelectItem>
-                    <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
-                    <SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterTipoDocumento">Espécie de Documento</Label>
-                 <Input id="filterTipoDocumento" name="tipoDocumento" value={filters.tipoDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterPessoasReferidas">Pessoas Referidas</Label>
-                <Input id="filterPessoasReferidas" name="pessoasReferidas" value={filters.pessoasReferidas} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterCodigoAtoM">Código AtoM</Label>
-                <Input id="filterCodigoAtoM" name="codigoAtoM" value={filters.codigoAtoM} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterSegredoJustica">Segredo de Justiça</Label>
-                <Select onValueChange={handleFilterSelectChange('segredoJustica')} value={filters.segredoJustica}>
-                  <SelectTrigger id="filterSegredoJustica"><SelectValue placeholder="Ambos" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Ambos</SelectItem>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterGrauSigilo">Grau de Sigilo LAI</Label>
-                <Select onValueChange={handleFilterSelectChange('grauSigilo')} value={filters.grauSigilo}>
-                  <SelectTrigger id="filterGrauSigilo"><SelectValue placeholder="Todos os graus" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os graus</SelectItem>
-                    <SelectItem value="Ostensivo">Ostensivo</SelectItem>
-                    <SelectItem value="Reservado">Reservado</SelectItem>
-                    <SelectItem value="Secreto">Secreto</SelectItem>
-                    <SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterDigitalizado">Digitalizado</Label>
-                <Select onValueChange={handleFilterSelectChange('digitalizado')} value={filters.digitalizado}>
-                  <SelectTrigger id="filterDigitalizado"><SelectValue placeholder="Todos" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos</SelectItem>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="filterAnoLimiteDocumento">Documentos Até o Ano (Arq.)</Label>
-                <Input id="filterAnoLimiteDocumento" name="anoLimiteDocumento" type="number" value={filters.anoLimiteDocumento} onChange={handleFilterInputChange} placeholder="AAAA" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
-                <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
-                <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterNumeroListagemEliminacao">Nº Listagem Eliminação</Label>
-                <Input id="filterNumeroListagemEliminacao" name="numeroListagemEliminacao" value={filters.numeroListagemEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
-              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-              <Button onClick={applyFiltersAndSorting}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
-            </CardFooter>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-
-      <Card className="mt-0">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="font-headline text-primary">
-              {pageTitle}
-            </CardTitle>
-            <CardDescription className="mt-1 text-sm text-muted-foreground">
-              {filtersAreActive || codigoCaixaFromUrl || isFilteredByListagem || isFilteredByReport
-                ? `Exibindo ${displayedDocumentos.length} de ${processedDocumentos.length} documento(s) com base nos filtros e parâmetros aplicados.`
-                : `Exibindo todos os ${processedDocumentos.length} documento(s) do acervo.`}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <ColumnsIcon className="mr-2 h-4 w-4" />
-                  Colunas
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
-                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Selecionar Todas
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
-                  <Square className="mr-2 h-4 w-4" />
-                  Limpar Todas
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {ALL_COLUMNS_CONFIG.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id as string}
-                    checked={columnVisibility[column.id as string]}
-                    onCheckedChange={() => toggleColumnVisibility(column.id as string)}
-                  >
-                    {column.header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="w-full">
-            <Table className="min-w-full whitespace-nowrap">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="py-2 px-3 w-12">
-                    <Checkbox
-                      checked={
-                        numDisp > 0 && numSel === numDisp
-                          ? true
-                          : numSel > 0 ? 'indeterminate' : false
-                      }
-                      onCheckedChange={(value) => {
-                        if (value === true) {
-                          setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
-                        } else {
-                          setSelectedRowIds([]);
-                        }
-                      }}
-                      aria-label="Selecionar todas as linhas"
-                    />
-                  </TableHead>
-                  {ALL_COLUMNS_CONFIG.map((column) =>
-                    columnVisibility[column.id as string] ? (
-                      <TableHead key={column.id as string} className="py-2 px-3">
-                        {column.enableSorting ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleSort(column.id as string)}
-                            className="px-1 py-1 h-auto -ml-2"
-                          >
-                            {column.header}
-                            {renderSortIcon(column.id as string)}
-                          </Button>
-                        ) : (
-                          column.header
-                        )}
-                      </TableHead>
-                    ) : null
-                  )}
-                  <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedDocumentos.map((doc) => (
-                  <TableRow key={doc.id} data-state={selectedRowIds.includes(doc.id) ? "selected" : ""}>
-                    <TableCell className="py-2 px-3">
-                      <Checkbox
-                        checked={selectedRowIds.includes(doc.id)}
-                        onCheckedChange={(value) => {
-                          setSelectedRowIds(prev =>
-                            value ? [...prev, doc.id] : prev.filter(id => id !== doc.id)
-                          );
-                        }}
-                        aria-label={`Selecionar documento ${doc.numeroDocumento || doc.id}`}
-                      />
-                    </TableCell>
-                    {ALL_COLUMNS_CONFIG.map((column) =>
-                      columnVisibility[column.id as string] ? (
-                        <TableCell key={`${doc.id}-${column.id as string}`} className="py-2 px-3">
-                           {getCellValue(doc, column)}
-                        </TableCell>
-                      ) : null
+              {selectedBulkField && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="bulk-value" className="text-right">
+                    Novo Valor
+                  </Label>
+                  <div className="col-span-3">
+                    {selectedBulkField.type === 'text' && (
+                      <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
                     )}
-                    <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
-                       <div className="flex items-center justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label="Editar Documento" onClick={() => handleOpenDialog(doc)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>{doc.status === 'Eliminado' ? 'Visualizar Documento' : 'Editar Documento'}</p></TooltipContent>
-                          </Tooltip>
-                           <AlertDialog>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" disabled={doc.status === 'Eliminado'}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent><p>{doc.status === 'Eliminado' ? 'Não pode ser excluído' : 'Excluir Documento'}</p></TooltipContent>
-                              </Tooltip>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Esta ação não pode ser desfeita. Isso excluirá permanentemente o documento "{doc.numeroDocumento || doc.id}".
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(doc.id)}>Sim, excluir</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-           {displayedDocumentos.length === 0 && (
-            <p className="text-center text-muted-foreground py-4">
-              {isFilteredByListagem ? `Nenhum documento encontrado na listagem de eliminação.` : (codigoCaixaFromUrl ? `Nenhum documento encontrado na caixa ${codigoCaixaFromUrl} para os filtros aplicados.` : "Nenhum documento encontrado para os filtros e ordenação aplicados.")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-
-    <Dialog open={isRelatedDocDialogOpen} onOpenChange={setIsRelatedDocDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>Selecionar Documento Relacionado</DialogTitle>
-                <DialogDescription>
-                    Busque e selecione um documento existente para relacionar.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-                <Input 
-                    placeholder="Buscar por ID, número, ou descrição..."
-                    value={relatedDocSearchTerm}
-                    onChange={(e) => setRelatedDocSearchTerm(e.target.value)}
-                />
-                <ScrollArea className="h-72 mt-4 border rounded-md">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Número</TableHead>
-                                <TableHead>Descrição</TableHead>
-                                <TableHead className="text-right">Ação</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {documentos
-                                .filter(doc => {
-                                    const searchTerm = relatedDocSearchTerm.toLowerCase();
-                                    if (doc.id === documentIdToDisplay) return false;
-                                    if (!searchTerm) return true;
-                                    return (
-                                        doc.id.toLowerCase().includes(searchTerm) ||
-                                        doc.numeroDocumento?.toLowerCase().includes(searchTerm) ||
-                                        doc.descricaoDocumento?.toLowerCase().includes(searchTerm)
-                                    );
-                                })
-                                .map(doc => (
-                                <TableRow key={doc.id}>
-                                    <TableCell>{doc.id}</TableCell>
-                                    <TableCell>{doc.numeroDocumento}</TableCell>
-                                    <TableCell className="max-w-xs truncate">{doc.descricaoDocumento}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            size="sm"
-                                            onClick={() => handleAddRelatedDoc(doc.id)}
-                                            disabled={formState.documentosRelacionadosIds?.split(',').map(s=>s.trim()).includes(doc.id)}
-                                        >
-                                            Adicionar
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </ScrollArea>
+                    {selectedBulkField.type === 'date' && (
+                      <DateInputPicker value={bulkEditValue} onChange={setBulkEditValue} />
+                    )}
+                    {selectedBulkField.type === 'select' && (
+                      <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                        <SelectTrigger id="bulk-value">
+                          <SelectValue placeholder="Selecione um valor..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedBulkField.options?.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setIsRelatedDocDialogOpen(false)}>Fechar</Button>
+              <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+              <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
             </DialogFooter>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog open={isParteDialogOpen} onOpenChange={setIsParteDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-            <DialogTitle>{isEditingParte ? 'Editar Parte' : 'Adicionar Nova Parte'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="parte-nome" className="text-right">Nome*</Label>
-                <Input id="parte-nome" value={parteFormState.nome} onChange={e => setParteFormState(p => ({...p, nome: e.target.value}))} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="parte-cpf" className="text-right">CPF/CNPJ</Label>
-                <Input id="parte-cpf" value={parteFormState.cpfCnpj || ''} onChange={e => setParteFormState(p => ({...p, cpfCnpj: e.target.value}))} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="parte-tipo" className="text-right">Tipo</Label>
-                <Select onValueChange={(value) => setParteFormState(p => ({...p, tipoParte: value}))} value={parteFormState.tipoParte}>
-                    <SelectTrigger className="col-span-3" id="parte-tipo">
-                        <SelectValue placeholder="Selecione o tipo de parte" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {tiposParte.sort().map(tipo => (
-                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            </div>
-            <DialogFooter>
-            <Button variant="outline" onClick={() => setIsParteDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveParte}>Salvar Parte</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    
-    <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
-      if (!isOpen) {
-        setBulkEditField('');
-        setBulkEditValue('');
-      }
-      setIsBulkEditOpen(isOpen);
-    }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Alteração em Bloco</DialogTitle>
-          <DialogDescription>
-            Selecione o campo e o novo valor para aplicar a todos os {selectedRowIds.length} documentos selecionados.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="bulk-field" className="text-right">
-              Campo a Alterar
-            </Label>
-            <Select onValueChange={(value) => {
-              setBulkEditField(value);
-              setBulkEditValue('');
-            }} value={bulkEditField}>
-              <SelectTrigger id="bulk-field" className="col-span-3">
-                <SelectValue placeholder="Selecione um campo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {bulkEditableFields.map(field => (
-                  <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedBulkField && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bulk-value" className="text-right">
-                Novo Valor
-              </Label>
-              <div className="col-span-3">
-                {selectedBulkField.type === 'text' && (
-                  <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
-                )}
-                {selectedBulkField.type === 'date' && (
-                  <DateInputPicker value={bulkEditValue} onChange={setBulkEditValue} />
-                )}
-                {selectedBulkField.type === 'select' && (
-                  <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
-                    <SelectTrigger id="bulk-value">
-                      <SelectValue placeholder="Selecione um valor..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedBulkField.options?.map(option => (
-                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
-          <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    
-    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} documento(s) selecionado(s).
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-
+          </DialogContent>
+        </Dialog>
+        
+        <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} documento(s) selecionado(s). Documentos com status "Eliminado" não serão afetados.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </TooltipProvider>
   );
 }
+
