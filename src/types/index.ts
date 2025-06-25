@@ -158,6 +158,7 @@ export interface Usuario {
     estatisticas: boolean;
     relatorios: boolean;
     auditoria: boolean;
+    manual: boolean;
   };
 }
 

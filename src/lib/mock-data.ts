@@ -327,10 +327,11 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'auditoria', label: 'Auditoria', description: 'Permite visualizar os logs de auditoria do sistema.' },
   { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
   { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
+  { id: 'manual', label: 'Manual', description: 'Permite acessar o manual do sistema.' },
 ];
 
 const allTruePermissions: Usuario['permissoes'] = {
-  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true,
+  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true, manual: true,
 };
 
 const standardUserPermissions: Usuario['permissoes'] = {

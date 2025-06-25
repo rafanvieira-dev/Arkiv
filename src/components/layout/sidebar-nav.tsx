@@ -18,6 +18,7 @@ import {
   BarChartHorizontal,
   ClipboardList,
   History,
+  LifeBuoy,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -54,6 +55,7 @@ const secondaryNavItems: NavItem[] = [
  { href: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' },
  { href: '/configuracoes', label: 'Configurações', icon: Settings, permissionKey: 'configuracoes' },
  { href: '/auditoria', label: 'Auditoria', icon: History, permissionKey: 'auditoria' },
+ { href: '/manual', label: 'Manual', icon: LifeBuoy, permissionKey: 'manual' },
 ];
 
 
