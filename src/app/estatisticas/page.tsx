@@ -48,7 +48,7 @@ const chartColors = [
 ];
 
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'condicaoCaixa' | 'situacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor' | 'categoria';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'condicaoCaixa' | 'situacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor' | 'categoria' | 'caixasPorCodigo' | 'caixasPorProveniencia';
 
 
 export default function EstatisticasPage() {
@@ -68,6 +68,8 @@ export default function EstatisticasPage() {
   const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
   const [transferenciasPorSetorData, setTransferenciasPorSetorData] = React.useState<any[]>([]);
   const [categoriaData, setCategoriaData] = React.useState<ChartData[]>([]);
+  const [caixasPorCodigoData, setCaixasPorCodigoData] = React.useState<ChartData[]>([]);
+  const [caixasPorProvenienciaData, setCaixasPorProvenienciaData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
@@ -438,6 +440,32 @@ export default function EstatisticasPage() {
       setTransferenciasPorSetorData(transferenciasChartData);
       setTransferenciaChartConfig(transferenciaFinalChartConfig);
 
+      // Process Caixas por Código
+      const codigoPrefixCounts = allCaixas.reduce((acc, caixa) => {
+          if (caixa.codigoCaixa) {
+              const prefix = caixa.codigoCaixa.split(/[-/]/)[0] || "Sem Prefixo";
+              acc[prefix] = (acc[prefix] || 0) + 1;
+          }
+          return acc;
+      }, {} as Record<string, number>);
+
+      const caixasPorCodigoChartData = Object.entries(codigoPrefixCounts)
+          .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-1))" }))
+          .sort((a,b) => b.value - a.value); 
+      setCaixasPorCodigoData(caixasPorCodigoChartData);
+
+
+      // Process Caixas por Proveniência
+      const provenienciaCounts = allCaixas.reduce((acc, caixa) => {
+          const proveniencia = caixa.proveniencia || "Não especificada";
+          acc[proveniencia] = (acc[proveniencia] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+
+      const caixasPorProvenienciaChartData = Object.entries(provenienciaCounts)
+          .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-2))" }))
+          .sort((a,b) => b.value - a.value);
+      setCaixasPorProvenienciaData(caixasPorProvenienciaChartData);
 
     } catch (error) {
       console.error("Failed to process chart data:", error);
@@ -716,6 +744,30 @@ export default function EstatisticasPage() {
     </ChartContainer>
   );
 
+  const CaixasPorCodigoChart = (
+    <ChartContainer config={{value: {label: "Caixas", color: "hsl(var(--chart-1))"}}} className="h-full w-full">
+      <BarChart data={caixasPorCodigoData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+        <CartesianGrid horizontal={false} />
+        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={80}/>
+        <XAxis type="number" />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+        <Bar dataKey="value" radius={4} name="Caixas"/>
+      </BarChart>
+    </ChartContainer>
+  );
+
+  const CaixasPorProvenienciaChart = (
+    <ChartContainer config={{value: {label: "Caixas", color: "hsl(var(--chart-2))"}}} className="h-full w-full">
+      <BarChart data={caixasPorProvenienciaData} layout="vertical" margin={{ top: 5, right: 20, left: 100, bottom: 5 }}>
+        <CartesianGrid horizontal={false} />
+        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={150} />
+        <XAxis type="number" />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+        <Bar dataKey="value" radius={4} name="Caixas"/>
+      </BarChart>
+    </ChartContainer>
+  );
+
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
@@ -808,6 +860,22 @@ export default function EstatisticasPage() {
               <CardContent className="h-[300px]">{DestinacaoCaixaChart}</CardContent>
             </Card>
         </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Código", "Quantidade de caixas agrupadas pelo prefixo do código.", 'caixasPorCodigo')}>
+              <CardHeader>
+                <CardTitle>Caixas por Código</CardTitle>
+                <CardDescription>Quantidade de caixas agrupadas pelo prefixo do código (ex: CX, PST).</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{CaixasPorCodigoChart}</CardContent>
+            </Card>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Proveniência", "Quantidade de caixas agrupadas por sua proveniência.", 'caixasPorProveniencia')}>
+              <CardHeader>
+                <CardTitle>Caixas por Proveniência</CardTitle>
+                <CardDescription>Quantidade de caixas agrupadas por sua proveniência.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{CaixasPorProvenienciaChart}</CardContent>
+            </Card>
+        </div>
       </div>
 
        <div className="mt-8">
@@ -888,6 +956,8 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'eliminadoPorAno' && EliminadoPorAnoChart}
                     {modalContent?.chartType === 'desarquivamentoPorSetor' && DesarquivamentoPorSetorChart}
                     {modalContent?.chartType === 'transferenciaPorSetor' && TransferenciaPorSetorChart}
+                    {modalContent?.chartType === 'caixasPorCodigo' && CaixasPorCodigoChart}
+                    {modalContent?.chartType === 'caixasPorProveniencia' && CaixasPorProvenienciaChart}
                 </div>
                 <DialogFooter className="sm:justify-end shrink-0 pt-4">
                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
