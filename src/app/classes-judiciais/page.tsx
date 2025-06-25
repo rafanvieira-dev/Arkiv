@@ -3,11 +3,11 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -55,6 +55,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ001", codigo: "1116", descricao: "Procedimento Comum Cível", prazoGuardaAnos: 2, destinacaoFinal: "Eliminação", inativo: false, observacoes: "Revisar após decisão do CNJ." },
@@ -71,6 +73,14 @@ const initialFormState: Omit<ClasseJudicial, 'id'> = {
   observacoes: "",
   inativo: false,
 };
+
+const initialFiltersState = {
+  codigo: "",
+  descricao: "",
+  destinacaoFinal: "",
+  status: "",
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
 const CLASSES_JUDICIAIS_STORAGE_KEY = 'arquivocentral_classes_judiciais';
 
@@ -125,6 +135,9 @@ export default function ClassesJudiciaisPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'prazoGuardaAnos', label: 'Prazo de Guarda (Anos)', type: 'number' },
@@ -270,9 +283,19 @@ export default function ClassesJudiciaisPage() {
   };
   
   React.useEffect(() => {
-    let sortedItems = [...classesJudiciais];
+    let itemsToDisplay = classesJudiciais.filter(item => {
+        if (filters.codigo && !item.codigo.toLowerCase().includes(filters.codigo.toLowerCase())) return false;
+        if (filters.descricao && !item.descricao.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
+        if (filters.destinacaoFinal && item.destinacaoFinal !== filters.destinacaoFinal) return false;
+        if (filters.status) {
+            const itemStatus = item.inativo ? 'Inativo' : 'Ativo';
+            if (itemStatus !== filters.status) return false;
+        }
+        return true;
+    });
+
     if (sorting.length > 0) {
-      sortedItems.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sorting) {
           const valA = getSortableValue(a, sortConfig.id);
           const valB = getSortableValue(b, sortConfig.id);
@@ -293,8 +316,8 @@ export default function ClassesJudiciaisPage() {
         return 0;
       });
     }
-    setDisplayedItems(sortedItems);
-  }, [sorting, classesJudiciais]);
+    setDisplayedItems(itemsToDisplay);
+  }, [sorting, classesJudiciais, filters]);
   
   const handleSort = (columnId: string) => {
     const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
@@ -459,9 +482,25 @@ export default function ClassesJudiciaisPage() {
     reader.readAsText(file);
   };
 
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
 
   const numDisplayed = displayedItems.length;
   const numSelected = selectedRowIds.length;
+  
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
 
   return (
     <TooltipProvider>
@@ -559,9 +598,70 @@ export default function ClassesJudiciaisPage() {
         </div>
       </PageHeader>
 
-      <Card className="mt-6">
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros das Classes Judiciais</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de classes judiciais aplicando um ou mais filtros abaixo.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+              <div className="space-y-2">
+                <Label htmlFor="filterCodigo">Código</Label>
+                <Input id="filterCodigo" name="codigo" value={filters.codigo} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDescricao">Nome da Classe</Label>
+                <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDestinacaoFinal">Destinação Final</Label>
+                <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                  <SelectTrigger id="filterDestinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
+                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterStatus">Status</Label>
+                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Classes Judiciais</CardTitle>
+           <div>
+            <CardTitle className="font-headline text-primary">Lista de Classes Judiciais</CardTitle>
+            <CardDescription className="mt-1 text-sm text-muted-foreground">
+              {filtersAreActive
+                ? `Exibindo ${displayedItems.length} de ${classesJudiciais.length} classes com base nos filtros aplicados.`
+                : `Exibindo todas as ${classesJudiciais.length} classes cadastradas.`}
+            </CardDescription>
+          </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
