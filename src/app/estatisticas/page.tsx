@@ -780,7 +780,7 @@ export default function EstatisticasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
-        <Accordion type="multiple" defaultValue={['item-1', 'item-2', 'item-3', 'item-4']} className="w-full space-y-4">
+        <Accordion type="multiple" defaultValue={[]} className="w-full space-y-4">
             <AccordionItem value="item-1" className="rounded-lg border bg-card text-card-foreground shadow-sm">
                 <AccordionTrigger className="px-6 py-4 hover:no-underline">
                    <h2 className="text-2xl font-headline font-semibold text-primary">Visão Geral do Acervo</h2>
