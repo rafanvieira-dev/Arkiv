@@ -74,6 +74,9 @@ const CustomTooltipContent = ({ active, payload, label }: any) => {
     return null;
   };
 
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento';
+
+
 export default function EstatisticasPage() {
   const { toast } = useToast();
   const [statusData, setStatusData] = React.useState<ChartData[]>([]);
@@ -91,7 +94,7 @@ export default function EstatisticasPage() {
   const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
 
-  const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chart: React.ReactNode } | null>(null);
+  const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chartType: ChartType } | null>(null);
   const chartRef = React.useRef<HTMLDivElement>(null);
 
   const handleDownload = React.useCallback(() => {
@@ -112,8 +115,8 @@ export default function EstatisticasPage() {
         });
   }, [modalContent?.title, toast]);
 
-  const handleChartClick = (title: string, description: string, chart: React.ReactNode) => {
-    setModalContent({ title, description, chart });
+  const handleChartClick = (title: string, description: string, chartType: ChartType) => {
+    setModalContent({ title, description, chartType });
   };
 
 
@@ -430,7 +433,7 @@ export default function EstatisticasPage() {
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", StatusChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", 'status')}>
           <CardHeader>
             <CardTitle>Documentos por Status</CardTitle>
             <CardDescription>Distribuição dos documentos com base no status atual.</CardDescription>
@@ -438,7 +441,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{StatusChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", YearChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", 'year')}>
           <CardHeader>
             <CardTitle>Documentos por Ano de Arquivamento</CardTitle>
             <CardDescription>Quantidade de documentos arquivados por ano.</CardDescription>
@@ -446,7 +449,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{YearChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Eliminação Previsto", "Quantidade de documentos com previsão de eliminação por ano.", AnoEliminacaoChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Eliminação Previsto", "Quantidade de documentos com previsão de eliminação por ano.", 'anoEliminacao')}>
           <CardHeader>
             <CardTitle>Documentos por Ano de Eliminação Previsto</CardTitle>
             <CardDescription>Quantidade de documentos com previsão de eliminação por ano.</CardDescription>
@@ -454,7 +457,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{AnoEliminacaoChart}</CardContent>
         </Card>
         
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", DestinacaoChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
           <CardHeader>
             <CardTitle>Documentos por Destinação Final</CardTitle>
             <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
@@ -462,7 +465,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
         </Card>
         
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", MeioChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", 'meio')}>
           <CardHeader>
             <CardTitle>Documentos por Tipo de Meio</CardTitle>
             <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
@@ -470,7 +473,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{MeioChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Destinação de Conteúdo", "Distribuição de caixas com base na destinação dos documentos.", DestinacaoCaixaChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Destinação de Conteúdo", "Distribuição de caixas com base na destinação dos documentos.", 'destinacaoCaixa')}>
           <CardHeader>
             <CardTitle>Caixas por Destinação de Conteúdo</CardTitle>
             <CardDescription>Distribuição de caixas com base na destinação dos documentos.</CardDescription>
@@ -478,7 +481,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{DestinacaoCaixaChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", ClassificationChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", 'classification')}>
           <CardHeader>
             <CardTitle>Top 10 Classificações</CardTitle>
             <CardDescription>Classificações com o maior número de documentos.</CardDescription>
@@ -486,7 +489,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[350px]">{ClassificationChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", TipoDocumentoChart)}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", 'tipoDocumento')}>
           <CardHeader>
             <CardTitle>Top 10 Espécies Documentais</CardTitle>
             <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
@@ -496,16 +499,23 @@ export default function EstatisticasPage() {
       </div>
 
        <Dialog open={!!modalContent} onOpenChange={(isOpen) => !isOpen && setModalContent(null)}>
-            <DialogContent className="max-w-4xl h-[85vh]">
+            <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{modalContent?.title}</DialogTitle>
                     <DialogDescription>{modalContent?.description}</DialogDescription>
                 </DialogHeader>
-                <div className="h-[calc(100%-120px)]" ref={chartRef}>
-                    {modalContent?.chart}
+                <div className="flex-grow min-h-0" ref={chartRef}>
+                    {modalContent?.chartType === 'status' && StatusChart}
+                    {modalContent?.chartType === 'year' && YearChart}
+                    {modalContent?.chartType === 'anoEliminacao' && AnoEliminacaoChart}
+                    {modalContent?.chartType === 'destinacao' && DestinacaoChart}
+                    {modalContent?.chartType === 'meio' && MeioChart}
+                    {modalContent?.chartType === 'destinacaoCaixa' && DestinacaoCaixaChart}
+                    {modalContent?.chartType === 'classification' && ClassificationChart}
+                    {modalContent?.chartType === 'tipoDocumento' && TipoDocumentoChart}
                 </div>
-                <DialogFooter className="sm:justify-end">
-                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
+                <DialogFooter className="sm:justify-end shrink-0 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
                     <Button type="button" onClick={handleDownload}>
                         <Download className="mr-2 h-4 w-4" /> Baixar Gráfico
                     </Button>
