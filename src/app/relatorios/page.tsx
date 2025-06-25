@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, Caixa, ParteDocumento } from "@/types";
+import type { Documento, Caixa, ParteDocumento, Classificacao } from "@/types";
 import { placeholderDocumentos, initialCaixas, initialClassificacoes } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { CheckSquare, ColumnsIcon, Printer, Square } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
+import { getYear, parseISO, isValid } from 'date-fns';
 
 
 interface EliminationReportData {
@@ -30,6 +31,7 @@ interface PermanentReportData {
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 
 type CustomReportColumn = {
   id: keyof Documento | string;
@@ -38,73 +40,102 @@ type CustomReportColumn = {
   cellFormatter?: (value: any, doc: Documento) => React.ReactNode;
 };
 
-const ALL_CUSTOM_REPORT_COLUMNS: CustomReportColumn[] = [
-    { id: 'id', header: 'ID Interno', accessorKey: 'id' },
-    { id: 'status', header: 'Status', accessorKey: 'status' },
-    { id: 'orgao', header: 'Órgão', accessorKey: 'orgao' },
-    { id: 'origem', header: 'Origem', accessorKey: 'origem' },
-    { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio' },
-    { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental' },
-    { id: 'categoria', header: 'Categoria', accessorKey: 'categoria' },
-    { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento' },
-    { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento' },
-    { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente' },
-    { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento' },
-    { 
-        id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', 
-        cellFormatter: (partes?: ParteDocumento[]) => partes?.map(p => p.nome).join(', ') || 'N/A'
-    },
-    { id: 'documentosRelacionadosIds', header: 'Docs Relacionados', accessorKey: 'documentosRelacionadosIds' },
-    { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-    { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes' },
-    { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos' },
-    { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos' },
-    { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias' },
-    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe' },
-    { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe' },
-    { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe' },
-    { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado' },
-    { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa' },
-    { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-    { 
-        id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId',
-        cellFormatter: (value, doc) => {
-            const classif = initialClassificacoes.find(c => c.id === value);
-            return classif ? `${classif.codigo} - ${classif.descricao}` : (value || 'N/A');
-        }
-    },
-    { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay' },
-    { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay' },
-    { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay' },
-    { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto' },
-    { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica' },
-    { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo' },
-    { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa' },
-    { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM' },
-    { id: 'numeroListagemEliminacao', header: 'Listagem Eliminação', accessorKey: 'numeroListagemEliminacao' },
-    { id: 'dataCadastro', header: 'Data de Cadastro', accessorKey: 'dataCadastro', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-];
-
-
 export default function RelatoriosPage() {
     const [eliminationReportData, setEliminationReportData] = React.useState<EliminationReportData[]>([]);
     const [permanentReportData, setPermanentReportData] = React.useState<PermanentReportData[]>([]);
     const [allYears, setAllYears] = React.useState<string[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
-    // State for custom report
     const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
     const [isPrinting, setIsPrinting] = React.useState(false);
     const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({});
+    const [allClassificacoes, setAllClassificacoes] = React.useState<Classificacao[]>([]);
+
+    const ALL_CUSTOM_REPORT_COLUMNS: CustomReportColumn[] = React.useMemo(() => [
+      { id: 'id', header: 'ID Interno', accessorKey: 'id' },
+      { id: 'status', header: 'Status', accessorKey: 'status' },
+      { id: 'orgao', header: 'Órgão', accessorKey: 'orgao' },
+      { id: 'origem', header: 'Origem', accessorKey: 'origem' },
+      { id: 'tipoMeio', header: 'Tipo de Meio', accessorKey: 'tipoMeio' },
+      { id: 'generoDocumental', header: 'Gênero', accessorKey: 'generoDocumental' },
+      { id: 'categoria', header: 'Categoria', accessorKey: 'categoria' },
+      { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento' },
+      { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento' },
+      { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente' },
+      { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento' },
+      { 
+          id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', 
+          cellFormatter: (partes?: ParteDocumento[]) => partes?.map(p => p.nome).join(', ') || 'N/A'
+      },
+      { id: 'documentosRelacionadosIds', header: 'Docs Relacionados', accessorKey: 'documentosRelacionadosIds' },
+      { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+      { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes' },
+      { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos' },
+      { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos' },
+      { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias' },
+      { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe' },
+      { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe' },
+      { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe' },
+      { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado' },
+      { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa' },
+      { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+      { 
+          id: 'classificacaoArquivisticaId', header: 'Classificação', accessorKey: 'classificacaoArquivisticaId',
+          cellFormatter: (value, doc) => {
+              const classif = allClassificacoes.find(c => c.id === value);
+              return classif ? `${classif.codigo} - ${classif.descricao}` : (value || 'N/A');
+          }
+      },
+      { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay' },
+      { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay' },
+      { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay' },
+      { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto' },
+      { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica' },
+      { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo' },
+      { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa' },
+      { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM' },
+      { id: 'numeroListagemEliminacao', header: 'Listagem Eliminação', accessorKey: 'numeroListagemEliminacao' },
+      { id: 'dataCadastro', header: 'Data de Cadastro', accessorKey: 'dataCadastro', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+  ], [allClassificacoes]);
 
     React.useEffect(() => {
         try {
             const storedDocs = localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
-            const loadedDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
-            setAllDocuments(loadedDocs);
-
+            let loadedDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
+            
             const storedCaixas = localStorage.getItem(CAIXAS_STORAGE_KEY);
             const allCaixas: Caixa[] = storedCaixas ? JSON.parse(storedCaixas) : initialCaixas;
+            
+            const storedClassificacoes = localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
+            const loadedClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes;
+            setAllClassificacoes(loadedClassificacoes);
+            const classificacaoMap = new Map(loadedClassificacoes.map(c => [c.id, c]));
+
+            const processedDocs = loadedDocs.map(doc => {
+              const classification = doc.classificacaoArquivisticaId ? classificacaoMap.get(doc.classificacaoArquivisticaId) : undefined;
+              if (!classification) return doc;
+
+              const updatedDoc = { ...doc };
+              updatedDoc.destinacaoFinalDisplay = classification.destinacaoFinal;
+
+              let anoEliminacao = "";
+              let effectiveDestination = classification.destinacaoFinal;
+              if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+                  effectiveDestination = "Guarda Permanente";
+              }
+              
+              if (effectiveDestination === 'Eliminação' && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+                  const dataArquivamentoDate = parseISO(doc.dataArquivamento);
+                  const prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos ?? 0;
+                  const anoArquivamento = getYear(dataArquivamentoDate);
+                  anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
+              }
+              updatedDoc.anoEliminacaoPrevisto = anoEliminacao;
+
+              return updatedDoc;
+            });
+            
+            setAllDocuments(processedDocs);
 
             const eliminationData: { [tipo: string]: { docIds: Set<string>, semPrazoDocIds: Set<string>, eliminacaoPorAno: { [year: string]: Set<string> } } } = {};
             const permanentData: { [tipo: string]: { docIds: Set<string> } } = {};
@@ -115,7 +146,7 @@ export default function RelatoriosPage() {
                 if(caixa.codigoCaixa) caixaTypeMap.set(caixa.codigoCaixa, caixa.tipo);
             });
 
-            loadedDocs.forEach(doc => {
+            processedDocs.forEach(doc => {
                 const boxCodes = doc.codigosCaixa?.split(',').map(c => c.trim()).filter(Boolean) || [];
                 const docBoxTypes = new Set<string>();
 
@@ -201,17 +232,18 @@ export default function RelatoriosPage() {
             totalPermanentRow.volumePermanenteIds = Array.from(allPermanentIds);
             setPermanentReportData([totalPermanentRow, ...finalPermanentData]);
 
-            // Initialize visible columns for custom report
-            setVisibleColumns(
-              ALL_CUSTOM_REPORT_COLUMNS.slice(0, 5).reduce((acc, col) => ({...acc, [col.id]: true}), {})
-            );
-
         } catch (error) {
             console.error("Failed to process report data:", error);
         } finally {
             setIsLoading(false);
         }
     }, []);
+
+    React.useEffect(() => {
+        setVisibleColumns(
+          ALL_CUSTOM_REPORT_COLUMNS.slice(0, 5).reduce((acc, col) => ({...acc, [col.id]: true}), {})
+        );
+    }, [ALL_CUSTOM_REPORT_COLUMNS]);
 
     const toggleColumnVisibility = (columnId: string) => {
         setVisibleColumns(prev => ({ ...prev, [columnId]: !prev[columnId] }));
@@ -235,7 +267,7 @@ export default function RelatoriosPage() {
 
     const visibleColumnDefs = React.useMemo(() => {
         return ALL_CUSTOM_REPORT_COLUMNS.filter(col => visibleColumns[col.id]);
-    }, [visibleColumns]);
+    }, [visibleColumns, ALL_CUSTOM_REPORT_COLUMNS]);
 
     if (isPrinting) {
       return (
@@ -413,7 +445,7 @@ export default function RelatoriosPage() {
                             {ALL_CUSTOM_REPORT_COLUMNS.map((column) => (
                               <DropdownMenuCheckboxItem
                                 key={column.id}
-                                checked={visibleColumns[column.id]}
+                                checked={visibleColumns[column.id] ?? false}
                                 onCheckedChange={() => toggleColumnVisibility(column.id)}
                               >
                                 {column.header}
