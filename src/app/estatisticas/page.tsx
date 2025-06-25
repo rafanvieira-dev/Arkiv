@@ -6,12 +6,13 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import type { Documento, Classificacao } from "@/types";
+import type { Documento, Classificacao, Caixa } from "@/types";
 import { getYear, parseISO, isValid } from "date-fns";
-import { placeholderDocumentos, initialClassificacoes } from "@/lib/mock-data";
+import { placeholderDocumentos, initialClassificacoes, initialCaixas } from "@/lib/mock-data";
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 
 
 interface ChartData {
@@ -68,11 +69,13 @@ export default function EstatisticasPage() {
   const [meioData, setMeioData] = React.useState<ChartData[]>([]);
   const [classificationData, setClassificationData] = React.useState<ChartData[]>([]);
   const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
+  const [destinacaoCaixaData, setDestinacaoCaixaData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoChartConfig, setDestinacaoChartConfig] = React.useState<ChartConfig>({});
   const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
+  const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
 
   React.useEffect(() => {
     try {
@@ -82,6 +85,9 @@ export default function EstatisticasPage() {
       
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes;
+      
+      const storedCaixas = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
+      const allCaixas: Caixa[] = storedCaixas ? JSON.parse(storedCaixas) : initialCaixas;
 
       // Process status data
       const statusCounts = allDocs.reduce((acc, doc) => {
@@ -183,6 +189,48 @@ export default function EstatisticasPage() {
         }, {} as ChartConfig)
       );
       
+      // Process caixas por destinação data
+      const caixaDestinacaoCounts = {
+        Permanente: 0,
+        Eliminável: 0,
+        Mista: 0,
+      };
+
+      allCaixas.forEach(caixa => {
+        if (!caixa.codigoCaixa) return;
+        const docsInCaixa = allDocs.filter(doc => doc.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
+        if (docsInCaixa.length === 0) return;
+
+        const destinos = new Set(docsInCaixa.map(d => d.destinacaoFinalDisplay).filter(Boolean));
+
+        if (destinos.has('Guarda Permanente') && destinos.has('Eliminação')) {
+          caixaDestinacaoCounts.Mista++;
+        } else if (destinos.has('Guarda Permanente')) {
+          caixaDestinacaoCounts.Permanente++;
+        } else if (destinos.has('Eliminação')) {
+          caixaDestinacaoCounts.Eliminável++;
+        }
+      });
+      
+      const destinacaoCaixaChartData = Object.entries(caixaDestinacaoCounts)
+        .map(([name, value], index) => ({ name, value, fill: chartColors[index % chartColors.length] }))
+        .filter(d => d.value > 0);
+
+      const totalCaixasAvaliadas = destinacaoCaixaChartData.reduce((sum, item) => sum + item.value, 0);
+
+      const finalDestinacaoCaixaData = destinacaoCaixaChartData.map(item => ({
+        ...item,
+        percentage: totalCaixasAvaliadas > 0 ? (item.value / totalCaixasAvaliadas) * 100 : 0,
+      }));
+
+      setDestinacaoCaixaData(finalDestinacaoCaixaData);
+      setDestinacaoCaixaChartConfig(
+        finalDestinacaoCaixaData.reduce((acc, entry) => {
+            acc[entry.name] = { label: entry.name, color: entry.fill };
+            return acc;
+        }, {} as ChartConfig)
+      );
+
       // Process classification data
       const classificationCounts = allDocs.reduce((acc, doc) => {
         if (doc.classificacaoArquivisticaId) {
@@ -365,6 +413,35 @@ export default function EstatisticasPage() {
                     ))}
                 </Pie>
                  <ChartLegend content={<ChartLegendContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Caixas por Destinação de Conteúdo</CardTitle>
+            <CardDescription>Distribuição de caixas com base na destinação dos documentos.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-[300px]">
+              <PieChart>
+                <ChartTooltip content={<CustomTooltipContent />} />
+                <Pie 
+                    data={destinacaoCaixaData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={110}
+                    labelLine={false}
+                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
+                >
+                   {destinacaoCaixaData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                    ))}
+                </Pie>
+                <ChartLegend content={<ChartLegendContent />} />
               </PieChart>
             </ChartContainer>
           </CardContent>
