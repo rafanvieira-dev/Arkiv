@@ -328,10 +328,11 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
   { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
   { id: 'manual', label: 'Manual', description: 'Permite acessar o manual do sistema.' },
+  { id: 'exclusaoDados', label: 'Exclusão de Dados', description: 'Permite excluir registros do sistema (caixas, documentos, etc.). Apenas administradores podem conceder esta permissão.' },
 ];
 
 export const allTruePermissions: Usuario['permissoes'] = {
-  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true, manual: true,
+  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true, manual: true, exclusaoDados: true,
 };
 
 export const standardUserPermissions: Usuario['permissoes'] = {
@@ -339,6 +340,7 @@ export const standardUserPermissions: Usuario['permissoes'] = {
   usuarios: false,
   configuracoes: false,
   auditoria: false,
+  exclusaoDados: false,
 };
 
 

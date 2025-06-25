@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialClassificacoes } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
@@ -187,6 +188,7 @@ interface MemoizedClassificacaoRowProps {
   visibleColumns: ColumnConfigClassificacoes[];
   onEditClick: (item: Classificacao) => void;
   onDeleteClick: (itemId: string) => void;
+  hasDeletePermission: boolean;
 }
 
 const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
@@ -196,6 +198,7 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
   visibleColumns,
   onEditClick,
   onDeleteClick,
+  hasDeletePermission,
 }: MemoizedClassificacaoRowProps) {
   return (
     <TableRow key={item.id} data-state={isSelected ? "selected" : ""}>
@@ -225,12 +228,12 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
             <Tooltip>
               <TooltipTrigger asChild>
                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação">
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação" disabled={!hasDeletePermission}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
               </TooltipTrigger>
-              <TooltipContent><p>Excluir Classificação</p></TooltipContent>
+              <TooltipContent><p>{hasDeletePermission ? 'Excluir Classificação' : 'Permissão necessária'}</p></TooltipContent>
             </Tooltip>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -255,6 +258,7 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
 export default function ClassificacaoPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { permissions } = useUserSession();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
@@ -682,7 +686,7 @@ export default function ClassificacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
         <div className="flex flex-wrap items-center gap-2">
-           <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+           <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -923,6 +927,7 @@ export default function ClassificacaoPage() {
                     visibleColumns={visibleColumnsForMemo}
                     onEditClick={handleOpenDialog}
                     onDeleteClick={handleDeleteRow}
+                    hasDeletePermission={permissions.exclusaoDados}
                   />
                 ))}
               </TableBody>

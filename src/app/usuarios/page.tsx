@@ -539,7 +539,7 @@ export default function UsuariosPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Usuários" description="Adicione, edite e gerencie os usuários e suas permissões no sistema.">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
+          <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Excluir ({selectedRowIds.length})
           </Button>
@@ -649,6 +649,12 @@ export default function UsuariosPage() {
                                   id={`perm-${permission.id}`}
                                   checked={formState.permissoes?.[permission.id as keyof typeof formState.permissoes] || false}
                                   onCheckedChange={handlePermissionChange(permission.id)}
+                                  disabled={
+                                    // The main admin cannot have their core permissions revoked.
+                                    (editingUserId === 'USR001' && (permission.id === 'usuarios' || permission.id === 'exclusaoDados')) ||
+                                    // Only admins can grant/revoke admin-level permissions.
+                                    ((permission.id === 'usuarios' || permission.id === 'exclusaoDados') && !permissions.usuarios)
+                                  }
                                 />
                                 <Label htmlFor={`perm-${permission.id}`} className="font-normal cursor-pointer">{permission.label}</Label>
                               </div>
@@ -829,12 +835,12 @@ export default function UsuariosPage() {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive" disabled={user.id === 'USR001' || !permissions.usuarios}>
+                                    <Button variant="ghost" size="icon" className="text-destructive" disabled={user.id === 'USR001' || !permissions.exclusaoDados}>
                                     <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent><p>{user.id === 'USR001' ? 'Administrador não pode ser excluído' : (permissions.usuarios ? 'Excluir Usuário' : 'Permissão necessária')}</p></TooltipContent>
+                                <TooltipContent><p>{user.id === 'USR001' ? 'Administrador não pode ser excluído' : (permissions.exclusaoDados ? 'Excluir Usuário' : 'Permissão necessária')}</p></TooltipContent>
                             </Tooltip>
                             <AlertDialogContent>
                                 <AlertDialogHeader>

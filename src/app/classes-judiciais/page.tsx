@@ -525,7 +525,7 @@ export default function ClassesJudiciaisPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -796,13 +796,13 @@ export default function ClassesJudiciaisPage() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.usuarios}>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.exclusaoDados}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{permissions.usuarios ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
+                                  <p>{permissions.exclusaoDados ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
                                 </TooltipContent>
                               </Tooltip>
                               <AlertDialogContent>

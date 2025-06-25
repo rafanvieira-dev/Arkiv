@@ -613,7 +613,7 @@ export default function CaixasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Caixas" description="Gerencie os dados das caixas que armazenam os documentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.usuarios} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Button variant="destructive" disabled={selectedRowIds.length === 0 || !permissions.exclusaoDados} onClick={() => setIsBulkDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir ({selectedRowIds.length})
             </Button>
@@ -933,13 +933,13 @@ export default function CaixasPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" disabled={!permissions.usuarios}>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Caixa" disabled={!permissions.exclusaoDados}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{permissions.usuarios ? "Excluir Caixa" : "Permissão necessária"}</p>
+                              <p>{permissions.exclusaoDados ? "Excluir Caixa" : "Permissão necessária"}</p>
                             </TooltipContent>
                           </Tooltip>
                           <AlertDialogContent>

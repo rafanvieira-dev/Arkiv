@@ -160,6 +160,7 @@ export interface Usuario {
     relatorios: boolean;
     auditoria: boolean;
     manual: boolean;
+    exclusaoDados: boolean;
   };
 }
 
