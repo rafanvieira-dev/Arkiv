@@ -3,17 +3,17 @@
 
 import * as React from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Solicitacao, Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ListFilter,
-  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet, Printer, PenSquare
+  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet, Printer, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { parseISO } from 'date-fns';
+import { parseISO, isBefore, isAfter } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -51,6 +51,7 @@ import {
 import Link from "next/link";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
@@ -68,6 +69,22 @@ const initialFormStateSolicitacao: Partial<Solicitacao> = {
   status: "Pendente",
   observacoes: "",
 };
+
+const initialFiltersState = {
+  numeroSolicitacao: "",
+  status: "",
+  tipo: "",
+  nomeSolicitante: "",
+  setorSolicitante: "",
+  dataSolicitacaoDe: undefined as Date | undefined,
+  dataSolicitacaoAte: undefined as Date | undefined,
+  dataAtendimentoDe: undefined as Date | undefined,
+  dataAtendimentoAte: undefined as Date | undefined,
+  dataDevolucaoDe: undefined as Date | undefined,
+  dataDevolucaoAte: undefined as Date | undefined,
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
+
 
 type DialogDocSortConfig = { id: keyof SimulatedDocumentForSolicitacaoDialog | string; direction: 'asc' | 'desc'; };
 type DialogDocFilters = { searchTerm: string; };
@@ -149,6 +166,10 @@ export default function SolicitacoesPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+
 
   const bulkEditableFields = [
     { value: 'tipo', label: 'Tipo', type: 'select', options: ['Empréstimo', 'Desarquivamento'] },
@@ -500,10 +521,50 @@ export default function SolicitacoesPage() {
     return value;
   };
   
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+  
+  const handleFilterDateChange = (name: keyof typeof initialFiltersState) => (date?: Date) => {
+    setFilters(prev => ({...prev, [name]: date}));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
+  
   React.useEffect(() => {
-    let sortedItems = [...solicitacoes];
+    let itemsToDisplay = solicitacoes.filter(item => {
+        if (filters.numeroSolicitacao && !item.numeroSolicitacao.toLowerCase().includes(filters.numeroSolicitacao.toLowerCase())) return false;
+        if (filters.status && item.status !== filters.status) return false;
+        if (filters.tipo && item.tipo !== filters.tipo) return false;
+        if (filters.nomeSolicitante && !item.nomeSolicitante.toLowerCase().includes(filters.nomeSolicitante.toLowerCase())) return false;
+        if (filters.setorSolicitante && !item.setorSolicitante?.toLowerCase().includes(filters.setorSolicitante.toLowerCase())) return false;
+
+        const checkDateRange = (dateString: string | undefined, dateDe: Date | undefined, dateAte: Date | undefined) => {
+          if (dateDe || dateAte) {
+            if (!dateString) return false;
+            const itemDate = parseISO(dateString);
+            if (dateDe && isBefore(itemDate, dateDe)) return false;
+            if (dateAte && isAfter(itemDate, dateAte)) return false;
+          }
+          return true;
+        }
+
+        if (!checkDateRange(item.dataSolicitacao, filters.dataSolicitacaoDe, filters.dataSolicitacaoAte)) return false;
+        if (!checkDateRange(item.dataAtendimento, filters.dataAtendimentoDe, filters.dataAtendimentoAte)) return false;
+        if (!checkDateRange(item.dataDevolucao, filters.dataDevolucaoDe, filters.dataDevolucaoAte)) return false;
+        
+        return true;
+    });
+
     if (sorting.length > 0) {
-      sortedItems.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sorting) {
           const valA = getSortableValue(a, sortConfig.id);
           const valB = getSortableValue(b, sortConfig.id);
@@ -524,8 +585,8 @@ export default function SolicitacoesPage() {
         return 0;
       });
     }
-    setDisplayedSolicitacoes(sortedItems);
-  }, [sorting, solicitacoes]);
+    setDisplayedSolicitacoes(itemsToDisplay);
+  }, [filters, sorting, solicitacoes]);
 
   const handleSort = (columnId: string) => {
     const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
@@ -733,6 +794,7 @@ export default function SolicitacoesPage() {
 
   const numDisplayed = displayedSolicitacoes.length;
   const numSelected = selectedRowIds.length;
+  const filtersAreActive = React.useMemo(() => Object.values(filters).some(value => !!value), [filters]);
 
   return (
     <TooltipProvider>
@@ -983,9 +1045,98 @@ export default function SolicitacoesPage() {
         </div>
       </PageHeader>
 
-      <Card className="mt-6">
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros das Solicitações</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de solicitações aplicando um ou mais filtros abaixo.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                <div className="space-y-2">
+                    <Label htmlFor="filterNumeroSolicitacao">Nº da Solicitação</Label>
+                    <Input id="filterNumeroSolicitacao" name="numeroSolicitacao" value={filters.numeroSolicitacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterStatus">Status</Label>
+                    <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                    <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                        <SelectItem value="Pendente">Pendente</SelectItem>
+                        <SelectItem value="Atendida">Atendida</SelectItem>
+                        <SelectItem value="Devolvido">Devolvido</SelectItem>
+                        <SelectItem value="Cancelada">Cancelada</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterTipo">Tipo</Label>
+                    <Select onValueChange={handleFilterSelectChange('tipo')} value={filters.tipo}>
+                    <SelectTrigger id="filterTipo"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_VALUES_SENTINEL}>Todos os tipos</SelectItem>
+                        <SelectItem value="Empréstimo">Empréstimo</SelectItem>
+                        <SelectItem value="Desarquivamento">Desarquivamento</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="filterNomeSolicitante">Nome do Solicitante</Label>
+                    <Input id="filterNomeSolicitante" name="nomeSolicitante" value={filters.nomeSolicitante} onChange={handleFilterInputChange} placeholder="Contém..." />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterSetorSolicitante">Setor do Solicitante</Label>
+                    <Input id="filterSetorSolicitante" name="setorSolicitante" value={filters.setorSolicitante} onChange={handleFilterInputChange} placeholder="Contém..." />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterDataSolicitacaoDe">Data Solicitação (De)</Label>
+                    <DateInputPicker value={filters.dataSolicitacaoDe} onChange={handleFilterDateChange('dataSolicitacaoDe')} placeholder="dd/mm/aaaa" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterDataSolicitacaoAte">Data Solicitação (Até)</Label>
+                    <DateInputPicker value={filters.dataSolicitacaoAte} onChange={handleFilterDateChange('dataSolicitacaoAte')} placeholder="dd/mm/aaaa" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterDataAtendimentoDe">Data Atendimento (De)</Label>
+                    <DateInputPicker value={filters.dataAtendimentoDe} onChange={handleFilterDateChange('dataAtendimentoDe')} placeholder="dd/mm/aaaa" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterDataAtendimentoAte">Data Atendimento (Até)</Label>
+                    <DateInputPicker value={filters.dataAtendimentoAte} onChange={handleFilterDateChange('dataAtendimentoAte')} placeholder="dd/mm/aaaa" />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="filterDataDevolucaoDe">Data Devolução (De)</Label>
+                    <DateInputPicker value={filters.dataDevolucaoDe} onChange={handleFilterDateChange('dataDevolucaoDe')} placeholder="dd/mm/aaaa" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="filterDataDevolucaoAte">Data Devolução (Até)</Label>
+                    <DateInputPicker value={filters.dataDevolucaoAte} onChange={handleFilterDateChange('dataDevolucaoAte')} placeholder="dd/mm/aaaa" />
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Solicitações</CardTitle>
+           <div>
+            <CardTitle className="font-headline text-primary">Lista de Solicitações</CardTitle>
+             <CardDescription className="mt-1 text-sm text-muted-foreground">
+              {filtersAreActive
+                ? `Exibindo ${displayedSolicitacoes.length} de ${solicitacoes.length} solicitações com base nos filtros aplicados.`
+                : `Exibindo todas as ${solicitacoes.length} solicitações cadastradas.`}
+            </CardDescription>
+          </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1196,3 +1347,4 @@ export default function SolicitacoesPage() {
     
 
     
+
