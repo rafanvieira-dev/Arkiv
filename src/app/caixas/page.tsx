@@ -585,6 +585,10 @@ export default function CaixasPage() {
 
   const numDisplayed = displayedCaixas.length;
   const numSelected = selectedRowIds.length;
+  
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
 
   return (
     <TooltipProvider>
@@ -787,7 +791,14 @@ export default function CaixasPage() {
 
       <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
+          <div>
+            <CardTitle className="font-headline text-primary">Lista de Caixas</CardTitle>
+            <CardDescription className="mt-1 text-sm text-muted-foreground">
+              {filtersAreActive
+                ? `Exibindo ${displayedCaixas.length} de ${caixas.length} caixas com base nos filtros aplicados.`
+                : `Exibindo todas as ${caixas.length} caixas cadastradas.`}
+            </CardDescription>
+          </div>
            <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
