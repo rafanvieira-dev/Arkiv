@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
@@ -50,6 +50,17 @@ import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { parseISO, isAfter, isBefore } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -215,6 +226,7 @@ export default function ListagensEliminacaoPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
@@ -763,6 +775,20 @@ export default function ListagensEliminacaoPage() {
         description: `A listagem ${listagemId} foi excluída com sucesso.`,
     });
   };
+  
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_LISTAGENS', {
+        count: selectedRowIds.length,
+        listagemIds: selectedRowIds,
+    });
+    setListagens(prev => prev.filter(item => !selectedRowIds.includes(item.id)));
+    toast({
+        title: "Exclusão em Bloco Concluída",
+        description: `${selectedRowIds.length} listagem(ns) foram removidas com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
+  };
 
   const getCellValueListagens = (item: ListagemEliminacao, column: ColumnConfigListagens) => {
     const value = item[column.accessorKey as keyof ListagemEliminacao];
@@ -907,6 +933,10 @@ export default function ListagensEliminacaoPage() {
       <div className="container mx-auto py-2">
         <PageHeader title="Listagens de Eliminação" description="Gerencie as listagens de eliminação de documentos.">
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedRowIds.length})
+            </Button>
             <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
@@ -1251,14 +1281,30 @@ export default function ListagensEliminacaoPage() {
                             </TooltipTrigger>
                             <TooltipContent><p>Editar Listagem</p></TooltipContent>
                           </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Listagem" onClick={() => handleDelete(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Excluir Listagem</p></TooltipContent>
-                          </Tooltip>
+                           <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Listagem">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Excluir Listagem</p></TooltipContent>
+                              </Tooltip>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a listagem "{item.numeroListagem}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1341,7 +1387,21 @@ export default function ListagensEliminacaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} listagem(ns) selecionada(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </TooltipProvider>
   );
 }
-

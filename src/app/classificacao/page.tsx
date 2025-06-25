@@ -275,6 +275,7 @@ export default function ClassificacaoPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'tipoPlanoClassificacao', label: 'Tipo de Plano', type: 'select', options: ['Administrativo', 'Judicial'] },
@@ -413,6 +414,20 @@ export default function ClassificacaoPage() {
     setIsBulkEditOpen(false);
     setBulkEditField('');
     setBulkEditValue('');
+  };
+  
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_CLASSIFICACOES', {
+      count: selectedRowIds.length,
+      classificacaoIds: selectedRowIds,
+    });
+    setClassificacoes(prev => prev.filter(c => !selectedRowIds.includes(c.id)));
+    toast({
+      title: "Exclusão em Bloco Concluída",
+      description: `${selectedRowIds.length} classificação(ões) foram removidas com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
   };
 
 
@@ -667,6 +682,10 @@ export default function ClassificacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
         <div className="flex flex-wrap items-center gap-2">
+           <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedRowIds.length})
+            </Button>
            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
@@ -980,6 +999,21 @@ export default function ClassificacaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classificação(ões) selecionada(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </div>
     </TooltipProvider>
   );

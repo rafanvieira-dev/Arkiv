@@ -223,6 +223,7 @@ export default function DocumentosPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
 
   const resetForm = React.useCallback(() => {
@@ -889,6 +890,20 @@ export default function DocumentosPage() {
     toast({ title: "Sucesso", description: "Documento excluído." });
   };
   
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_DOCUMENTS', {
+        count: selectedRowIds.length,
+        documentIds: selectedRowIds,
+    });
+    setDocumentos(prev => prev.filter(doc => !selectedRowIds.includes(doc.id)));
+    toast({
+        title: "Exclusão em Bloco Concluída",
+        description: `${selectedRowIds.length} documento(s) foram removidos com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
+  };
+  
   const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -1460,6 +1475,10 @@ export default function DocumentosPage() {
         description={pageDescription}
       >
         <div className="flex flex-wrap items-center gap-2">
+           <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedRowIds.length})
+            </Button>
            <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
               <PenSquare className="mr-2 h-4 w-4" />
               Alterar em Bloco ({selectedRowIds.length})
@@ -2381,6 +2400,21 @@ export default function DocumentosPage() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    
+    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} documento(s) selecionado(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 
     </TooltipProvider>
   );
