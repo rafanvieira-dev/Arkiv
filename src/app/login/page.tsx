@@ -71,24 +71,20 @@ export default function LoginPage() {
 
   const handleAdminLogin = (e: React.MouseEvent) => {
     e.preventDefault();
-    let allUsers: Usuario[] = [];
-     try {
-      const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
-      allUsers = storedUsers ? JSON.parse(storedUsers) : initialUsers;
-    } catch {
-      allUsers = initialUsers;
-    }
+    
+    // Always use the pristine admin user data from the mock data source of truth
+    const adminUser = initialUsers.find(u => u.email === 'admin@sistem.com');
 
-    const adminUser = allUsers.find(u => u.email === 'admin@sistem.com');
     if (adminUser) {
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
       logAction('LOGIN_SUCCESS', { email: adminUser.email });
       router.push('/');
     } else {
+        // This case should ideally never happen if mock-data.ts is correct
         toast({
             variant: "destructive",
-            title: "Erro",
-            description: "Usuário administrador de teste não foi encontrado.",
+            title: "Erro Crítico",
+            description: "A conta de administrador padrão não foi encontrada nos dados iniciais do sistema.",
         });
     }
   };
