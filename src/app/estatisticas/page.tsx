@@ -720,41 +720,70 @@ export default function EstatisticasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", 'status')}>
-          <CardHeader>
-            <CardTitle>Documentos por Status</CardTitle>
-            <CardDescription>Distribuição dos documentos com base no status atual.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{StatusChart}</CardContent>
-        </Card>
-
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Categoria", "Distribuição de documentos por categoria.", 'categoria')}>
-          <CardHeader>
-            <CardTitle>Documentos por Categoria</CardTitle>
-            <CardDescription>Distribuição de documentos por categoria.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{CategoriaChart}</CardContent>
-        </Card>
-
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", 'meio')}>
-          <CardHeader>
-            <CardTitle>Documentos por Tipo de Meio</CardTitle>
-            <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{MeioChart}</CardContent>
-        </Card>
-
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
-          <CardHeader>
-            <CardTitle>Documentos por Destinação Final</CardTitle>
-            <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
-        </Card>
-      </div>
-
       <div className="mt-6">
+        <h2 className="text-2xl font-headline font-semibold text-primary mb-4">Visão Geral do Acervo</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", 'status')}>
+              <CardHeader>
+                <CardTitle>Documentos por Status</CardTitle>
+                <CardDescription>Distribuição dos documentos com base no status atual.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{StatusChart}</CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Categoria", "Distribuição de documentos por categoria.", 'categoria')}>
+              <CardHeader>
+                <CardTitle>Documentos por Categoria</CardTitle>
+                <CardDescription>Distribuição de documentos por categoria.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{CategoriaChart}</CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", 'meio')}>
+              <CardHeader>
+                <CardTitle>Documentos por Tipo de Meio</CardTitle>
+                <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{MeioChart}</CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
+              <CardHeader>
+                <CardTitle>Documentos por Destinação Final</CardTitle>
+                <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
+            </Card>
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-1" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", 'classification')}>
+              <CardHeader>
+                <CardTitle>Top 10 Classificações</CardTitle>
+                <CardDescription>Classificações com o maior número de documentos.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[350px]">{ClassificationChart}</CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-1" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", 'tipoDocumento')}>
+              <CardHeader>
+                <CardTitle>Top 10 Espécies Documentais</CardTitle>
+                <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[350px]">{TipoDocumentoChart}</CardContent>
+            </Card>
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-1">
+             <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", 'year')}>
+              <CardHeader>
+                <CardTitle>Documentos por Ano de Arquivamento</CardTitle>
+                <CardDescription>Quantidade de documentos arquivados por ano.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{YearChart}</CardContent>
+            </Card>
+        </div>
+      </div>
+      
+      <div className="mt-8">
         <h2 className="text-2xl font-headline font-semibold text-primary mb-4">Estatísticas das Caixas</h2>
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
             <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Condição", "Distribuição das caixas por condição (ocupada ou vazia).", 'condicaoCaixa')}>
@@ -781,80 +810,60 @@ export default function EstatisticasPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", 'year')}>
-          <CardHeader>
-            <CardTitle>Documentos por Ano de Arquivamento</CardTitle>
-            <CardDescription>Quantidade de documentos arquivados por ano.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{YearChart}</CardContent>
-        </Card>
+       <div className="mt-8">
+        <h2 className="text-2xl font-headline font-semibold text-primary mb-4">Entrada e Saída de Documentos</h2>
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Emprestados por Setor/Ano", "Quantidade de documentos emprestados, agrupados por setor solicitante e ano da solicitação.", 'emprestimoPorSetor')}>
+            <CardHeader>
+                <CardTitle>Empréstimos por Setor e Ano</CardTitle>
+                <CardDescription>Documentos emprestados por setor solicitante ao longo dos anos.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[350px]">
+                {EmprestimoPorSetorChart}
+            </CardContent>
+            </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Eliminação Previsto", "Quantidade de documentos com previsão de eliminação por ano.", 'anoEliminacao')}>
-          <CardHeader>
-            <CardTitle>Documentos por Ano de Eliminação Previsto</CardTitle>
-            <CardDescription>Quantidade de documentos com previsão de eliminação por ano.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{AnoEliminacaoChart}</CardContent>
-        </Card>
-
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Eliminados por Ano", "Quantidade de documentos efetivamente eliminados por ano.", 'eliminadoPorAno')}>
-          <CardHeader>
-            <CardTitle>Documentos Eliminados por Ano</CardTitle>
-            <CardDescription>Quantidade de documentos efetivamente eliminados por ano.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{EliminadoPorAnoChart}</CardContent>
-        </Card>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Desarquivados por Setor/Ano", "Quantidade de documentos desarquivados, agrupados por setor solicitante e ano da solicitação.", 'desarquivamentoPorSetor')}>
+            <CardHeader>
+                <CardTitle>Desarquivamentos por Setor e Ano</CardTitle>
+                <CardDescription>Documentos desarquivados por setor solicitante ao longo dos anos.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[350px]">
+                {DesarquivamentoPorSetorChart}
+            </CardContent>
+            </Card>
+            
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Transferidos por Setor/Ano", "Quantidade de documentos recebidos em transferência, agrupados por setor remetente e ano.", 'transferenciaPorSetor')}>
+            <CardHeader>
+                <CardTitle>Transferências por Setor e Ano</CardTitle>
+                <CardDescription>Documentos recebidos por setor remetente ao longo dos anos.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[350px]">
+                {TransferenciaPorSetorChart}
+            </CardContent>
+            </Card>
+        </div>
       </div>
 
-       <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-1" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", 'classification')}>
-          <CardHeader>
-            <CardTitle>Top 10 Classificações</CardTitle>
-            <CardDescription>Classificações com o maior número de documentos.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">{ClassificationChart}</CardContent>
-        </Card>
+      <div className="mt-8">
+        <h2 className="text-2xl font-headline font-semibold text-primary mb-4">Estatísticas de Eliminação</h2>
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Eliminação Previsto", "Quantidade de documentos com previsão de eliminação por ano.", 'anoEliminacao')}>
+              <CardHeader>
+                <CardTitle>Documentos por Ano de Eliminação Previsto</CardTitle>
+                <CardDescription>Quantidade de documentos com previsão de eliminação por ano.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{AnoEliminacaoChart}</CardContent>
+            </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-1" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", 'tipoDocumento')}>
-          <CardHeader>
-            <CardTitle>Top 10 Espécies Documentais</CardTitle>
-            <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">{TipoDocumentoChart}</CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Emprestados por Setor/Ano", "Quantidade de documentos emprestados, agrupados por setor solicitante e ano da solicitação.", 'emprestimoPorSetor')}>
-          <CardHeader>
-            <CardTitle>Empréstimos por Setor e Ano</CardTitle>
-            <CardDescription>Documentos emprestados por setor solicitante ao longo dos anos.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">
-            {EmprestimoPorSetorChart}
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Desarquivados por Setor/Ano", "Quantidade de documentos desarquivados, agrupados por setor solicitante e ano da solicitação.", 'desarquivamentoPorSetor')}>
-          <CardHeader>
-            <CardTitle>Desarquivamentos por Setor e Ano</CardTitle>
-            <CardDescription>Documentos desarquivados por setor solicitante ao longo dos anos.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">
-            {DesarquivamentoPorSetorChart}
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Transferidos por Setor/Ano", "Quantidade de documentos recebidos em transferência, agrupados por setor remetente e ano.", 'transferenciaPorSetor')}>
-          <CardHeader>
-            <CardTitle>Transferências por Setor e Ano</CardTitle>
-            <CardDescription>Documentos recebidos por setor remetente ao longo dos anos.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">
-            {TransferenciaPorSetorChart}
-          </CardContent>
-        </Card>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Eliminados por Ano", "Quantidade de documentos efetivamente eliminados por ano.", 'eliminadoPorAno')}>
+              <CardHeader>
+                <CardTitle>Documentos Eliminados por Ano</CardTitle>
+                <CardDescription>Quantidade de documentos efetivamente eliminados por ano.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">{EliminadoPorAnoChart}</CardContent>
+            </Card>
+        </div>
       </div>
 
        <Dialog open={!!modalContent} onOpenChange={(isOpen) => !isOpen && setModalContent(null)}>
