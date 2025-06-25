@@ -68,7 +68,7 @@ export default function EstatisticasPage() {
   const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
   const [transferenciasPorSetorData, setTransferenciasPorSetorData] = React.useState<any[]>([]);
   const [categoriaData, setCategoriaData] = React.useState<ChartData[]>([]);
-  const [caixasPorProvenienciaData, setCaixasPorProvenienciaData] = React.useState<ChartData[]>([]);
+  const [caixasPorProvenienciaData, setCaixasPorProvenienciaData] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
@@ -81,6 +81,7 @@ export default function EstatisticasPage() {
   const [desarquivamentoChartConfig, setDesarquivamentoChartConfig] = React.useState<ChartConfig>({});
   const [transferenciaChartConfig, setTransferenciaChartConfig] = React.useState<ChartConfig>({});
   const [categoriaChartConfig, setCategoriaChartConfig] = React.useState<ChartConfig>({});
+  const [caixasPorProvenienciaChartConfig, setCaixasPorProvenienciaChartConfig] = React.useState<ChartConfig>({});
 
 
   const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chartType: ChartType } | null>(null);
@@ -439,27 +440,47 @@ export default function EstatisticasPage() {
       setTransferenciasPorSetorData(transferenciasChartData);
       setTransferenciaChartConfig(transferenciaFinalChartConfig);
 
-      // Process Caixas por Proveniência e Código
-      const combinedCounts: Record<string, number> = {};
+      // Process Caixas por Proveniência e Prefixo de Código (Grouped Bar Chart)
+      const countsByProveniencia: { [proveniencia: string]: { [prefix: string]: number } } = {};
+      const allCaixaPrefixes = new Set<string>();
 
       allCaixas.forEach(caixa => {
-          // Count by Proveniência, only if it exists
-          if (caixa.proveniencia && caixa.proveniencia.trim() !== "") {
-              const proveniencia = caixa.proveniencia;
-              combinedCounts[proveniencia] = (combinedCounts[proveniencia] || 0) + 1;
-          }
-
-          // Count by Código Prefix
-          if (caixa.codigoCaixa) {
-              const prefix = `Prefixo: ${caixa.codigoCaixa.split(/[-/]/)[0] || "N/A"}`;
-              combinedCounts[prefix] = (combinedCounts[prefix] || 0) + 1;
-          }
+        if (!caixa.codigoCaixa) return;
+        const proveniencia = caixa.proveniencia || "Não especificada";
+        const prefix = caixa.codigoCaixa.split(/[-/]/)[0] || "N/A";
+        
+        if (!countsByProveniencia[proveniencia]) {
+            countsByProveniencia[proveniencia] = {};
+        }
+        if (!countsByProveniencia[proveniencia][prefix]) {
+            countsByProveniencia[proveniencia][prefix] = 0;
+        }
+        countsByProveniencia[proveniencia][prefix]++;
+        allCaixaPrefixes.add(prefix);
       });
+      
+      const sortedCaixaPrefixes = Array.from(allCaixaPrefixes).sort();
+      
+      const groupedCaixasChartData = Object.keys(countsByProveniencia)
+        .map(proveniencia => {
+            const entry: { [key: string]: string | number } = { name: proveniencia };
+            sortedCaixaPrefixes.forEach(prefix => {
+                entry[prefix] = countsByProveniencia[proveniencia][prefix] || 0;
+            });
+            return entry;
+        })
+        .sort((a, b) => (a.name as string).localeCompare(b.name as string));
+      
+      const groupedCaixasConfig = sortedCaixaPrefixes.reduce((acc, prefix, index) => {
+        acc[prefix] = {
+            label: `Tipo ${prefix}`,
+            color: chartColors[(index + 5) % chartColors.length]
+        };
+        return acc;
+      }, {} as ChartConfig);
 
-      const caixasPorProvenienciaECodigoChartData = Object.entries(combinedCounts)
-          .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-2))" }))
-          .sort((a,b) => b.value - a.value);
-      setCaixasPorProvenienciaData(caixasPorProvenienciaECodigoChartData);
+      setCaixasPorProvenienciaData(groupedCaixasChartData);
+      setCaixasPorProvenienciaChartConfig(groupedCaixasConfig);
 
 
     } catch (error) {
@@ -740,14 +761,17 @@ export default function EstatisticasPage() {
   );
 
   const CaixasPorProvenienciaChart = (
-    <ChartContainer config={{value: {label: "Caixas", color: "hsl(var(--chart-2))"}}} className="h-full w-full">
-      <BarChart data={caixasPorProvenienciaData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid horizontal={false} />
-        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={150} />
-        <XAxis type="number" />
-        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-        <Bar dataKey="value" radius={4} name="Caixas"/>
-      </BarChart>
+    <ChartContainer config={caixasPorProvenienciaChartConfig} className="h-full w-full">
+        <BarChart data={caixasPorProvenienciaData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-45} textAnchor="end" interval={0} height={100} />
+            <YAxis />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
+            {Object.keys(caixasPorProvenienciaChartConfig).map(prefix => (
+                <Bar key={prefix} dataKey={prefix} fill={`var(--color-${prefix})`} radius={4} />
+            ))}
+        </BarChart>
     </ChartContainer>
   );
 
@@ -844,12 +868,12 @@ export default function EstatisticasPage() {
             </Card>
         </div>
         <div className="mt-6 grid gap-6 md:grid-cols-1">
-            <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-2" onClick={() => handleChartClick("Caixas por Proveniência e Código", "Quantidade de caixas agrupadas por sua proveniência e pelo prefixo do código.", 'caixasPorProveniencia')}>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-2" onClick={() => handleChartClick("Caixas por Proveniência e Tipo", "Quantidade de caixas por tipo (prefixo do código), agrupadas por sua proveniência.", 'caixasPorProveniencia')}>
               <CardHeader>
-                <CardTitle>Caixas por Proveniência e Código</CardTitle>
-                <CardDescription>Quantidade de caixas agrupadas por sua proveniência e pelo prefixo do código.</CardDescription>
+                <CardTitle>Caixas por Proveniência e Tipo</CardTitle>
+                <CardDescription>Quantidade de caixas por tipo (prefixo do código), agrupadas por sua proveniência.</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">{CaixasPorProvenienciaChart}</CardContent>
+              <CardContent className="h-[400px]">{CaixasPorProvenienciaChart}</CardContent>
             </Card>
         </div>
       </div>
