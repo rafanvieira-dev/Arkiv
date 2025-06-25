@@ -31,6 +31,7 @@ const chartColors = [
 export default function EstatisticasPage() {
   const [statusData, setStatusData] = React.useState<ChartData[]>([]);
   const [yearData, setYearData] = React.useState<ChartData[]>([]);
+  const [anoEliminacaoData, setAnoEliminacaoData] = React.useState<ChartData[]>([]);
   const [destinacaoData, setDestinacaoData] = React.useState<ChartData[]>([]);
   const [meioData, setMeioData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -66,6 +67,20 @@ export default function EstatisticasPage() {
         .map(([name, value], index) => ({ name, value, fill: "hsl(var(--chart-1))" }))
         .sort((a,b) => parseInt(a.name) - parseInt(b.name));
       setYearData(yearChartData);
+
+      // Process ano de eliminação previsto data
+      const anoEliminacaoCounts = allDocs.reduce((acc, doc) => {
+        if (doc.anoEliminacaoPrevisto) {
+          const year = doc.anoEliminacaoPrevisto;
+          acc[year] = (acc[year] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      const anoEliminacaoChartData = Object.entries(anoEliminacaoCounts)
+        .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-2))" }))
+        .sort((a,b) => parseInt(a.name) - parseInt(b.name));
+      setAnoEliminacaoData(anoEliminacaoChartData);
       
       // Process destinacao data
       const destinacaoCounts = allDocs.reduce((acc, doc) => {
@@ -116,7 +131,7 @@ export default function EstatisticasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Documentos por Status</CardTitle>
@@ -150,6 +165,24 @@ export default function EstatisticasPage() {
                 <YAxis />
                 <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                 <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Documentos por Ano de Eliminação Previsto</CardTitle>
+            <CardDescription>Quantidade de documentos com previsão de eliminação por ano.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[300px] w-full">
+              <BarChart data={anoEliminacaoData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis />
+                <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} />
               </BarChart>
             </ChartContainer>
           </CardContent>
