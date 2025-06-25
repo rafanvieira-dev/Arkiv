@@ -9,19 +9,20 @@ import { PageHeader } from "@/components/page-header";
 import type { Documento, Caixa } from "@/types";
 import { placeholderDocumentos, initialCaixas } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
-interface ReportRow {
+interface ReportData {
   tipo: string;
-  volumeTotal: number;
-  semPrazo: number;
-  eliminacaoPorAno: { [year: string]: number };
+  volumeTotalIds: string[];
+  semPrazoIds: string[];
+  eliminacaoPorAno: { [year: string]: string[] };
 }
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 
 export default function RelatoriosPage() {
-    const [reportData, setReportData] = React.useState<ReportRow[]>([]);
+    const [reportData, setReportData] = React.useState<ReportData[]>([]);
     const [allYears, setAllYears] = React.useState<string[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -61,15 +62,17 @@ export default function RelatoriosPage() {
                     }
                     data[type].docIds.add(doc.id);
 
-                    if (doc.anoEliminacaoPrevisto) {
-                        const year = doc.anoEliminacaoPrevisto;
-                        yearsSet.add(year);
-                        if (!data[type].eliminacaoPorAno[year]) {
-                            data[type].eliminacaoPorAno[year] = new Set();
+                    if (doc.destinacaoFinalDisplay === 'Eliminação') {
+                        if (doc.anoEliminacaoPrevisto) {
+                            const year = doc.anoEliminacaoPrevisto;
+                            yearsSet.add(year);
+                            if (!data[type].eliminacaoPorAno[year]) {
+                                data[type].eliminacaoPorAno[year] = new Set();
+                            }
+                            data[type].eliminacaoPorAno[year].add(doc.id);
+                        } else {
+                            data[type].semPrazoDocIds.add(doc.id);
                         }
-                        data[type].eliminacaoPorAno[year].add(doc.id);
-                    } else {
-                        data[type].semPrazoDocIds.add(doc.id);
                     }
                 });
             });
@@ -77,33 +80,48 @@ export default function RelatoriosPage() {
             const sortedYears = Array.from(yearsSet).sort();
             setAllYears(sortedYears);
 
-            const finalReportData: ReportRow[] = Object.entries(data).map(([tipo, values]) => {
-                const eliminacaoPorAnoCounts: { [year: string]: number } = {};
+            const finalReportData: ReportData[] = Object.entries(data).map(([tipo, values]) => {
+                const eliminacaoPorAnoArrays: { [year: string]: string[] } = {};
                 Object.entries(values.eliminacaoPorAno).forEach(([year, docIdsSet]) => {
-                    eliminacaoPorAnoCounts[year] = docIdsSet.size;
+                    eliminacaoPorAnoArrays[year] = Array.from(docIdsSet);
                 });
 
                 return {
                     tipo: tipo,
-                    volumeTotal: values.docIds.size,
-                    semPrazo: values.semPrazoDocIds.size,
-                    eliminacaoPorAno: eliminacaoPorAnoCounts,
+                    volumeTotalIds: Array.from(values.docIds),
+                    semPrazoIds: Array.from(values.semPrazoDocIds),
+                    eliminacaoPorAno: eliminacaoPorAnoArrays,
                 };
             }).sort((a, b) => a.tipo.localeCompare(b.tipo));
             
-            const totalRow: ReportRow = {
+            const totalRow: ReportData = {
                 tipo: 'Total',
-                volumeTotal: 0,
-                semPrazo: 0,
+                volumeTotalIds: [],
+                semPrazoIds: [],
                 eliminacaoPorAno: {}
             };
+            
+            const allVolumeTotalIds = new Set<string>();
+            const allSemPrazoIds = new Set<string>();
+            const allEliminacaoPorAno: { [year: string]: Set<string> } = {};
 
             finalReportData.forEach(row => {
-                totalRow.volumeTotal += row.volumeTotal;
-                totalRow.semPrazo += row.semPrazo;
+                row.volumeTotalIds.forEach(id => allVolumeTotalIds.add(id));
+                row.semPrazoIds.forEach(id => allSemPrazoIds.add(id));
                 sortedYears.forEach(year => {
-                    totalRow.eliminacaoPorAno[year] = (totalRow.eliminacaoPorAno[year] || 0) + (row.eliminacaoPorAno[year] || 0);
+                    if (row.eliminacaoPorAno[year]) {
+                        if (!allEliminacaoPorAno[year]) {
+                            allEliminacaoPorAno[year] = new Set();
+                        }
+                        row.eliminacaoPorAno[year].forEach(id => allEliminacaoPorAno[year].add(id));
+                    }
                 });
+            });
+
+            totalRow.volumeTotalIds = Array.from(allVolumeTotalIds);
+            totalRow.semPrazoIds = Array.from(allSemPrazoIds);
+            Object.entries(allEliminacaoPorAno).forEach(([year, idSet]) => {
+                totalRow.eliminacaoPorAno[year] = Array.from(idSet);
             });
 
             setReportData([totalRow, ...finalReportData]);
@@ -131,7 +149,7 @@ export default function RelatoriosPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="sticky left-0 bg-card z-10 font-semibold">Tipo</TableHead>
-                                        <TableHead className="font-semibold">Volume de Processos</TableHead>
+                                        <TableHead className="font-semibold">Volume de Documentos</TableHead>
                                         <TableHead className="font-semibold">Sem prazo</TableHead>
                                         {allYears.map(year => (
                                             <TableHead key={year} className="text-center font-semibold">{year}</TableHead>
@@ -142,11 +160,23 @@ export default function RelatoriosPage() {
                                     {reportData.map((row) => (
                                         <TableRow key={row.tipo} className={row.tipo === 'Total' ? 'bg-muted hover:bg-muted font-bold' : ''}>
                                             <TableCell className="sticky left-0 bg-card z-10">{row.tipo}</TableCell>
-                                            <TableCell>{row.volumeTotal.toLocaleString()}</TableCell>
-                                            <TableCell>{row.semPrazo.toLocaleString()}</TableCell>
+                                            <TableCell>
+                                              <Link href={`/documentos?docIds=${row.volumeTotalIds.join(',')}&reportContext=${encodeURIComponent(`Volume Total para Tipo de Caixa: ${row.tipo}`)}`} className="text-primary hover:underline" prefetch={false} >
+                                                  {row.volumeTotalIds.length.toLocaleString()}
+                                              </Link>
+                                            </TableCell>
+                                            <TableCell>
+                                              <Link href={`/documentos?docIds=${row.semPrazoIds.join(',')}&reportContext=${encodeURIComponent(`Docs Sem Prazo de Elim. para Tipo: ${row.tipo}`)}`} className="text-primary hover:underline" prefetch={false}>
+                                                  {row.semPrazoIds.length.toLocaleString()}
+                                              </Link>
+                                            </TableCell>
                                             {allYears.map(year => (
                                                 <TableCell key={year} className="text-center">
-                                                    {row.eliminacaoPorAno[year] ? row.eliminacaoPorAno[year].toLocaleString() : 0}
+                                                    {(row.eliminacaoPorAno[year] && row.eliminacaoPorAno[year].length > 0) ? (
+                                                        <Link href={`/documentos?docIds=${row.eliminacaoPorAno[year].join(',')}&reportContext=${encodeURIComponent(`Docs de ${row.tipo} para Eliminar em ${year}`)}`} className="text-primary hover:underline" prefetch={false}>
+                                                            {row.eliminacaoPorAno[year].length.toLocaleString()}
+                                                        </Link>
+                                                    ) : 0}
                                                 </TableCell>
                                             ))}
                                         </TableRow>

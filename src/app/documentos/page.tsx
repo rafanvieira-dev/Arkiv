@@ -157,11 +157,16 @@ export default function DocumentosPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
   const codigoCaixaFromUrl = searchParams.get('codigoCaixa');
   const listagemDocIdsParam = searchParams.get('listagemDocIds');
   const numeroListagemFromQuery = searchParams.get('numeroListagem');
   const editDocIdFromUrl = searchParams.get('edit');
+  const docIdsFromReportParam = searchParams.get('docIds');
+  const reportContext = searchParams.get('reportContext');
+  
   const isFilteredByListagem = !!listagemDocIdsParam;
+  const isFilteredByReport = !!docIdsFromReportParam;
 
   const [documentos, setDocumentos] = React.useState<Documento[]>([]);
   const [processedDocumentos, setProcessedDocumentos] = React.useState<Documento[]>([]);
@@ -836,84 +841,78 @@ export default function DocumentosPage() {
     const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
     const docIdsFromListagem = currentListagemDocIdsParam ? currentListagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
 
-    let newFilteredDocumentos = processedDocumentos.filter(doc => {
-      let passesAll = true;
+    const currentReportDocIdsParam = searchParams.get('docIds');
+    const docIdsFromReport = currentReportDocIdsParam ? currentReportDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
 
-      if (codigoCaixaFromUrl) {
-        if (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(codigoCaixaFromUrl)) {
-          passesAll = false;
-        }
-      }
-      if (!passesAll) return false;
+    let newFilteredDocumentos: Documento[];
 
-      if (currentListagemDocIdsParam) {
-        if (docIdsFromListagem.length > 0) {
-          if (!docIdsFromListagem.includes(doc.id)) {
-            passesAll = false;
-          }
-        } else {
-          passesAll = false; 
-        }
-      }
-      if (!passesAll) return false;
+    if (docIdsFromReport.length > 0) {
+      newFilteredDocumentos = processedDocumentos.filter(doc => docIdsFromReport.includes(doc.id));
+    } else if (docIdsFromListagem.length > 0) {
+      newFilteredDocumentos = processedDocumentos.filter(doc => docIdsFromListagem.includes(doc.id));
+    } else {
+        newFilteredDocumentos = processedDocumentos.filter(doc => {
+            if (codigoCaixaFromUrl && (!doc.codigosCaixa || !doc.codigosCaixa.split(',').map(c => c.trim()).includes(codigoCaixaFromUrl))) {
+                return false;
+            }
 
-      if (filters.status && doc.status !== filters.status) passesAll = false;
-      if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) passesAll = false;
-      if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) passesAll = false;
-      if (filters.descricao && doc.descricaoDocumento && !doc.descricaoDocumento.toLowerCase().includes(filters.descricao.toLowerCase())) passesAll = false;
+            if (filters.status && doc.status !== filters.status) return false;
+            if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) return false;
+            if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) return false;
+            if (filters.descricao && doc.descricaoDocumento && !doc.descricaoDocumento.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
+            
+            if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
+              const classificacao = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
+              if (!classificacao || (classificacao.codigo && !classificacao.codigo.toLowerCase().includes(filters.codClassificacao.toLowerCase()))) {
+                return false;
+              }
+            } else if (filters.codClassificacao && !doc.classificacaoArquivisticaId) {
+              return false;
+            }
       
-      if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
-        const classificacao = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
-        if (!classificacao || (classificacao.codigo && !classificacao.codigo.toLowerCase().includes(filters.codClassificacao.toLowerCase()))) {
-          passesAll = false;
-        }
-      } else if (filters.codClassificacao && !doc.classificacaoArquivisticaId) {
-        passesAll = false;
-      }
-
-      if (filters.destinacaoFinal) {
-        let effectiveDestination = doc.destinacaoFinalDisplay;
-        if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
-          effectiveDestination = "Guarda Permanente";
-        }
-        if (effectiveDestination !== filters.destinacaoFinal) passesAll = false;
-      }
-
-      if (filters.anoProducao) {
-        const anoProducaoDoc = parseDataAbrangenteForYear(doc.dataAbrangente);
-        if (!anoProducaoDoc || anoProducaoDoc !== filters.anoProducao) passesAll = false;
-      }
-      if (filters.anoArquivamento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
-        const docYear = getYear(parseISO(doc.dataArquivamento)).toString();
-        if (docYear !== filters.anoArquivamento) passesAll = false;
-      }
-      if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) passesAll = false;
-      if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) passesAll = false;
+            if (filters.destinacaoFinal) {
+              let effectiveDestination = doc.destinacaoFinalDisplay;
+              if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+                effectiveDestination = "Guarda Permanente";
+              }
+              if (effectiveDestination !== filters.destinacaoFinal) return false;
+            }
       
-      if (!codigoCaixaFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) passesAll = false;
+            if (filters.anoProducao) {
+              const anoProducaoDoc = parseDataAbrangenteForYear(doc.dataAbrangente);
+              if (!anoProducaoDoc || anoProducaoDoc !== filters.anoProducao) return false;
+            }
+            if (filters.anoArquivamento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+              const docYear = getYear(parseISO(doc.dataArquivamento)).toString();
+              if (docYear !== filters.anoArquivamento) return false;
+            }
+            if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) return false;
+            if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) return false;
+            
+            if (!codigoCaixaFromUrl && filters.codigoCaixa && doc.codigosCaixa && !doc.codigosCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
+            
       
+            if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) return false;
+            if (filters.categoriaDocumento && doc.categoria !== filters.categoriaDocumento) return false;
+            if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) return false; 
+            if (filters.pessoasReferidas && doc.nomePartePrincipal && !doc.nomePartePrincipal.toLowerCase().includes(filters.pessoasReferidas.toLowerCase())) return false;
+            if (filters.codigoAtoM && doc.codigoAtoM && !doc.codigoAtoM.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) return false;
+            if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) return false;
+            if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) return false;
+            if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) return false;
+            
+            if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+              const docYear = getYear(parseISO(doc.dataArquivamento));
+              if (docYear > parseInt(filters.anoLimiteDocumento, 10)) return false;
+            }
+            if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) return false;
+            if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) return false;
+            if (filters.numeroListagemEliminacao && doc.numeroListagemEliminacao && !doc.numeroListagemEliminacao.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
+            else if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao) return false;
 
-      if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) passesAll = false;
-      if (filters.categoriaDocumento && doc.categoria !== filters.categoriaDocumento) passesAll = false;
-      if (filters.tipoDocumento && doc.tipoDocumento && !doc.tipoDocumento.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) passesAll = false; 
-      if (filters.pessoasReferidas && doc.nomePartePrincipal && !doc.nomePartePrincipal.toLowerCase().includes(filters.pessoasReferidas.toLowerCase())) passesAll = false;
-      if (filters.codigoAtoM && doc.codigoAtoM && !doc.codigoAtoM.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) passesAll = false;
-      if (filters.segredoJustica && doc.segredoJustica !== filters.segredoJustica) passesAll = false;
-      if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) passesAll = false;
-      if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) passesAll = false;
-      
-      if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
-        const docYear = getYear(parseISO(doc.dataArquivamento));
-        if (docYear > parseInt(filters.anoLimiteDocumento, 10)) passesAll = false;
-      }
-      if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) passesAll = false;
-      if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) passesAll = false;
-      if (filters.numeroListagemEliminacao && doc.numeroListagemEliminacao && !doc.numeroListagemEliminacao.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) passesAll = false;
-      else if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao) passesAll = false;
-
-
-      return passesAll;
-    });
+            return true;
+        });
+    }
 
     if (sorting.length > 0) {
       newFilteredDocumentos.sort((a, b) => {
@@ -1259,7 +1258,10 @@ export default function DocumentosPage() {
   let pageTitle = "Gerenciamento do Acervo";
   let pageDescription = "Cadastre e gerencie as descrições dos documentos do acervo.";
 
-  if (isFilteredByListagem) {
+  if (isFilteredByReport && reportContext) {
+    pageTitle = reportContext;
+    pageDescription = `Documentos filtrados a partir do Relatório de Previsão de Eliminação.`;
+  } else if (isFilteredByListagem) {
     pageTitle = numeroListagemFromQuery
       ? `Documentos da Listagem de Eliminação nº ${numeroListagemFromQuery}`
       : "Documentos da Listagem de Eliminação";
