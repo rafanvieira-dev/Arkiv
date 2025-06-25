@@ -2,6 +2,8 @@
 
 import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento } from "@/types";
 
+export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
+
 export const initialCaixas: Caixa[] = [
   { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", documentoIds: ["DOC001", "DOC003"] },
   { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", documentoIds: ["DOC002"] },
@@ -322,18 +324,20 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
   { id: 'estatisticas', label: 'Estatísticas', description: 'Permite visualizar gráficos e estatísticas sobre o acervo.' },
   { id: 'relatorios', label: 'Relatórios', description: 'Permite visualizar relatórios tabulares detalhados.' },
+  { id: 'auditoria', label: 'Auditoria', description: 'Permite visualizar os logs de auditoria do sistema.' },
   { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
   { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
 ];
 
 const allTruePermissions: Usuario['permissoes'] = {
-  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true,
+  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true,
 };
 
 const standardUserPermissions: Usuario['permissoes'] = {
   ...allTruePermissions,
   usuarios: false,
   configuracoes: false,
+  auditoria: false,
 };
 
 

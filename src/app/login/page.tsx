@@ -11,6 +11,7 @@ import type { Usuario } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { initialUsers } from '@/lib/mock-data';
 import Link from "next/link";
+import { logAction } from "@/lib/audit";
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
@@ -47,6 +48,7 @@ export default function LoginPage() {
     if (user) {
       if (user.statusAprovacao === 'Aprovado') {
         localStorage.setItem('currentUser', JSON.stringify(user));
+        logAction('LOGIN_SUCCESS', { email });
         router.push('/');
       } else {
         toast({
@@ -54,6 +56,7 @@ export default function LoginPage() {
           title: "Acesso Negado",
           description: "Sua conta de usuário ainda não foi aprovada pelo administrador.",
         });
+        logAction('LOGIN_FAIL', { email, reason: 'Account not approved' });
       }
     } else {
       toast({
@@ -61,6 +64,7 @@ export default function LoginPage() {
         title: "Erro de Login",
         description: "E-mail ou senha inválidos. Por favor, tente novamente.",
       });
+      logAction('LOGIN_FAIL', { email, reason: 'Invalid credentials' });
     }
   };
 
@@ -77,6 +81,7 @@ export default function LoginPage() {
     const adminUser = allUsers.find(u => u.email === 'admin@sistem.com');
     if (adminUser) {
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
+      logAction('LOGIN_SUCCESS', { email: adminUser.email });
       router.push('/');
     } else {
         toast({

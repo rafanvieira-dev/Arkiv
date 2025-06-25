@@ -28,6 +28,7 @@ import { SidebarNav } from './sidebar-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { logAction } from '@/lib/audit';
 
 function AppHeader() {
   const { toggleSidebar } = useSidebar();
@@ -58,6 +59,7 @@ function AppHeader() {
   };
 
   const handleLogout = () => {
+    logAction('LOGOUT');
     localStorage.removeItem('currentUser');
     router.push('/login');
   };

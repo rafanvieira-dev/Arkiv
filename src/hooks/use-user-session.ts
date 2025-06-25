@@ -24,6 +24,7 @@ const defaultPermissions: Usuario['permissoes'] = {
   configuracoes: false,
   estatisticas: false,
   relatorios: false,
+  auditoria: false,
 };
 
 export function useUserSession(): UserSession {

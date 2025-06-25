@@ -59,6 +59,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow } from "@/lib/utils";
+import { logAction } from "@/lib/audit";
 
 
 const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
@@ -776,11 +777,12 @@ export default function DocumentosPage() {
       });
       return;
     }
-
+    
+    const isCreating = documentIdToDisplay === "(Automático após salvar)";
     const finalFormState: Documento = {
       ...initialFormState, 
       ...formStateToSave, 
-      id: documentIdToDisplay === "(Automático após salvar)" ? `DOC${Date.now()}` : documentIdToDisplay,
+      id: isCreating ? `DOC${Date.now()}` : documentIdToDisplay,
       classificacaoArquivisticaId: resolvedClassificationId,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental!,
@@ -795,6 +797,9 @@ export default function DocumentosPage() {
       grauSigilo: formState.grauSigilo || 'Ostensivo',
       numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, 
     };
+
+    const action = isCreating ? 'CREATE_DOCUMENT' : 'UPDATE_DOCUMENT';
+    logAction(action, { documentId: finalFormState.id });
 
     const boxCodes = (finalFormState.codigosCaixa || "").split(',').map(c => c.trim()).filter(Boolean);
     if (boxCodes.length > 0) {
@@ -868,6 +873,7 @@ export default function DocumentosPage() {
   };
 
   const handleDelete = (docId: string) => {
+    logAction('DELETE_DOCUMENT', { documentId: docId });
     setDocumentos(prev => prev.filter(d => d.id !== docId));
   };
   
@@ -1334,6 +1340,12 @@ export default function DocumentosPage() {
       });
       return;
     }
+
+    logAction('BULK_UPDATE_DOCUMENTS', {
+      count: selectedRowIds.length,
+      field: bulkEditField,
+      documentIds: selectedRowIds,
+    });
 
     if (bulkEditField === 'classificacaoArquivisticaId') {
       const classificationCode = bulkEditValue;

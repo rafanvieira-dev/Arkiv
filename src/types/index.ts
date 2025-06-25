@@ -157,6 +157,7 @@ export interface Usuario {
     configuracoes: boolean;
     estatisticas: boolean;
     relatorios: boolean;
+    auditoria: boolean;
   };
 }
 
@@ -192,4 +193,13 @@ export interface Transferencia {
   status: 'Pendente' | 'Aprovada' | 'Reprovada';
   documentos: DocumentoTransferencia[];
   observacoes?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string; // ISO Date string
+  userId: string;
+  userName: string;
+  action: string; // e.g., "CREATE_DOCUMENT", "UPDATE_USER"
+  details: Record<string, any>; // e.g., { documentId: 'DOC123', fieldsChanged: ['status'] }
 }
