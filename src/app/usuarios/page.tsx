@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Usuario } from "@/types";
-import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,26 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -54,17 +74,74 @@ const initialFormState: UserFormState = {
   permissoes: Object.fromEntries(allPermissions.map(p => [p.id, false])),
 };
 
+type ColumnConfigUsuarios = {
+  id: keyof Usuario | string;
+  header: string;
+  accessorKey: keyof Usuario | string;
+  defaultVisible: boolean;
+  enableSorting: boolean;
+  cellFormatter?: (value: any, item: Usuario) => React.ReactNode;
+};
+
+type SortConfig = { id: string; direction: 'asc' | 'desc' };
+
+const getStatusIcon = (status: Usuario['statusAprovacao']) => {
+    switch (status) {
+      case 'Aprovado':
+        return <ShieldCheck className="h-5 w-5 text-green-500" />;
+      case 'Reprovado':
+        return <ShieldX className="h-5 w-5 text-red-500" />;
+      case 'Pendente':
+      default:
+        return <ShieldQuestion className="h-5 w-5 text-yellow-500" />;
+    }
+};
+
+const ALL_COLUMNS_CONFIG: ColumnConfigUsuarios[] = [
+  { id: 'nomeCompleto', header: 'Nome Completo', accessorKey: 'nomeCompleto', defaultVisible: true, enableSorting: true },
+  { 
+    id: 'statusAprovacao', 
+    header: 'Status', 
+    accessorKey: 'statusAprovacao', 
+    defaultVisible: true, 
+    enableSorting: true, 
+    cellFormatter: (value: Usuario['statusAprovacao']) => (
+      <Badge variant={value === 'Aprovado' ? 'secondary' : value === 'Reprovado' ? 'destructive' : 'default'} className="flex items-center gap-2 w-fit">
+        {getStatusIcon(value)}
+        {value}
+      </Badge>
+    )
+  },
+  { id: 'email', header: 'E-mail', accessorKey: 'email', defaultVisible: true, enableSorting: true },
+  { id: 'setor', header: 'Setor', accessorKey: 'setor', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  { id: 'sigla', header: 'Sigla', accessorKey: 'sigla', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+];
+
 
 export default function UsuariosPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [users, setUsers] = React.useState<Usuario[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
+  const [displayedUsers, setDisplayedUsers] = React.useState<Usuario[]>([]);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<UserFormState>(initialFormState);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
+
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
+  const [sorting, setSorting] = React.useState<SortConfig[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
+  
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+
+
+  React.useEffect(() => {
+    setColumnVisibility(
+      ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+    );
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -87,6 +164,38 @@ export default function UsuariosPage() {
     }
   }, [users, isDataLoaded]);
 
+  const getSortableValue = (item: Usuario, columnId: string): any => {
+    const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
+    if (!column) return null;
+    return item[column.accessorKey as keyof Usuario];
+  };
+
+  React.useEffect(() => {
+    let itemsToDisplay = [...users];
+
+    if (sorting.length > 0) {
+      itemsToDisplay.sort((a, b) => {
+        for (const sortConfig of sorting) {
+          const valA = getSortableValue(a, sortConfig.id);
+          const valB = getSortableValue(b, sortConfig.id);
+
+          let comparisonResult = 0;
+          if (valA === null || valA === undefined) comparisonResult = 1;
+          else if (valB === null || valB === undefined) comparisonResult = -1;
+          else {
+            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+          }
+    
+          if (comparisonResult !== 0) {
+            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
+          }
+        }
+        return 0;
+      });
+    }
+    setDisplayedUsers(itemsToDisplay);
+  }, [users, sorting]);
+
   const resetForm = () => {
     setFormState(initialFormState);
     setIsEditing(false);
@@ -97,7 +206,6 @@ export default function UsuariosPage() {
     if (user) {
       setIsEditing(true);
       setEditingUserId(user.id);
-      // We don't load the password fields for editing
       setFormState({
         ...user,
         senha: "",
@@ -129,8 +237,23 @@ export default function UsuariosPage() {
   };
 
   const handleDelete = (userId: string) => {
+    if (userId === "USR001") {
+      toast({ variant: "destructive", title: "Ação não permitida", description: "O usuário administrador padrão não pode ser excluído." });
+      return;
+    }
     setUsers(prev => prev.filter(u => u.id !== userId));
     toast({ title: "Sucesso", description: "Usuário excluído com sucesso." });
+  };
+  
+  const handleBulkDelete = () => {
+    const filteredIds = selectedRowIds.filter(id => id !== "USR001");
+    if (filteredIds.length < selectedRowIds.length) {
+       toast({ variant: "destructive", title: "Ação Parcialmente Bloqueada", description: "O usuário administrador padrão não pode ser excluído e foi ignorado." });
+    }
+    setUsers(prev => prev.filter(u => !filteredIds.includes(u.id)));
+    toast({ title: "Exclusão em Bloco Concluída", description: `${filteredIds.length} usuário(s) foram removidos com sucesso.` });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
   };
 
   const handleSaveChanges = () => {
@@ -295,25 +418,71 @@ export default function UsuariosPage() {
     };
     reader.readAsText(file);
   };
+  
+  const handleSort = (columnId: string) => {
+    const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
+    if (!columnConfig || !columnConfig.enableSorting) return;
 
+    setSorting(prevSorting => {
+      const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
+      let newSorting = [...prevSorting];
 
-  const getStatusIcon = (status: Usuario['statusAprovacao']) => {
-    switch (status) {
-      case 'Aprovado':
-        return <ShieldCheck className="h-5 w-5 text-green-500" />;
-      case 'Reprovado':
-        return <ShieldX className="h-5 w-5 text-red-500" />;
-      case 'Pendente':
-      default:
-        return <ShieldQuestion className="h-5 w-5 text-yellow-500" />;
-    }
+      if (existingSortIndex !== -1) {
+        if (newSorting[existingSortIndex].direction === 'asc') {
+          newSorting[existingSortIndex].direction = 'desc';
+        } else {
+          newSorting.splice(existingSortIndex, 1);
+        }
+      } else {
+        newSorting.push({ id: columnId, direction: 'asc' });
+      }
+      return newSorting;
+    });
   };
+  
+  const renderSortIcon = (columnId: string) => {
+    const sortConfig = sorting.find(s => s.id === columnId);
+    if (!sortConfig) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const toggleColumnVisibility = (columnId: string) => {
+    setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
+
+  const handleSelectAllColumns = () => {
+    setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {}));
+  };
+
+  const handleDeselectAllColumns = () => {
+    setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {}));
+  };
+  
+  const getCellValue = (item: Usuario, column: ColumnConfigUsuarios) => {
+    const value = item[column.accessorKey as keyof Usuario];
+    if (column.cellFormatter) {
+      return column.cellFormatter(value, item);
+    }
+    return value === undefined || value === null ? 'N/A' : String(value);
+  };
+  
+  const numDisplayed = displayedUsers.length;
+  const numSelected = selectedRowIds.length;
 
   return (
     <TooltipProvider>
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Usuários" description="Adicione, edite e gerencie os usuários e suas permissões no sistema.">
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir ({selectedRowIds.length})
+          </Button>
           <Button variant="outline" onClick={handleImportClick}>
             <Upload className="mr-2 h-4 w-4" />
             Importar CSV
@@ -428,40 +597,125 @@ export default function UsuariosPage() {
         </div>
       </PageHeader>
       <Card className="mt-6">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-headline text-primary">Lista de Usuários</CardTitle>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <ColumnsIcon className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Exibir/Ocultar Colunas</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={handleSelectAllColumns} className="cursor-pointer">
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Selecionar Todas
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleDeselectAllColumns} className="cursor-pointer">
+                  <Square className="mr-2 h-4 w-4" />
+                  Limpar Todas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {ALL_COLUMNS_CONFIG.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    checked={columnVisibility[column.id as string] ?? false}
+                    onCheckedChange={() => toggleColumnVisibility(column.id as string)}
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome Completo</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Setor</TableHead>
+                    <TableHead className="w-12 py-2 px-3">
+                        <Checkbox
+                        checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
+                        onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedUsers.map(u => u.id) : [])}
+                        aria-label="Selecionar todas as linhas"
+                        />
+                    </TableHead>
+                    {ALL_COLUMNS_CONFIG.map((column) =>
+                        columnVisibility[column.id as string] ? (
+                        <TableHead key={column.id as string} className="py-2 px-3">
+                            {column.enableSorting ? (
+                            <Button
+                                variant="ghost"
+                                onClick={() => handleSort(column.id as string)}
+                                className="px-1 py-1 h-auto -ml-2"
+                            >
+                                {column.header}
+                                {renderSortIcon(column.id as string)}
+                            </Button>
+                            ) : (
+                            column.header
+                            )}
+                        </TableHead>
+                        ) : null
+                    )}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.nomeCompleto}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.statusAprovacao === 'Aprovado' ? 'secondary' : user.statusAprovacao === 'Reprovado' ? 'destructive' : 'default'} className="flex items-center gap-2 w-fit">
-                        {getStatusIcon(user.statusAprovacao)}
-                        {user.statusAprovacao}
-                      </Badge>
+                {displayedUsers.map((user) => (
+                  <TableRow key={user.id} data-state={selectedRowIds.includes(user.id) ? "selected" : ""}>
+                    <TableCell className="py-2 px-3">
+                        <Checkbox
+                        checked={selectedRowIds.includes(user.id)}
+                        onCheckedChange={(value) => setSelectedRowIds(prev => value ? [...prev, user.id] : prev.filter(id => id !== user.id))}
+                        aria-label={`Selecionar usuário ${user.nomeCompleto}`}
+                        />
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.setor || 'N/A'}</TableCell>
+                    {ALL_COLUMNS_CONFIG.map((column) =>
+                        columnVisibility[column.id as string] ? (
+                        <TableCell key={`${user.id}-${column.id as string}`} className="py-2 px-3">
+                            {getCellValue(user, column)}
+                        </TableCell>
+                        ) : null
+                    )}
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                       <AlertDialog>
+                            <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
+                                <Edit className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Editar Usuário</p></TooltipContent>
+                            </Tooltip>
+                        </AlertDialog>
+                        <AlertDialog>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive" disabled={user.id === 'USR001'}>
+                                    <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>{user.id === 'USR001' ? 'Administrador não pode ser excluído' : 'Excluir Usuário'}</p></TooltipContent>
+                            </Tooltip>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário "{user.nomeCompleto}".
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(user.id)}>Sim, excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -474,6 +728,21 @@ export default function UsuariosPage() {
           )}
         </CardContent>
       </Card>
+      
+        <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} usuário(s) selecionado(s). O usuário administrador será ignorado.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
     </TooltipProvider>
   );
