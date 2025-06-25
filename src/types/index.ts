@@ -135,6 +135,9 @@ export interface Caixa {
   condicao: 'Ocupada' | 'Vazia';
   documentoIds?: string[];
   observacoes?: string;
+  anosArquivamento?: string; // Atribuído
+  prazosGuarda?: string;     // Atribuído
+  anosEliminacao?: string;   // Atribuído
 }
 
 export interface Usuario {

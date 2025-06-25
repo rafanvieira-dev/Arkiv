@@ -62,7 +62,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useUserSession } from "@/hooks/use-user-session";
 
 
-const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
+type CaixaFormState = Partial<Caixa> & { 
+  anosArquivamentoCalculado?: string; 
+  prazosGuardaCalculado?: string; 
+  anosEliminacaoCalculado?: string; 
+};
+
+
+const initialFormStateCaixa: CaixaFormState = {
   codigoCaixa: "",
   descricao: "",
   observacoes: "",
@@ -75,6 +82,9 @@ const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazo
   anosArquivamento: "",
   prazosGuarda: "",
   anosEliminacao: "",
+  anosArquivamentoCalculado: "",
+  prazosGuardaCalculado: "",
+  anosEliminacaoCalculado: "",
 };
 
 const initialFiltersState = {
@@ -110,7 +120,7 @@ export default function CaixasPage() {
   const { permissions } = useUserSession();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formStateCaixa, setFormStateCaixa] = React.useState<Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; }>(initialFormStateCaixa);
+  const [formStateCaixa, setFormStateCaixa] = React.useState<CaixaFormState>(initialFormStateCaixa);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingCaixaId, setEditingCaixaId] = React.useState<string | null>(null);
 
@@ -142,6 +152,9 @@ export default function CaixasPage() {
     { value: 'localizacao', label: 'Localização', type: 'text' },
     { value: 'situacao', label: 'Situação', type: 'select', options: ['Completa', 'Incompleta'] },
     { value: 'condicao', label: 'Condição', type: 'select', options: ['Ocupada', 'Vazia'] },
+    { value: 'anosArquivamento', label: 'Ano(s) de Arquivamento (Atribuído)', type: 'text' },
+    { value: 'prazosGuarda', label: 'Prazo(s) de Guarda (Atribuído)', type: 'text' },
+    { value: 'anosEliminacao', label: 'Ano(s) de Eliminação (Atribuído)', type: 'text' },
     { value: 'observacoes', label: 'Observações', type: 'text' }
   ];
   
@@ -168,10 +181,11 @@ export default function CaixasPage() {
     { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
     { id: 'proveniencia', header: 'Proveniência', accessorKey: 'proveniencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'anosArquivamentoAtribuido', header: 'Ano(s) Arq. (Atribuído)', accessorKey: 'anosArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
-      id: 'anosArquivamento',
-      header: 'Ano(s) Arquivamento',
-      accessorKey: 'anosArquivamento', // Dummy accessor
+      id: 'anosArquivamentoCalculado',
+      header: 'Ano(s) Arq. (Calc.)',
+      accessorKey: 'documentoIds', // Dummy accessor
       defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
@@ -181,10 +195,11 @@ export default function CaixasPage() {
         return years.join(', ') || "N/A";
       }
     },
+    { id: 'prazosGuardaAtribuido', header: 'Prazo(s) Guarda (Atribuído)', accessorKey: 'prazosGuarda', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
-      id: 'prazosGuarda',
-      header: 'Prazo(s) Guarda',
-      accessorKey: 'prazosGuarda',
+      id: 'prazosGuardaCalculado',
+      header: 'Prazo(s) Guarda (Calc.)',
+      accessorKey: 'documentoIds', // Dummy
       defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
@@ -194,10 +209,11 @@ export default function CaixasPage() {
         return prazos.join(', ') || "N/A";
       }
     },
+    { id: 'anosEliminacaoAtribuido', header: 'Ano(s) Elim. (Atribuído)', accessorKey: 'anosEliminacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
-      id: 'anosEliminacao',
-      header: 'Ano(s) Eliminação',
-      accessorKey: 'anosEliminacao',
+      id: 'anosEliminacaoCalculado',
+      header: 'Ano(s) Elim. (Calc.)',
+      accessorKey: 'documentoIds', // Dummy
       defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
@@ -260,15 +276,15 @@ export default function CaixasPage() {
       
       const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
 
-      const anosArquivamento = [...new Set(associatedDocs.map(d => d.dataArquivamento ? getYear(parseISO(d.dataArquivamento)) : null).filter(Boolean))].sort((a,b) => a-b).join(', ');
-      const prazosGuarda = [...new Set(associatedDocs.map(d => d.prazoArquivoIntermediarioDisplay).filter(Boolean))].join(', ');
-      const anosEliminacao = [...new Set(associatedDocs.map(d => d.anoEliminacaoPrevisto).filter(Boolean))].sort().join(', ');
+      const anosArquivamentoCalculado = [...new Set(associatedDocs.map(d => d.dataArquivamento ? getYear(parseISO(d.dataArquivamento)) : null).filter(Boolean))].sort((a,b) => a-b).join(', ');
+      const prazosGuardaCalculado = [...new Set(associatedDocs.map(d => d.prazoArquivoIntermediarioDisplay).filter(Boolean))].join(', ');
+      const anosEliminacaoCalculado = [...new Set(associatedDocs.map(d => d.anoEliminacaoPrevisto).filter(Boolean))].sort().join(', ');
 
       setFormStateCaixa({
         ...caixa,
-        anosArquivamento: anosArquivamento || 'N/A',
-        prazosGuarda: prazosGuarda || 'N/A',
-        anosEliminacao: anosEliminacao || 'N/A',
+        anosArquivamentoCalculado: anosArquivamentoCalculado || 'N/A',
+        prazosGuardaCalculado: prazosGuardaCalculado || 'N/A',
+        anosEliminacaoCalculado: anosEliminacaoCalculado || 'N/A',
       });
     } else {
       resetFormAndDialogState();
@@ -288,14 +304,20 @@ export default function CaixasPage() {
 
   const handleSaveChanges = () => {
     const caixaDataToSave: Caixa = {
-      ...initialFormStateCaixa,
-      ...formStateCaixa,
       id: isEditing && editingCaixaId ? editingCaixaId : `CX${Date.now()}`,
+      codigoCaixa: formStateCaixa.codigoCaixa || "",
+      descricao: formStateCaixa.descricao,
+      observacoes: formStateCaixa.observacoes,
+      proveniencia: formStateCaixa.proveniencia,
       tipo: formStateCaixa.tipo || "",
       status: formStateCaixa.status || 'Aberta',
+      localizacao: formStateCaixa.localizacao,
       situacao: formStateCaixa.situacao || 'Incompleta',
       condicao: formStateCaixa.condicao || 'Ocupada',
-    } as Caixa;
+      anosArquivamento: formStateCaixa.anosArquivamento,
+      prazosGuarda: formStateCaixa.prazosGuarda,
+      anosEliminacao: formStateCaixa.anosEliminacao,
+    };
 
     const action = isEditing ? 'UPDATE_CAIXA' : 'CREATE_CAIXA';
     logAction(action, { caixaId: caixaDataToSave.id });
@@ -492,7 +514,7 @@ export default function CaixasPage() {
         toast({variant: "destructive", description: "Nenhuma caixa selecionada para exportar."});
         return;
     }
-    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'observacoes', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
+    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes', 'anosArquivamentoCalculado', 'prazosGuardaCalculado', 'anosEliminacaoCalculado'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(caixa => {
@@ -507,10 +529,13 @@ export default function CaixasPage() {
           localizacao: caixa.localizacao || '',
           situacao: caixa.situacao,
           condicao: caixa.condicao,
+          anosArquivamento: caixa.anosArquivamento || '',
+          prazosGuarda: caixa.prazosGuarda || '',
+          anosEliminacao: caixa.anosEliminacao || '',
           observacoes: caixa.observacoes || '',
-          anosArquivamento: derived.anos,
-          prazosGuarda: derived.prazos,
-          anosEliminacao: derived.eliminacao,
+          anosArquivamentoCalculado: derived.anos,
+          prazosGuardaCalculado: derived.prazos,
+          anosEliminacaoCalculado: derived.eliminacao,
         };
         const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
@@ -538,7 +563,7 @@ export default function CaixasPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'observacoes'];
+    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -570,8 +595,9 @@ export default function CaixasPage() {
             
             const headers = parseCsvRow(headerRow);
             
-            if (!headers.includes('codigoCaixa')) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. A coluna 'codigoCaixa' é obrigatória." });
+            const requiredHeaders = ['codigoCaixa'];
+            if (!requiredHeaders.every(h => headers.includes(h))) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: `O cabeçalho do arquivo CSV é inválido. A coluna '${requiredHeaders.join(', ')}' é obrigatória.` });
                  return;
             }
 
@@ -593,6 +619,9 @@ export default function CaixasPage() {
                     localizacao: newCaixaData.localizacao,
                     situacao: (newCaixaData.situacao as Caixa['situacao']) || 'Incompleta',
                     condicao: (newCaixaData.condicao as Caixa['condicao']) || 'Ocupada',
+                    anosArquivamento: newCaixaData.anosArquivamento || '',
+                    prazosGuarda: newCaixaData.prazosGuarda || '',
+                    anosEliminacao: newCaixaData.anosEliminacao || '',
                     observacoes: newCaixaData.observacoes || '',
                     documentoIds: []
                 };
@@ -752,17 +781,29 @@ export default function CaixasPage() {
                           <Label htmlFor="proveniencia">Proveniência</Label>
                           <Input id="proveniencia" placeholder="Origem da caixa, ex: Vara Federal, Gabinete..." value={formStateCaixa.proveniencia || ""} onChange={handleFormInputChange} />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>
-                          <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        <div className="space-y-2">
+                          <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (Atribuído)</Label>
+                          <Input id="anosArquivamento" value={formStateCaixa.anosArquivamento || ""} onChange={handleFormInputChange} placeholder="Ex: 2020-2022" />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (calculado)</Label>
-                          <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        <div className="space-y-2">
+                          <Label htmlFor="anosArquivamentoCalculado">Ano(s) de Arquivamento (Calculado)</Label>
+                          <Input id="anosArquivamentoCalculado" value={formStateCaixa.anosArquivamentoCalculado || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (calculado)</Label>
-                          <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        <div className="space-y-2">
+                          <Label htmlFor="prazosGuarda">Prazo(s) de Guarda (Atribuído)</Label>
+                          <Input id="prazosGuarda" value={formStateCaixa.prazosGuarda || ""} onChange={handleFormInputChange} placeholder="Ex: 15 Anos" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prazosGuardaCalculado">Prazo(s) de Guarda (Calculado)</Label>
+                          <Input id="prazosGuardaCalculado" value={formStateCaixa.prazosGuardaCalculado || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="anosEliminacao">Ano(s) de Eliminação (Atribuído)</Label>
+                          <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} onChange={handleFormInputChange} placeholder="Ex: 2038" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="anosEliminacaoCalculado">Ano(s) de Eliminação (Calculado)</Label>
+                          <Input id="anosEliminacaoCalculado" value={formStateCaixa.anosEliminacaoCalculado || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="tipo">Tipo</Label>
