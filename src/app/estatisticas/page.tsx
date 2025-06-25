@@ -6,9 +6,9 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import type { Documento, Classificacao, Caixa, Solicitacao } from "@/types";
+import type { Documento, Classificacao, Caixa, Solicitacao, Transferencia } from "@/types";
 import { getYear, parseISO, isValid } from "date-fns";
-import { placeholderDocumentos, initialClassificacoes, initialCaixas, placeholderSolicitacoesInitial } from "@/lib/mock-data";
+import { placeholderDocumentos, initialClassificacoes, initialCaixas, placeholderSolicitacoesInitial, initialTransferencias } from "@/lib/mock-data";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
+const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
 
 
 interface ChartData {
@@ -47,7 +48,7 @@ const chartColors = [
 ];
 
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor';
 
 
 export default function EstatisticasPage() {
@@ -63,6 +64,7 @@ export default function EstatisticasPage() {
   const [emprestimosPorSetorData, setEmprestimosPorSetorData] = React.useState<any[]>([]);
   const [desarquivadosPorSetorData, setDesarquivadosPorSetorData] = React.useState<any[]>([]);
   const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
+  const [transferenciasPorSetorData, setTransferenciasPorSetorData] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
@@ -71,6 +73,7 @@ export default function EstatisticasPage() {
   const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
   const [emprestimoChartConfig, setEmprestimoChartConfig] = React.useState<ChartConfig>({});
   const [desarquivamentoChartConfig, setDesarquivamentoChartConfig] = React.useState<ChartConfig>({});
+  const [transferenciaChartConfig, setTransferenciaChartConfig] = React.useState<ChartConfig>({});
 
 
   const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chartType: ChartType } | null>(null);
@@ -113,6 +116,9 @@ export default function EstatisticasPage() {
       
       const storedSolicitacoes = window.localStorage.getItem(SOLICITACOES_STORAGE_KEY);
       const allSolicitacoes: Solicitacao[] = storedSolicitacoes ? JSON.parse(storedSolicitacoes) : placeholderSolicitacoesInitial;
+      
+      const storedTransferencias = window.localStorage.getItem(TRANSFERENCIAS_STORAGE_KEY);
+      const allTransferencias: Transferencia[] = storedTransferencias ? JSON.parse(storedTransferencias) : initialTransferencias;
 
 
       // Process status data
@@ -329,6 +335,39 @@ export default function EstatisticasPage() {
       const eliminadoPorAnoCounts = eliminatedDocs.reduce((acc, doc) => { const year = getYear(parseISO(doc.dataBaixa!)).toString(); acc[year] = (acc[year] || 0) + 1; return acc; }, {} as Record<string, number>);
       const eliminadoPorAnoChartData = Object.entries(eliminadoPorAnoCounts).map(([name, value]) => ({ name, value, percentage: totalEliminatedDocs > 0 ? (value / totalEliminatedDocs) * 100 : 0, fill: "hsl(var(--chart-5))" })).sort((a,b) => parseInt(a.name) - parseInt(b.name));
       setEliminadoPorAnoData(eliminadoPorAnoChartData);
+      
+      // Process "Transferências por Setor e Ano"
+      const transferenciasCounts: { [year: string]: { [setor: string]: number } } = {};
+      const allTransferenciaSetores = new Set<string>();
+      allTransferencias.filter(t => t.status === 'Aprovada' && t.dataTransferencia && t.documentos?.length > 0).forEach(t => {
+          const year = getYear(parseISO(t.dataTransferencia)).toString();
+          const setor = t.setorRemetente || "Não especificado";
+          if (!transferenciasCounts[year]) {
+              transferenciasCounts[year] = {};
+          }
+          if (!transferenciasCounts[year][setor]) {
+              transferenciasCounts[year][setor] = 0;
+          }
+          transferenciasCounts[year][setor] += t.documentos.length;
+          allTransferenciaSetores.add(setor);
+      });
+
+      const sortedTransferenciaSetores = Array.from(allTransferenciaSetores).sort();
+      const transferenciasChartData = Object.keys(transferenciasCounts).map(year => {
+          const yearData: { [key: string]: string | number } = { name: year };
+          sortedTransferenciaSetores.forEach(setor => {
+              yearData[setor] = transferenciasCounts[year][setor] || 0;
+          });
+          return yearData;
+      }).sort((a, b) => parseInt(a.name as string) - parseInt(b.name as string));
+      
+      const transferenciaFinalChartConfig = sortedTransferenciaSetores.reduce((acc, setor, index) => {
+          acc[setor] = { label: setor, color: chartColors[(index + 4) % chartColors.length] };
+          return acc;
+      }, {} as ChartConfig);
+
+      setTransferenciasPorSetorData(transferenciasChartData);
+      setTransferenciaChartConfig(transferenciaFinalChartConfig);
 
 
     } catch (error) {
@@ -345,7 +384,13 @@ export default function EstatisticasPage() {
   const StatusChart = (
     <ChartContainer config={statusChartConfig} className="mx-auto aspect-square h-full w-full">
       <PieChart>
-        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+        <ChartTooltip formatter={(value, name, props) => {
+            const { payload } = props;
+            const percentage = payload.percentage?.toFixed(1);
+            return `${value} (${percentage}%)`;
+          }} 
+          content={<ChartTooltipContent hideLabel />} 
+        />
         <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
             {statusData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
         </Pie>
@@ -360,7 +405,14 @@ export default function EstatisticasPage() {
         <CartesianGrid vertical={false} />
         <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
         <YAxis />
-        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+        <ChartTooltip 
+            cursor={false} 
+            content={<ChartTooltipContent indicator="line" formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }} />} 
+        />
         <Bar dataKey="value" radius={4} name="Documentos"/>
       </BarChart>
     </ChartContainer>
@@ -372,7 +424,14 @@ export default function EstatisticasPage() {
             <CartesianGrid vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+            <ChartTooltip 
+              cursor={false} 
+              content={<ChartTooltipContent indicator="line" formatter={(value, name, props) => {
+                const { payload } = props;
+                const percentage = payload.percentage?.toFixed(1);
+                return `${value} (${percentage}%)`;
+              }} />} 
+            />
             <Bar dataKey="value" radius={4} name="Documentos"/>
         </BarChart>
     </ChartContainer>
@@ -384,7 +443,14 @@ export default function EstatisticasPage() {
             <CartesianGrid vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+             <ChartTooltip 
+              cursor={false} 
+              content={<ChartTooltipContent indicator="line" formatter={(value, name, props) => {
+                const { payload } = props;
+                const percentage = payload.percentage?.toFixed(1);
+                return `${value} (${percentage}%)`;
+              }} />} 
+            />
             <Bar dataKey="value" radius={4} name="Documentos Eliminados"/>
         </BarChart>
     </ChartContainer>
@@ -393,7 +459,13 @@ export default function EstatisticasPage() {
   const DestinacaoChart = (
     <ChartContainer config={destinacaoChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }}
+            content={<ChartTooltipContent hideLabel />} 
+          />
             <Pie data={destinacaoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {destinacaoData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
@@ -405,7 +477,13 @@ export default function EstatisticasPage() {
   const MeioChart = (
     <ChartContainer config={meioChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+             <ChartTooltip formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }}
+            content={<ChartTooltipContent hideLabel />} 
+          />
             <Pie data={meioData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {meioData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
@@ -417,7 +495,13 @@ export default function EstatisticasPage() {
   const DestinacaoCaixaChart = (
     <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }}
+            content={<ChartTooltipContent hideLabel />} 
+          />
             <Pie data={destinacaoCaixaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {destinacaoCaixaData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
@@ -432,7 +516,14 @@ export default function EstatisticasPage() {
             <CartesianGrid vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-60} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
             <YAxis />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+            <ChartTooltip 
+              cursor={false} 
+              content={<ChartTooltipContent indicator="line" formatter={(value, name, props) => {
+                const { payload } = props;
+                const percentage = payload.percentage?.toFixed(1);
+                return `${value} (${percentage}%)`;
+              }} />} 
+            />
             <Bar dataKey="value" radius={4} name="Documentos" />
         </BarChart>
     </ChartContainer>
@@ -444,7 +535,14 @@ export default function EstatisticasPage() {
             <CartesianGrid vertical={false} />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-60} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
             <YAxis />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+            <ChartTooltip 
+              cursor={false} 
+              content={<ChartTooltipContent indicator="line" formatter={(value, name, props) => {
+                const { payload } = props;
+                const percentage = payload.percentage?.toFixed(1);
+                return `${value} (${percentage}%)`;
+              }} />} 
+            />
             <Bar dataKey="value" radius={4} name="Documentos" />
         </BarChart>
     </ChartContainer>
@@ -474,6 +572,21 @@ export default function EstatisticasPage() {
             <ChartTooltip content={<ChartTooltipContent />} />
             <ChartLegend content={<ChartLegendContent />} />
             {Object.keys(desarquivamentoChartConfig).map(setor => (
+                <Bar key={setor} dataKey={setor} stackId="a" fill={`var(--color-${setor})`} radius={4} name={setor} />
+            ))}
+        </BarChart>
+    </ChartContainer>
+  );
+  
+  const TransferenciaPorSetorChart = (
+    <ChartContainer config={transferenciaChartConfig} className="h-full w-full">
+        <BarChart data={transferenciasPorSetorData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }} accessibilityLayer>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} name="Ano" />
+            <YAxis />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
+            {Object.keys(transferenciaChartConfig).map(setor => (
                 <Bar key={setor} dataKey={setor} stackId="a" fill={`var(--color-${setor})`} radius={4} name={setor} />
             ))}
         </BarChart>
@@ -558,11 +671,11 @@ export default function EstatisticasPage() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
          <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Emprestados por Setor/Ano", "Quantidade de documentos emprestados, agrupados por setor solicitante e ano da solicitação.", 'emprestimoPorSetor')}>
           <CardHeader>
             <CardTitle>Empréstimos por Setor e Ano</CardTitle>
-            <CardDescription>Quantidade de documentos emprestados por setor solicitante ao longo dos anos.</CardDescription>
+            <CardDescription>Documentos emprestados por setor solicitante ao longo dos anos.</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             {EmprestimoPorSetorChart}
@@ -572,10 +685,20 @@ export default function EstatisticasPage() {
         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Desarquivados por Setor/Ano", "Quantidade de documentos desarquivados, agrupados por setor solicitante e ano da solicitação.", 'desarquivamentoPorSetor')}>
           <CardHeader>
             <CardTitle>Desarquivamentos por Setor e Ano</CardTitle>
-            <CardDescription>Quantidade de documentos desarquivados por setor solicitante ao longo dos anos.</CardDescription>
+            <CardDescription>Documentos desarquivados por setor solicitante ao longo dos anos.</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             {DesarquivamentoPorSetorChart}
+          </CardContent>
+        </Card>
+        
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos Transferidos por Setor/Ano", "Quantidade de documentos recebidos em transferência, agrupados por setor remetente e ano.", 'transferenciaPorSetor')}>
+          <CardHeader>
+            <CardTitle>Transferências por Setor e Ano</CardTitle>
+            <CardDescription>Documentos recebidos por setor remetente ao longo dos anos.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            {TransferenciaPorSetorChart}
           </CardContent>
         </Card>
       </div>
@@ -598,6 +721,7 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'emprestimoPorSetor' && EmprestimoPorSetorChart}
                     {modalContent?.chartType === 'eliminadoPorAno' && EliminadoPorAnoChart}
                     {modalContent?.chartType === 'desarquivamentoPorSetor' && DesarquivamentoPorSetorChart}
+                    {modalContent?.chartType === 'transferenciaPorSetor' && TransferenciaPorSetorChart}
                 </div>
                 <DialogFooter className="sm:justify-end shrink-0 pt-4">
                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
