@@ -329,12 +329,13 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'solicitacoes', label: 'Solicitações', description: 'Permite gerenciar solicitações de empréstimo e desarquivamento.' },
   { id: 'buscaAvancada', label: 'Busca Avançada', description: 'Permite utilizar a busca com múltiplos filtros.' },
   { id: 'estatisticas', label: 'Estatísticas', description: 'Permite visualizar gráficos e estatísticas sobre o acervo.' },
+  { id: 'relatorios', label: 'Relatórios', description: 'Permite visualizar relatórios tabulares detalhados.' },
   { id: 'usuarios', label: 'Usuários', description: 'Permite gerenciar usuários e suas permissões (somente para administradores).' },
   { id: 'configuracoes', label: 'Configurações', description: 'Permite acessar e alterar as configurações globais do sistema.' },
 ];
 
 const allTruePermissions: Usuario['permissoes'] = {
-  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true,
+  dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true,
 };
 
 const standardUserPermissions: Usuario['permissoes'] = {

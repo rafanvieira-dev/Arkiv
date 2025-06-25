@@ -161,6 +161,7 @@ export interface Usuario {
     usuarios: boolean;
     configuracoes: boolean;
     estatisticas: boolean;
+    relatorios: boolean;
   };
 }
 
