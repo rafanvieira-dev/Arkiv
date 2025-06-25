@@ -43,6 +43,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { initialClassificacoes } from "@/lib/mock-data";
+import { parseCsvRow } from "@/lib/utils";
 
 
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
@@ -505,7 +506,7 @@ export default function ClassificacaoPage() {
             const headerRow = rows.shift();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const headers = parseCsvRow(headerRow);
             const expectedHeaders = [
               'tipoPlanoClassificacao', 'codigo', 'descricao', 'status', 'tipoPrazoFaseCorrente', 
               'prazoGuardaFaseCorrenteAnos', 'prazoGuardaFaseCorrenteCondicaoTextual', 
@@ -520,10 +521,15 @@ export default function ClassificacaoPage() {
 
             const newItemsFromCsv: Classificacao[] = [];
             rows.forEach((row, index) => {
-                const values = row.split(',');
+                if (!row.trim()) return;
+                const values = parseCsvRow(row);
+                if (values.length !== headers.length) {
+                    console.warn(`Skipping row ${index + 2}: Mismatched column count.`);
+                    return;
+                }
                 const newItemData: { [key: string]: string } = {};
                 headers.forEach((header, i) => {
-                  newItemData[header] = values[i]?.trim().replace(/"/g, '') || "";
+                  newItemData[header] = values[i] || "";
                 });
 
                 if (!newItemData.codigo || !newItemData.descricao || !newItemData.prazoGuardaFaseIntermediariaAnos || !newItemData.destinacaoFinal || !newItemData.status) {
