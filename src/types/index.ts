@@ -21,7 +21,7 @@ export interface TipoOrigem {
 }
 
 export interface Documento {
-  id: string; // UUID, system-generated, read-only for user. Visível, mas não alterável.
+  id:string; // UUID, system-generated, read-only for user. Visível, mas não alterável.
   status: 'Arquivado' | 'Eliminado' | 'Emprestado' | 'Desarquivado' | 'Aguardando prazo para eliminação' | 'Pendente de Conferência'; // 1.2
   orgao: 'TRF2' | 'SJRJ' | 'SJES'; // 1.3
   origem: string; // 1.C - Campo para cadastramento da origem. Cada origem cadastrada ficará gravada no sistema, e o usuário poderá escolher
@@ -32,7 +32,7 @@ export interface Documento {
   numeroDocumento?: string; // 1.8
   dataAbrangente?: string; // 1.9 - Pode ser data completa, mês/ano, ou um intervalo. Ex.: 01/2023 – 12/2024
   descricaoDocumento?: string; // 1.21 - Antigo 'observacoes' ou campo principal de descrição.
-  nomePartePrincipal?: string;
+  partes?: ParteDocumento[]; // 1.29 - Replaces nomePartePrincipal, etc.
   documentosRelacionadosIds?: string; // 1.34 - Simplificado para string (separada por vírgula)
   dataArquivamento?: string; // 1.10 - ISO Date string
   quantidadeVolumes?: number; // 1.11
@@ -56,9 +56,6 @@ export interface Documento {
 
   alteracaoDestinacaoFinal: 'Não Alterar' | 'Guarda Permanente – Guarda Amostral' | 'Guarda Permanente – Decisão da CPAD'; // 1.26 - Opção padrão “Não Alterar”
   anoEliminacaoPrevisto?: string; // 1.27 - Calculado
-
-  // Simplificado para Partes (1.29)
-  tipoPartePrincipal?: string; // Lista extensa, permitir "Outro"
   
   segredoJustica: 'Sim' | 'Não'; // 1.30 - Opção padrão “Não”
   grauSigilo: 'Ostensivo' | 'Reservado' | 'Secreto' | 'Ultrassecreto'; // 1.31 - Opção padrão “Ostensivo” (LAI)
@@ -70,9 +67,6 @@ export interface Documento {
   numeroListagemEliminacao?: string; // New field for elimination list number
   
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)
-  // Deprecated fields, to be removed after migration if needed
-  outroTipoMidiaDetalhe?: string;
-  outroTipoPartePrincipal?: string;
 }
 
 export interface Classificacao {

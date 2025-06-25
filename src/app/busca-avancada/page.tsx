@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { Search, RotateCcw, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { DateInputPicker } from "@/components/date-input-picker";
-import type { Documento, Classificacao, TipoOrigem } from "@/types";
+import type { Documento, Classificacao, TipoOrigem, ParteDocumento } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, isAfter, isBefore } from "date-fns";
@@ -128,7 +128,12 @@ export default function BuscaAvancadaPage() {
     { id: 'numeroListagemEliminacao', header: 'Nº Listagem Eliminação', accessorKey: 'numeroListagemEliminacao', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'destructive' : 'outline'}>{value}</Badge> },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'secondary' : 'outline'}>{value}</Badge> },
-    { id: 'nomePartePrincipal', header: 'Partes Envolvidas', accessorKey: 'nomePartePrincipal', defaultVisible: true, enableSorting: true },
+    { id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', defaultVisible: true, enableSorting: false, cellFormatter: (partes: ParteDocumento[]) => {
+        if (!partes || partes.length === 0) return 'N/A';
+        const names = partes.map(p => p.nome).join(', ');
+        return <span className="block max-w-xs truncate" title={names}>{names}</span>
+      } 
+    },
     { id: 'dataAbrangente', header: 'Data do Documento', accessorKey: 'dataAbrangente', defaultVisible: false, enableSorting: true },
   ], [allClassificacoes]);
 
@@ -183,7 +188,7 @@ export default function BuscaAvancadaPage() {
         if (filters.origem && doc.origem !== filters.origem) return false;
         if (filters.tipoDocumento && !doc.tipoDocumento?.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) return false;
         if (filters.descricaoDocumento && !doc.descricaoDocumento?.toLowerCase().includes(filters.descricaoDocumento.toLowerCase())) return false;
-        if (filters.partes && !doc.nomePartePrincipal?.toLowerCase().includes(filters.partes.toLowerCase())) return false;
+        if (filters.partes && !doc.partes?.some(p => p.nome.toLowerCase().includes(filters.partes.toLowerCase()))) return false;
         if (filters.codigoCaixa && !doc.codigosCaixa?.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
         if (filters.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoEliminacaoPrevisto) return false;
         if (filters.codigoAtoM && !doc.codigoAtoM?.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) return false;
