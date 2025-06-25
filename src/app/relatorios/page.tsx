@@ -166,7 +166,7 @@ export default function RelatoriosPage() {
                 Object.entries(values.eliminacaoPorAno).forEach(([year, docIdsSet]) => {
                     eliminacaoPorAnoArrays[year] = Array.from(docIdsSet);
                 });
-                return { tipo, volumeTotalIds: Array.from(values.docIds), semPrazoIds: Array.from(values.semPrazoDocIds), eliminacaoPorAno: eliminacaoPorAnoArrays };
+                return { tipo, volumeTotalIds: Array.from(values.docIds), semPrazoIds: Array.from(values.semPrazoIds), eliminacaoPorAno: eliminacaoPorAnoArrays };
             }).sort((a, b) => a.tipo.localeCompare(b.tipo));
             
             const totalEliminationRow: EliminationReportData = { tipo: 'Total', volumeTotalIds: [], semPrazoIds: [], eliminacaoPorAno: {} };
@@ -237,9 +237,56 @@ export default function RelatoriosPage() {
         return ALL_CUSTOM_REPORT_COLUMNS.filter(col => visibleColumns[col.id]);
     }, [visibleColumns]);
 
+    if (isPrinting) {
+      return (
+        <div className="print-container">
+          <Card>
+              <CardHeader className="non-printable flex flex-row items-center justify-between">
+                  <div>
+                      <CardTitle>Relatório Customizado de Acervo</CardTitle>
+                      <CardDescription>Exibindo {allDocuments.length} documentos com as colunas selecionadas.</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+                    <Button onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir / Salvar PDF
+                    </Button>
+                  </div>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="w-full">
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  {visibleColumnDefs.map(col => (
+                                      <TableHead key={col.id}>{col.header}</TableHead>
+                                  ))}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {allDocuments.map(doc => (
+                                  <TableRow key={doc.id}>
+                                      {visibleColumnDefs.map(col => (
+                                          <TableCell key={`${doc.id}-${col.id}`}>
+                                              {getCustomReportCellValue(doc, col)}
+                                          </TableCell>
+                                      ))}
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                      <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
+              </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
-        <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
-            <div className="non-printable">
+        <div className={'container mx-auto py-2'}>
+            <div>
                 <PageHeader title="Relatórios Gerenciais" description="Quantitativos de documentos por tipo de caixa, destinação e previsão de eliminação." />
                 
                 <Card className="mb-8">
@@ -378,53 +425,6 @@ export default function RelatoriosPage() {
                     </CardContent>
                 </Card>
             </div>
-
-            {isPrinting && (
-                <div className="printable-area">
-                    <Card>
-                        <CardHeader className="non-printable flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Relatório Customizado de Acervo</CardTitle>
-                                <CardDescription>Exibindo {allDocuments.length} documentos com as colunas selecionadas.</CardDescription>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
-                              <Button onClick={() => window.print()}>
-                                  <Printer className="mr-2 h-4 w-4" />
-                                  Imprimir / Salvar PDF
-                              </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="w-full">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            {visibleColumnDefs.map(col => (
-                                                <TableHead key={col.id}>{col.header}</TableHead>
-                                            ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {allDocuments.map(doc => (
-                                            <TableRow key={doc.id}>
-                                                {visibleColumnDefs.map(col => (
-                                                    <TableCell key={`${doc.id}-${col.id}`}>
-                                                        {getCustomReportCellValue(doc, col)}
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                                <ScrollBar orientation="horizontal" />
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </div>
     );
 }
-
-

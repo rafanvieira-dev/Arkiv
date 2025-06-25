@@ -88,21 +88,28 @@
 }
 
 @media print {
-  body {
-    background: white !important;
-  }
-  .non-printable {
+  /* Hide all elements on the page by default */
+  body > *:not(.print-container) {
     display: none !important;
   }
-  .printable-area {
+
+  /* Only show the print container and its contents */
+  .print-container,
+  .print-container * {
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+    visibility: visible !important;
+  }
+
+  /* Re-hide elements inside the print container that are marked as non-printable */
+  .print-container .non-printable {
+    display: none !important;
+  }
+  
+  .print-container {
+    position: static;
     margin: 0;
-    padding: 1rem;
-    border: none !important;
-    box-shadow: none !important;
+    padding: 0;
+    background: white !important;
+    color: black !important;
   }
 }

@@ -696,40 +696,44 @@ export default function ClassificacaoPage() {
   const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]), [columnVisibilityClassificacoes]);
   const dataToPrint = React.useMemo(() => classificacoes.filter(c => selectedRowIds.includes(c.id)), [classificacoes, selectedRowIds]);
 
+  if (isPrinting) {
+    return (
+      <div className="print-container">
+        <Card>
+          <CardHeader className="non-printable flex-row items-center justify-between">
+            <div>
+              <CardTitle>Relatório de Classificações Selecionadas</CardTitle>
+              <CardDescription>Exibindo {dataToPrint.length} classificações para impressão.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+              <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dataToPrint.map(item => (
+                  <TableRow key={item.id}>
+                    {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValueClassificacoes(item, column)}</TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
-      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
-        {isPrinting ? (
-           <Card>
-            <CardHeader className="non-printable flex-row items-center justify-between">
-              <div>
-                <CardTitle>Relatório de Classificações Selecionadas</CardTitle>
-                <CardDescription>Exibindo {dataToPrint.length} classificações para impressão.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
-                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dataToPrint.map(item => (
-                    <TableRow key={item.id}>
-                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValueClassificacoes(item, column)}</TableCell>)}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ) : (
+      <div className={'container mx-auto py-2'}>
           <>
             <PageHeader title="Cadastro de Classificação" description="Gerencie os códigos de classificação de assuntos dos documentos.">
               <div className="flex flex-wrap items-center gap-2">
@@ -1075,9 +1079,7 @@ export default function ClassificacaoPage() {
               </AlertDialogContent>
           </AlertDialog>
         </>
-      )}
-    </div>
+      </div>
     </TooltipProvider>
   );
 }
-

@@ -536,39 +536,44 @@ export default function ClassesJudiciaisPage() {
   const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [columnVisibility]);
   const dataToPrint = React.useMemo(() => classesJudiciais.filter(c => selectedRowIds.includes(c.id)), [classesJudiciais, selectedRowIds]);
 
+  if (isPrinting) {
+    return (
+      <div className="print-container">
+        <Card>
+          <CardHeader className="non-printable flex-row items-center justify-between">
+            <div>
+              <CardTitle>Relatório de Classes Judiciais Selecionadas</CardTitle>
+              <CardDescription>Exibindo {dataToPrint.length} classes para impressão.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
+              <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dataToPrint.map(item => (
+                  <TableRow key={item.id}>
+                    {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValue(item, column)}</TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <TooltipProvider>
-      <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
-        {isPrinting ? (
-          <Card>
-            <CardHeader className="non-printable flex-row items-center justify-between">
-              <div>
-                <CardTitle>Relatório de Classes Judiciais Selecionadas</CardTitle>
-                <CardDescription>Exibindo {dataToPrint.length} classes para impressão.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsPrinting(false)}>Voltar</Button>
-                <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir / Salvar PDF</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {columnsToPrint.map(column => <TableHead key={column.id as string}>{column.header}</TableHead>)}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dataToPrint.map(item => (
-                    <TableRow key={item.id}>
-                      {columnsToPrint.map(column => <TableCell key={`${item.id}-${column.id as string}`}>{getCellValue(item, column)}</TableCell>)}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ) : (
+      <div className={'container mx-auto py-2'}>
           <>
             <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
               <div className="flex flex-wrap items-center gap-2">
@@ -970,8 +975,7 @@ export default function ClassesJudiciaisPage() {
               </AlertDialogContent>
           </AlertDialog>
         </>
-      )}
-    </div>
+      </div>
     </TooltipProvider>
   );
 }
