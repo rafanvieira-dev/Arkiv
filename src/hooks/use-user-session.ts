@@ -22,6 +22,7 @@ const defaultPermissions: Usuario['permissoes'] = {
   transferencias: false,
   usuarios: false,
   configuracoes: false,
+  estatisticas: false,
 };
 
 export function useUserSession(): UserSession {
