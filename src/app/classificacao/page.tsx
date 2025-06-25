@@ -19,6 +19,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,14 +221,30 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
             </TooltipTrigger>
             <TooltipContent><p>Editar Classificação</p></TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação" onClick={() => onDeleteClick(item.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Excluir Classificação</p></TooltipContent>
-          </Tooltip>
+          <AlertDialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                 <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classificação">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent><p>Excluir Classificação</p></TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a classificação "{item.descricao}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDeleteClick(item.id)}>Sim, excluir</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </TableCell>
     </TableRow>
@@ -625,8 +652,10 @@ export default function ClassificacaoPage() {
   }, []);
 
   const handleDeleteRow = React.useCallback((itemId: string) => {
+    logAction('DELETE_CLASSIFICACAO', { classificacaoId: itemId });
     setClassificacoes(prev => prev.filter(item => item.id !== itemId));
-  }, []);
+    toast({ title: "Sucesso", description: "Classificação excluída." });
+  }, [toast]);
   
   const visibleColumnsForMemo = React.useMemo(() => {
     return ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]);

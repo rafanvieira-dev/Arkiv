@@ -28,6 +28,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -875,6 +886,7 @@ export default function DocumentosPage() {
   const handleDelete = (docId: string) => {
     logAction('DELETE_DOCUMENT', { documentId: docId });
     setDocumentos(prev => prev.filter(d => d.id !== docId));
+    toast({ title: "Sucesso", description: "Documento excluído." });
   };
   
   const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2154,14 +2166,30 @@ export default function DocumentosPage() {
                             </TooltipTrigger>
                             <TooltipContent><p>{doc.status === 'Eliminado' ? 'Visualizar Documento' : 'Editar Documento'}</p></TooltipContent>
                           </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" onClick={() => handleDelete(doc.id)} disabled={doc.status === 'Eliminado'}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Excluir Documento</p></TooltipContent>
-                          </Tooltip>
+                           <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Documento" disabled={doc.status === 'Eliminado'}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Excluir Documento</p></TooltipContent>
+                              </Tooltip>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita. Isso excluirá permanentemente o documento "{doc.numeroDocumento || doc.id}".
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(doc.id)}>Sim, excluir</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </TableCell>
                   </TableRow>
