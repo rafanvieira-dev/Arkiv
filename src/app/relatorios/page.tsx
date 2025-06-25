@@ -11,18 +11,24 @@ import { placeholderDocumentos, initialCaixas } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
-interface ReportData {
+interface EliminationReportData {
   tipo: string;
   volumeTotalIds: string[];
   semPrazoIds: string[];
   eliminacaoPorAno: { [year: string]: string[] };
 }
 
+interface PermanentReportData {
+  tipo: string;
+  volumePermanenteIds: string[];
+}
+
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
 
 export default function RelatoriosPage() {
-    const [reportData, setReportData] = React.useState<ReportData[]>([]);
+    const [eliminationReportData, setEliminationReportData] = React.useState<EliminationReportData[]>([]);
+    const [permanentReportData, setPermanentReportData] = React.useState<PermanentReportData[]>([]);
     const [allYears, setAllYears] = React.useState<string[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -33,7 +39,8 @@ export default function RelatoriosPage() {
             const allDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
             const allCaixas: Caixa[] = storedCaixas ? JSON.parse(storedCaixas) : initialCaixas;
 
-            const data: { [tipo: string]: { docIds: Set<string>, semPrazoDocIds: Set<string>, eliminacaoPorAno: { [year: string]: Set<string> } } } = {};
+            const eliminationData: { [tipo: string]: { docIds: Set<string>, semPrazoDocIds: Set<string>, eliminacaoPorAno: { [year: string]: Set<string> } } } = {};
+            const permanentData: { [tipo: string]: { docIds: Set<string> } } = {};
             const yearsSet = new Set<string>();
 
             const caixaTypeMap = new Map<string, string>();
@@ -47,84 +54,89 @@ export default function RelatoriosPage() {
 
                 boxCodes.forEach(code => {
                     const type = caixaTypeMap.get(code);
-                    if (type) {
-                        docBoxTypes.add(type);
-                    }
+                    if (type) docBoxTypes.add(type);
                 });
 
-                if (docBoxTypes.size === 0) {
-                     docBoxTypes.add("Não Alocado");
-                }
+                if (docBoxTypes.size === 0) docBoxTypes.add("Não Alocado");
 
                 docBoxTypes.forEach(type => {
-                    if (!data[type]) {
-                        data[type] = { docIds: new Set(), semPrazoDocIds: new Set(), eliminacaoPorAno: {} };
+                    // Elimination Report Logic
+                    if (!eliminationData[type]) {
+                        eliminationData[type] = { docIds: new Set(), semPrazoDocIds: new Set(), eliminacaoPorAno: {} };
                     }
-                    data[type].docIds.add(doc.id);
+                    eliminationData[type].docIds.add(doc.id);
 
                     if (doc.destinacaoFinalDisplay === 'Eliminação') {
                         if (doc.anoEliminacaoPrevisto) {
                             const year = doc.anoEliminacaoPrevisto;
                             yearsSet.add(year);
-                            if (!data[type].eliminacaoPorAno[year]) {
-                                data[type].eliminacaoPorAno[year] = new Set();
+                            if (!eliminationData[type].eliminacaoPorAno[year]) {
+                                eliminationData[type].eliminacaoPorAno[year] = new Set();
                             }
-                            data[type].eliminacaoPorAno[year].add(doc.id);
+                            eliminationData[type].eliminacaoPorAno[year].add(doc.id);
                         } else {
-                            data[type].semPrazoDocIds.add(doc.id);
+                            eliminationData[type].semPrazoDocIds.add(doc.id);
                         }
                     }
+
+                    // Permanent Report Logic
+                    let effectiveDestination = doc.destinacaoFinalDisplay;
+                    if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
+                        effectiveDestination = "Guarda Permanente";
+                    }
+                    if (effectiveDestination === 'Guarda Permanente') {
+                        if (!permanentData[type]) {
+                           permanentData[type] = { docIds: new Set() };
+                       }
+                       permanentData[type].docIds.add(doc.id);
+                   }
                 });
             });
 
             const sortedYears = Array.from(yearsSet).sort();
             setAllYears(sortedYears);
 
-            const finalReportData: ReportData[] = Object.entries(data).map(([tipo, values]) => {
+            // Process Elimination Report Data
+            const finalEliminationData: EliminationReportData[] = Object.entries(eliminationData).map(([tipo, values]) => {
                 const eliminacaoPorAnoArrays: { [year: string]: string[] } = {};
                 Object.entries(values.eliminacaoPorAno).forEach(([year, docIdsSet]) => {
                     eliminacaoPorAnoArrays[year] = Array.from(docIdsSet);
                 });
-
-                return {
-                    tipo: tipo,
-                    volumeTotalIds: Array.from(values.docIds),
-                    semPrazoIds: Array.from(values.semPrazoDocIds),
-                    eliminacaoPorAno: eliminacaoPorAnoArrays,
-                };
+                return { tipo, volumeTotalIds: Array.from(values.docIds), semPrazoIds: Array.from(values.semPrazoDocIds), eliminacaoPorAno: eliminacaoPorAnoArrays };
             }).sort((a, b) => a.tipo.localeCompare(b.tipo));
             
-            const totalRow: ReportData = {
-                tipo: 'Total',
-                volumeTotalIds: [],
-                semPrazoIds: [],
-                eliminacaoPorAno: {}
-            };
-            
+            const totalEliminationRow: EliminationReportData = { tipo: 'Total', volumeTotalIds: [], semPrazoIds: [], eliminacaoPorAno: {} };
             const allVolumeTotalIds = new Set<string>();
             const allSemPrazoIds = new Set<string>();
             const allEliminacaoPorAno: { [year: string]: Set<string> } = {};
-
-            finalReportData.forEach(row => {
+            finalEliminationData.forEach(row => {
                 row.volumeTotalIds.forEach(id => allVolumeTotalIds.add(id));
                 row.semPrazoIds.forEach(id => allSemPrazoIds.add(id));
                 sortedYears.forEach(year => {
                     if (row.eliminacaoPorAno[year]) {
-                        if (!allEliminacaoPorAno[year]) {
-                            allEliminacaoPorAno[year] = new Set();
-                        }
+                        if (!allEliminacaoPorAno[year]) allEliminacaoPorAno[year] = new Set();
                         row.eliminacaoPorAno[year].forEach(id => allEliminacaoPorAno[year].add(id));
                     }
                 });
             });
+            totalEliminationRow.volumeTotalIds = Array.from(allVolumeTotalIds);
+            totalEliminationRow.semPrazoIds = Array.from(allSemPrazoIds);
+            Object.entries(allEliminacaoPorAno).forEach(([year, idSet]) => { totalEliminationRow.eliminacaoPorAno[year] = Array.from(idSet); });
+            setEliminationReportData([totalEliminationRow, ...finalEliminationData]);
+            
+            // Process Permanent Report Data
+            const finalPermanentData: PermanentReportData[] = Object.entries(permanentData).map(([tipo, values]) => ({
+                tipo,
+                volumePermanenteIds: Array.from(values.docIds),
+            })).sort((a, b) => a.tipo.localeCompare(b.tipo));
 
-            totalRow.volumeTotalIds = Array.from(allVolumeTotalIds);
-            totalRow.semPrazoIds = Array.from(allSemPrazoIds);
-            Object.entries(allEliminacaoPorAno).forEach(([year, idSet]) => {
-                totalRow.eliminacaoPorAno[year] = Array.from(idSet);
+            const totalPermanentRow: PermanentReportData = { tipo: 'Total', volumePermanenteIds: [] };
+            const allPermanentIds = new Set<string>();
+            finalPermanentData.forEach(row => {
+                row.volumePermanenteIds.forEach(id => allPermanentIds.add(id));
             });
-
-            setReportData([totalRow, ...finalReportData]);
+            totalPermanentRow.volumePermanenteIds = Array.from(allPermanentIds);
+            setPermanentReportData([totalPermanentRow, ...finalPermanentData]);
 
         } catch (error) {
             console.error("Failed to process report data:", error);
@@ -135,20 +147,22 @@ export default function RelatoriosPage() {
 
     return (
         <div className="container mx-auto py-2">
-            <PageHeader title="Relatório de Previsão de Eliminação" description="Quantitativo de documentos por tipo de caixa e ano previsto para eliminação." />
-            <Card>
-                <CardContent className="pt-6">
+            <PageHeader title="Relatórios Gerenciais" description="Quantitativos de documentos por tipo de caixa, destinação e previsão de eliminação." />
+            
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle>Relatório de Previsão de Eliminação</CardTitle>
+                    <CardDescription>Quantitativo de documentos por tipo de caixa e ano previsto para eliminação.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
                     {isLoading ? (
-                        <div className="space-y-4">
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-64 w-full" />
-                        </div>
+                        <div className="space-y-4 p-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
                     ) : (
                         <ScrollArea className="w-full">
                             <Table className="min-w-full whitespace-nowrap">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="sticky left-0 bg-card z-10 font-semibold">Tipo</TableHead>
+                                        <TableHead className="sticky left-0 bg-card z-10 font-semibold">Tipo de Caixa</TableHead>
                                         <TableHead className="font-semibold">Volume de Documentos</TableHead>
                                         <TableHead className="font-semibold">Sem prazo</TableHead>
                                         {allYears.map(year => (
@@ -157,7 +171,7 @@ export default function RelatoriosPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {reportData.map((row) => (
+                                    {eliminationReportData.map((row) => (
                                         <TableRow key={row.tipo} className={row.tipo === 'Total' ? 'bg-muted hover:bg-muted font-bold' : ''}>
                                             <TableCell className="sticky left-0 bg-card z-10">{row.tipo}</TableCell>
                                             <TableCell>
@@ -183,10 +197,50 @@ export default function RelatoriosPage() {
                                     ))}
                                 </TableBody>
                             </Table>
-                             {reportData.length === 0 && (
-                                <p className="text-center text-muted-foreground py-8">Nenhum dado para exibir no relatório.</p>
+                             {eliminationReportData.length <= 1 && (
+                                <p className="text-center text-muted-foreground py-8">Nenhum dado de eliminação para exibir.</p>
                             )}
                             <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                 <CardHeader>
+                    <CardTitle>Relatório de Guarda Permanente</CardTitle>
+                    <CardDescription>Quantitativo de documentos de guarda permanente por tipo de caixa.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                     {isLoading ? (
+                        <div className="space-y-4 p-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-32 w-full" /></div>
+                    ) : (
+                        <ScrollArea className="w-full">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="font-semibold">Tipo de Caixa</TableHead>
+                                        <TableHead className="font-semibold">Volume de Documentos Permanentes</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                   {permanentReportData.map(row => (
+                                       <TableRow key={row.tipo} className={row.tipo === 'Total' ? 'bg-muted hover:bg-muted font-bold' : ''}>
+                                           <TableCell>{row.tipo}</TableCell>
+                                           <TableCell>
+                                               {row.volumePermanenteIds.length > 0 ? (
+                                                <Link href={`/documentos?docIds=${row.volumePermanenteIds.join(',')}&reportContext=${encodeURIComponent(`Docs Permanentes do Tipo: ${row.tipo}`)}`} className="text-primary hover:underline" prefetch={false}>
+                                                    {row.volumePermanenteIds.length.toLocaleString()}
+                                                </Link>
+                                               ) : 0}
+                                           </TableCell>
+                                       </TableRow>
+                                   ))}
+                                </TableBody>
+                            </Table>
+                            {permanentReportData.length <= 1 && (
+                                <p className="text-center text-muted-foreground py-8">Nenhum documento de guarda permanente encontrado.</p>
+                            )}
                         </ScrollArea>
                     )}
                 </CardContent>
