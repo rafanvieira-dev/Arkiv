@@ -37,6 +37,7 @@ export default function EstatisticasPage() {
   const [destinacaoData, setDestinacaoData] = React.useState<ChartData[]>([]);
   const [meioData, setMeioData] = React.useState<ChartData[]>([]);
   const [classificationData, setClassificationData] = React.useState<ChartData[]>([]);
+  const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   React.useEffect(() => {
@@ -133,6 +134,20 @@ export default function EstatisticasPage() {
         .sort((a, b) => b.value - a.value)
         .slice(0, 10);
       setClassificationData(classificationChartData);
+
+      // Process "Espécie Documental" data
+      const tipoDocumentoCounts = allDocs.reduce((acc, doc) => {
+        if (doc.tipoDocumento) {
+            acc[doc.tipoDocumento] = (acc[doc.tipoDocumento] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      const tipoDocumentoChartData = Object.entries(tipoDocumentoCounts)
+        .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-4))" }))
+        .sort((a,b) => b.value - a.value)
+        .slice(0,10);
+      setTipoDocumentoData(tipoDocumentoChartData);
 
 
     } catch (error) {
@@ -277,6 +292,36 @@ export default function EstatisticasPage() {
                   content={<ChartTooltipContent hideLabel />}
                 />
                 <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 10 Espécies Documentais</CardTitle>
+            <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <ChartContainer config={{}} className="h-[350px] w-full">
+              <BarChart data={tipoDocumentoData} margin={{ top: 5, right: 20, left: 0, bottom: 100 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickMargin={8} 
+                  angle={-60}
+                  textAnchor="end"
+                  interval={0}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={4} />
               </BarChart>
             </ChartContainer>
           </CardContent>
