@@ -51,6 +51,7 @@ import { parseCsvRow } from "@/lib/utils";
 const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
   codigoCaixa: "",
   descricao: "",
+  proveniencia: "",
   tipo: "",
   status: "Aberta",
   localizacao: "",
@@ -111,6 +112,7 @@ export default function CaixasPage() {
     },
     { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
     { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'proveniencia', header: 'Proveniência', accessorKey: 'proveniencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
     { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
@@ -362,7 +364,7 @@ export default function CaixasPage() {
   }, [documentos]);
 
   const handleExportCSV = () => {
-    const headers = ['id', 'codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
+    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
     const csvRows = [headers.join(',')];
 
     const dataToExport = displayedCaixas.length > 0 ? displayedCaixas : caixas;
@@ -373,6 +375,7 @@ export default function CaixasPage() {
           id: caixa.id,
           codigoCaixa: caixa.codigoCaixa,
           descricao: caixa.descricao || '',
+          proveniencia: caixa.proveniencia || '',
           tipo: caixa.tipo,
           status: caixa.status,
           localizacao: caixa.localizacao || '',
@@ -397,7 +400,7 @@ export default function CaixasPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao'];
+    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -428,7 +431,7 @@ export default function CaixasPage() {
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
             const headers = parseCsvRow(headerRow);
-            const expectedHeaders = ['codigoCaixa', 'descricao', 'tipo', 'status', 'localizacao', 'situacao'];
+            const expectedHeaders = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao'];
             
             const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
             if (!hasAllHeaders) {
@@ -448,6 +451,7 @@ export default function CaixasPage() {
                     id: `CX_IMP_${Date.now()}_${index}`,
                     codigoCaixa: newCaixaData.codigoCaixa,
                     descricao: newCaixaData.descricao,
+                    proveniencia: newCaixaData.proveniencia,
                     tipo: newCaixaData.tipo,
                     status: (newCaixaData.status as Caixa['status']) || 'Aberta',
                     localizacao: newCaixaData.localizacao,
@@ -527,6 +531,10 @@ export default function CaixasPage() {
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="descricao">Descrição</Label>
                     <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+                  </div>
+                   <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="proveniencia">Proveniência</Label>
+                    <Input id="proveniencia" placeholder="Origem da caixa, ex: Vara Federal, Gabinete..." value={formStateCaixa.proveniencia || ""} onChange={handleFormInputChange} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="anosArquivamento">Ano(s) de Arquivamento (calculado)</Label>

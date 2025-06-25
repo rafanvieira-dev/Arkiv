@@ -133,6 +133,7 @@ export interface Caixa {
   id: string;
   codigoCaixa: string;
   descricao?: string;
+  proveniencia?: string;
   tipo: string; 
   status: 'Aberta' | 'Fechada';
   localizacao?: string;
