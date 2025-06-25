@@ -71,6 +71,7 @@ const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazo
   status: "Aberta",
   localizacao: "",
   situacao: "Incompleta",
+  condicao: "Ocupada",
   anosArquivamento: "",
   prazosGuarda: "",
   anosEliminacao: "",
@@ -84,6 +85,7 @@ const initialFiltersState = {
   status: "",
   localizacao: "",
   situacao: "",
+  condicao: "",
 };
 const ALL_VALUES_SENTINEL = "ALL_VALUES"; 
 
@@ -139,6 +141,7 @@ export default function CaixasPage() {
     { value: 'status', label: 'Status', type: 'select', options: ['Aberta', 'Fechada'] },
     { value: 'localizacao', label: 'Localização', type: 'text' },
     { value: 'situacao', label: 'Situação', type: 'select', options: ['Completa', 'Incompleta'] },
+    { value: 'condicao', label: 'Condição', type: 'select', options: ['Ocupada', 'Vazia'] },
     { value: 'observacoes', label: 'Observações', type: 'text' }
   ];
   
@@ -165,6 +168,7 @@ export default function CaixasPage() {
     { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
     { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
+    { id: 'condicao', header: 'Condição', accessorKey: 'condicao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Ocupada' ? 'default' : 'outline'}>{value}</Badge> },
     {
       id: 'anosArquivamento',
       header: 'Ano(s) Arquivamento',
@@ -290,6 +294,7 @@ export default function CaixasPage() {
       tipo: formStateCaixa.tipo || "",
       status: formStateCaixa.status || 'Aberta',
       situacao: formStateCaixa.situacao || 'Incompleta',
+      condicao: formStateCaixa.condicao || 'Ocupada',
     } as Caixa;
 
     const action = isEditing ? 'UPDATE_CAIXA' : 'CREATE_CAIXA';
@@ -383,6 +388,7 @@ export default function CaixasPage() {
         if (filters.status && caixa.status !== filters.status) return false;
         if (filters.localizacao && !caixa.localizacao?.toLowerCase().includes(filters.localizacao.toLowerCase())) return false;
         if (filters.situacao && caixa.situacao !== filters.situacao) return false;
+        if (filters.condicao && caixa.condicao !== filters.condicao) return false;
         return true;
     });
 
@@ -486,7 +492,7 @@ export default function CaixasPage() {
         toast({variant: "destructive", description: "Nenhuma caixa selecionada para exportar."});
         return;
     }
-    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'observacoes', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
+    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'observacoes', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(caixa => {
@@ -500,6 +506,7 @@ export default function CaixasPage() {
           status: caixa.status,
           localizacao: caixa.localizacao || '',
           situacao: caixa.situacao,
+          condicao: caixa.condicao,
           observacoes: caixa.observacoes || '',
           anosArquivamento: derived.anos,
           prazosGuarda: derived.prazos,
@@ -531,7 +538,7 @@ export default function CaixasPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'observacoes'];
+    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'observacoes'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -585,6 +592,7 @@ export default function CaixasPage() {
                     status: (newCaixaData.status as Caixa['status']) || 'Aberta',
                     localizacao: newCaixaData.localizacao,
                     situacao: (newCaixaData.situacao as Caixa['situacao']) || 'Incompleta',
+                    condicao: (newCaixaData.condicao as Caixa['condicao']) || 'Ocupada',
                     observacoes: newCaixaData.observacoes || '',
                     documentoIds: []
                 };
@@ -797,6 +805,18 @@ export default function CaixasPage() {
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="condicao">Condição</Label>
+                          <Select onValueChange={handleFormSelectChange('condicao')} value={formStateCaixa.condicao}>
+                            <SelectTrigger id="condicao">
+                              <SelectValue placeholder="Selecione a condição" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Ocupada">Ocupada</SelectItem>
+                              <SelectItem value="Vazia">Vazia</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                       </ScrollArea>
                       <DialogFooter className="pt-4">
@@ -871,6 +891,17 @@ export default function CaixasPage() {
                           <SelectItem value={ALL_VALUES_SENTINEL}>Todas as situações</SelectItem>
                           <SelectItem value="Completa">Completa</SelectItem>
                           <SelectItem value="Incompleta">Incompleta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCondicao">Condição</Label>
+                      <Select onValueChange={handleFilterSelectChange('condicao')} value={filters.condicao}>
+                        <SelectTrigger id="filterCondicao"><SelectValue placeholder="Todas as condições" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as condições</SelectItem>
+                          <SelectItem value="Ocupada">Ocupada</SelectItem>
+                          <SelectItem value="Vazia">Vazia</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

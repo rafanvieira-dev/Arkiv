@@ -132,6 +132,7 @@ export interface Caixa {
   status: 'Aberta' | 'Fechada';
   localizacao?: string;
   situacao: 'Completa' | 'Incompleta';
+  condicao: 'Ocupada' | 'Vazia';
   documentoIds?: string[];
   observacoes?: string;
 }
