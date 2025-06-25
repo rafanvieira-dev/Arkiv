@@ -5,7 +5,6 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Solicitacao, Documento } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
@@ -73,81 +72,59 @@ export default function GuiaRemessaPage() {
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir
             </Button>
-            <header className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <Logo className="h-16 w-16 text-black" />
-                    <div>
-                        <h1 className="text-2xl font-bold">Guia de Remessa de Documentos</h1>
-                        <p className="text-sm">Arquivo do Tribunal Regional Federal da 2ª Região</p>
-                    </div>
-                </div>
-                 <div>
-                    <p className="font-bold">Nº Solicitação:</p>
-                    <p>{solicitacao.numeroSolicitacao}</p>
-                </div>
+            <header className="text-center mb-8">
+                <h1 className="text-xl font-bold uppercase">Guia de Remessa de Documentos</h1>
+                <p className="font-bold">Nº da Solicitação: {solicitacao.numeroSolicitacao}</p>
             </header>
 
             <main>
-                <section className="mb-6">
-                    <h2 className="text-lg font-bold border-b border-black mb-2">Dados do Solicitante</h2>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                        <p><strong>Nome:</strong> {solicitacao.nomeSolicitante}</p>
+                <section className="mb-6 border border-black p-4">
+                    <h2 className="text-base font-bold mb-2 -mt-1">Dados da Solicitação</h2>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                        <p><strong>Solicitante:</strong> {solicitacao.nomeSolicitante}</p>
                         <p><strong>Setor:</strong> {solicitacao.setorSolicitante || 'N/A'}</p>
-                        <p><strong>Matrícula:</strong> {solicitacao.matriculaSolicitante || 'N/A'}</p>
-                        <p><strong>E-mail:</strong> {solicitacao.emailContato || 'N/A'}</p>
+                        <p><strong>Tipo de Solicitação:</strong> {solicitacao.tipo}</p>
+                        <p><strong>Data da Solicitação:</strong> <ClientSideDateFormatter isoDateString={solicitacao.dataSolicitacao} /></p>
                     </div>
                 </section>
                 
-                 <section className="mb-6">
-                    <h2 className="text-lg font-bold border-b border-black mb-2">Dados da Solicitação</h2>
-                    <div className="grid grid-cols-3 gap-x-8 gap-y-2 text-sm">
-                        <p><strong>Tipo:</strong> {solicitacao.tipo}</p>
-                        <p><strong>Data da Solicitação:</strong> <ClientSideDateFormatter isoDateString={solicitacao.dataSolicitacao} /></p>
-                        <p><strong>Data do Atendimento:</strong> <ClientSideDateFormatter isoDateString={solicitacao.dataAtendimento} /></p>
-                    </div>
-                </section>
-
                 <section>
-                    <h2 className="text-lg font-bold border-b border-black mb-2">Documentos Solicitados</h2>
-                    <table className="w-full text-left text-sm border-collapse">
+                    <h2 className="text-base font-bold mb-2">Documentos Solicitados/Movimentados</h2>
+                    <table className="w-full text-left text-sm border-collapse border border-black">
                         <thead>
-                            <tr className="border-b border-black">
-                                <th className="p-2">Item</th>
-                                <th className="p-2">Nº Documento</th>
-                                <th className="p-2">Espécie do Documento</th>
-                                <th className="p-2">Descrição</th>
+                            <tr className="border-b border-black bg-gray-100">
+                                <th className="p-2 border-r border-black font-bold">Nº Documento</th>
+                                <th className="p-2 border-r border-black font-bold">Origem</th>
+                                <th className="p-2 font-bold">Descrição Breve</th>
                             </tr>
                         </thead>
                         <tbody>
                             {documentos.map((doc, index) => (
                                 <tr key={doc.id} className="border-b border-gray-300">
-                                    <td className="p-2">{index + 1}</td>
-                                    <td className="p-2">{doc.numeroDocumento || 'N/A'}</td>
-                                    <td className="p-2">{doc.tipoDocumento || 'N/A'}</td>
+                                    <td className="p-2 border-r border-black">{doc.numeroDocumento || 'N/A'}</td>
+                                    <td className="p-2 border-r border-black">{doc.origem || 'N/A'}</td>
                                     <td className="p-2">{doc.segredoJustica === 'Sim' ? '*** Segredo de Justiça ***' : doc.descricaoDocumento || 'N/A'}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </section>
+
+                 <section className="mt-8 text-sm space-y-4">
+                    <p>Declaro ter recebido o(s) documento(s) acima listado(s) na data indicada.</p>
+                    <p>Declaro que o(s) documento(s) acima listado(s) foi(ram) devolvido(s) na data indicada.</p>
+                </section>
+
             </main>
 
-            <footer className="mt-20 grid grid-cols-2 gap-12 text-center">
+            <footer className="mt-16 grid grid-cols-2 gap-12 text-center text-sm">
                 <div>
-                    <div className="border-t border-black w-3/4 mx-auto pt-2">
-                        <p>_________________________________________</p>
-                        <p className="font-bold">{solicitacao.nomeSolicitante}</p>
-                        <p>(Assinatura do Solicitante - Recebimento)</p>
-                         <p className="mt-2 text-xs">Data: ____/____/______</p>
-                    </div>
+                    <p className="border-t border-black w-full mx-auto pt-1">Assinatura do Solicitante</p>
+                    <p className="mt-2 text-xs">Data: ____/____/______</p>
                 </div>
                  <div>
-                    <div className="border-t border-black w-3/4 mx-auto pt-2">
-                        <p>_________________________________________</p>
-                        <p className="font-bold">Servidor do Arquivo</p>
-                        <p>(Assinatura do Atendente - Devolução)</p>
-                        <p className="mt-2 text-xs">Data: ____/____/______</p>
-                    </div>
+                    <p className="border-t border-black w-full mx-auto pt-1">Assinatura do Atendente</p>
+                    <p className="mt-2 text-xs">Data: ____/____/______</p>
                 </div>
             </footer>
         </div>
