@@ -1561,6 +1561,15 @@ export default function DocumentosPage() {
                                         <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
                                         <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
+                                        <DateInputPicker 
+                                        value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
+                                        onChange={(date) => handleDateChange('dataArquivamento')(date)} 
+                                        placeholder="dd/mm/aaaa"
+                                        disabled={isFormDisabled}
+                                        />
+                                    </div>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
@@ -1571,6 +1580,10 @@ export default function DocumentosPage() {
                                      <div className="space-y-2 sm:col-span-2">
                                         <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
                                         <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
+                                    </div>
+                                     <div className="space-y-2 sm:col-span-2">
+                                        <Label htmlFor="observacoesGerais">Observações Gerais</Label>
+                                        <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
                                     </div>
                                     <div className="space-y-2 sm:col-span-2">
                                         <div className="flex justify-between items-center mb-2">
@@ -1815,15 +1828,6 @@ export default function DocumentosPage() {
                                         <Input id="numeroListagemEliminacao" value={formState.numeroListagemEliminacao || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" disabled={isFormDisabled} />
                                     </div>
                                      <div className="space-y-2">
-                                        <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
-                                        <DateInputPicker 
-                                        value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
-                                        onChange={(date) => handleDateChange('dataArquivamento')(date)} 
-                                        placeholder="dd/mm/aaaa"
-                                        disabled={isFormDisabled}
-                                        />
-                                    </div>
-                                     <div className="space-y-2">
                                         <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
                                         <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
                                     </div>
@@ -1835,10 +1839,6 @@ export default function DocumentosPage() {
                                         placeholder="dd/mm/aaaa"
                                         disabled={isFormDisabled}
                                         />
-                                    </div>
-                                     <div className="space-y-2 sm:col-span-2 xl:col-span-3">
-                                        <Label htmlFor="observacoesGerais">Observações Gerais</Label>
-                                        <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
                                     </div>
                                 </div>
                             </AccordionContent>
