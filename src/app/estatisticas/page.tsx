@@ -336,7 +336,7 @@ export default function EstatisticasPage() {
     <ChartContainer config={statusChartConfig} className="mx-auto aspect-square h-full w-full">
       <PieChart>
         <ChartTooltip content={<CustomTooltipContent />} />
-        <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+        <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
             {statusData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
         </Pie>
         <ChartLegend content={<ChartLegendContent />} />
@@ -372,7 +372,7 @@ export default function EstatisticasPage() {
     <ChartContainer config={destinacaoChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
             <ChartTooltip content={<CustomTooltipContent />} />
-            <Pie data={destinacaoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+            <Pie data={destinacaoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {destinacaoData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
             <ChartLegend content={<ChartLegendContent />} />
@@ -384,7 +384,7 @@ export default function EstatisticasPage() {
     <ChartContainer config={meioChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
             <ChartTooltip content={<CustomTooltipContent />} />
-            <Pie data={meioData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+            <Pie data={meioData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {meioData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
             <ChartLegend content={<ChartLegendContent />} />
@@ -396,7 +396,7 @@ export default function EstatisticasPage() {
     <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
             <ChartTooltip content={<CustomTooltipContent />} />
-            <Pie data={destinacaoCaixaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+            <Pie data={destinacaoCaixaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
                 {destinacaoCaixaData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
             </Pie>
             <ChartLegend content={<ChartLegendContent />} />
