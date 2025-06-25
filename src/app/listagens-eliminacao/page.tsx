@@ -112,12 +112,12 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     enableSorting: true,
     cellFormatter: (value, item) => {
       if (item.dataProducaoTermoEliminacao) {
-        return <Badge variant="destructive">Eliminada</Badge>;
+        return <Badge variant="destructive">Efetivada</Badge>;
       }
       if (item.dataPublicacaoEdital) {
         return <Badge className="border-transparent bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80 dark:bg-yellow-500 dark:text-yellow-50 dark:hover:bg-yellow-500/80">Edital Publicado</Badge>;
       }
-      return <Badge variant="secondary">Aberta</Badge>;
+      return <Badge variant="secondary">Tramitando</Badge>;
     }
   },
   {
