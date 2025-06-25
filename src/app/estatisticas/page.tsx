@@ -6,11 +6,13 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import type { Documento } from "@/types";
+import type { Documento, Classificacao } from "@/types";
 import { getYear, parseISO, isValid } from "date-fns";
-import { placeholderDocumentos } from "@/lib/mock-data";
+import { placeholderDocumentos, initialClassificacoes } from "@/lib/mock-data";
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
+const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+
 
 interface ChartData {
   name: string;
@@ -34,6 +36,7 @@ export default function EstatisticasPage() {
   const [anoEliminacaoData, setAnoEliminacaoData] = React.useState<ChartData[]>([]);
   const [destinacaoData, setDestinacaoData] = React.useState<ChartData[]>([]);
   const [meioData, setMeioData] = React.useState<ChartData[]>([]);
+  const [classificationData, setClassificationData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   React.useEffect(() => {
@@ -41,6 +44,9 @@ export default function EstatisticasPage() {
       const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
       const allDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
       
+      const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
+      const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes;
+
       // Process status data
       const statusCounts = allDocs.reduce((acc, doc) => {
         acc[doc.status] = (acc[doc.status] || 0) + 1;
@@ -109,6 +115,24 @@ export default function EstatisticasPage() {
         fill: chartColors[index % chartColors.length],
       }));
       setMeioData(meioChartData);
+      
+      // Process classification data
+      const classificationCounts = allDocs.reduce((acc, doc) => {
+        if (doc.classificacaoArquivisticaId) {
+          acc[doc.classificacaoArquivisticaId] = (acc[doc.classificacaoArquivisticaId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      const classificationChartData = Object.entries(classificationCounts)
+        .map(([id, value]) => {
+            const classif = allClassificacoes.find(c => c.id === id);
+            const name = classif ? `${classif.codigo} - ${classif.descricao}` : `ID: ${id}`;
+            return { name, value, fill: "hsl(var(--chart-3))" };
+        })
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      setClassificationData(classificationChartData);
 
 
     } catch (error) {
@@ -224,6 +248,36 @@ export default function EstatisticasPage() {
                 </Pie>
                  <ChartLegend content={<ChartLegendContent />} />
               </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 10 Classificações</CardTitle>
+            <CardDescription>Classificações com o maior número de documentos.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[350px] w-full">
+              <BarChart data={classificationData} margin={{ top: 5, right: 20, left: 0, bottom: 100 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickMargin={8} 
+                  angle={-60}
+                  textAnchor="end"
+                  interval={0}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
