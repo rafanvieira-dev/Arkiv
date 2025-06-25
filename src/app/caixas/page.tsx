@@ -519,13 +519,13 @@ export default function CaixasPage() {
                 <DialogHeader>
                   <DialogTitle className="font-headline text-primary">{isEditing ? "Editar Caixa" : "Nova Caixa"}</DialogTitle>
                   <DialogDescription>
-                    Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa. Campos marcados com * são obrigatórios.
+                    Preencha as informações abaixo para {isEditing ? "editar a" : "cadastrar uma nova"} caixa.
                   </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh] pr-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="codigoCaixa">Código*</Label>
+                    <Label htmlFor="codigoCaixa">Código</Label>
                     <Input id="codigoCaixa" placeholder="Ex: CX-A-001" value={formStateCaixa.codigoCaixa || ""} onChange={handleFormInputChange} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
@@ -549,7 +549,7 @@ export default function CaixasPage() {
                     <Input id="anosEliminacao" value={formStateCaixa.anosEliminacao || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo*</Label>
+                    <Label htmlFor="tipo">Tipo</Label>
                     <Select onValueChange={handleFormSelectChange('tipo')} value={formStateCaixa.tipo}>
                       <SelectTrigger id="tipo">
                         <SelectValue placeholder="Selecione o tipo" />
@@ -566,7 +566,7 @@ export default function CaixasPage() {
                     <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="status">Status*</Label>
+                    <Label htmlFor="status">Status</Label>
                     <Select onValueChange={handleFormSelectChange('status')} value={formStateCaixa.status}>
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Selecione o status" />
@@ -578,7 +578,7 @@ export default function CaixasPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="situacao">Situação*</Label>
+                    <Label htmlFor="situacao">Situação</Label>
                     <Select onValueChange={handleFormSelectChange('situacao')} value={formStateCaixa.situacao}>
                       <SelectTrigger id="situacao">
                         <SelectValue placeholder="Selecione a situação" />
