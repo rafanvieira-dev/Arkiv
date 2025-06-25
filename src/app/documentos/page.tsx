@@ -12,7 +12,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOri
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X, Upload, Download, FileSpreadsheet
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -197,6 +197,11 @@ export default function DocumentosPage() {
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [caixas, setCaixas] = React.useState<Caixa[]>([]);
+  
+  const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
+  const [bulkEditField, setBulkEditField] = React.useState('');
+  const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -1081,7 +1086,7 @@ export default function DocumentosPage() {
             const headerRow = rows.shift()?.trim();
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
-            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+            const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, '""'));
             
             const missingHeaders = ['status', 'orgao', 'origem', 'tipoMeio', 'categoria', 'tipoDocumento', 'dataAbrangente', 'dataArquivamento', 'classificacaoArquivisticaId', 'segredoJustica', 'grauSigilo'].filter(h => !headers.includes(h));
             if (missingHeaders.length > 0) {
@@ -1250,7 +1255,104 @@ export default function DocumentosPage() {
     };
     reader.readAsText(file);
   };
+  
+    const bulkEditableFields = [
+    { value: 'status', label: 'Status', type: 'select', options: ['Arquivado', 'Pendente de Conferência', 'Eliminado', 'Emprestado', 'Desarquivado', 'Aguardando prazo para eliminação'] },
+    { value: 'codigosCaixa', label: 'Código(s) da(s) Caixa(s)', type: 'text' },
+    { value: 'dataArquivamento', label: 'Data de Arquivamento', type: 'date' },
+    { value: 'origem', label: 'Origem', type: 'select', options: tiposOrigem.map(o => o.sigla ? `${o.nome} - ${o.sigla}` : o.nome).sort((a, b) => a.localeCompare(b)) },
+    { value: 'tipoMeio', label: 'Tipo de Meio', type: 'select', options: ['Não digital', 'Digital', 'Híbrido'] },
+    { value: 'generoDocumental', label: 'Gênero Documental', type: 'select', options: generosDocumentais.sort((a, b) => a.localeCompare(b)) },
+    { value: 'categoria', label: 'Categoria', type: 'select', options: ['Documento', 'Dossiê', 'Processo Judicial', 'Processo Administrativo'] },
+    { value: 'tipoDocumento', label: 'Espécie de Documento', type: 'select', options: tiposDocumento.sort((a, b) => a.localeCompare(b)) },
+    { value: 'digitalizado', label: 'Digitalizado', type: 'select', options: ['Sim', 'Não'] },
+    { value: 'segredoJustica', label: 'Segredo de Justiça', type: 'select', options: ['Sim', 'Não'] },
+    { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
+    { value: 'classificacaoArquivisticaId', label: 'Classificação (por código)', type: 'text' },
+    { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
+  ];
 
+  const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
+
+  const handleBulkUpdate = () => {
+    if (!bulkEditField || (typeof bulkEditValue !== 'boolean' && !bulkEditValue)) {
+      toast({
+        variant: "destructive",
+        title: "Ação Incompleta",
+        description: "Por favor, selecione um campo e forneça o novo valor.",
+      });
+      return;
+    }
+
+    if (bulkEditField === 'classificacaoArquivisticaId') {
+      const classificationCode = bulkEditValue;
+      const classification = classificacoes.find(c => c.codigo === classificationCode);
+
+      if (!classification) {
+        toast({ title: "Erro", description: `Código de classificação "${classificationCode}" não encontrado.` });
+        return;
+      }
+      if (classification.status !== 'Ativo') {
+        toast({ title: "Erro", description: `A classificação "${classificationCode}" não está ativa.` });
+        return;
+      }
+
+      setDocumentos(prevDocs =>
+        prevDocs.map(doc => {
+          if (selectedRowIds.includes(doc.id)) {
+            let prazoCorrente = "";
+            if (classification.tipoPrazoFaseCorrente === "Anos") {
+                prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos ?? 'N/A'} Anos`;
+            } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
+                prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
+            }
+            const prazoIntermediario = `${classification.prazoGuardaFaseIntermediariaAnos} Anos`;
+            const destinacao = classification.destinacaoFinal;
+            let anoEliminacao = "";
+            if (doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento)) && destinacao === 'Eliminação') {
+                const dataArquivamentoDate = parseISO(doc.dataArquivamento);
+                const prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos ?? 0;
+                anoEliminacao = (getYear(dataArquivamentoDate) + prazoIntermediarioAnosNum + 1).toString();
+            }
+
+            return {
+              ...doc,
+              classificacaoArquivisticaId: classification.id,
+              prazoArquivoCorrenteDisplay: prazoCorrente,
+              prazoArquivoIntermediarioDisplay: prazoIntermediario,
+              destinacaoFinalDisplay: destinacao,
+              anoEliminacaoPrevisto: anoEliminacao,
+            };
+          }
+          return doc;
+        })
+      );
+    } else {
+      // General case for other fields
+      setDocumentos(prevDocs =>
+        prevDocs.map(doc => {
+          if (selectedRowIds.includes(doc.id)) {
+            const valueToSet = bulkEditField === 'dataArquivamento' && bulkEditValue instanceof Date
+              ? bulkEditValue.toISOString()
+              : bulkEditValue;
+            
+            return { ...doc, [bulkEditField]: valueToSet };
+          }
+          return doc;
+        })
+      );
+    }
+    
+    toast({
+      title: "Alteração em Bloco Concluída",
+      description: `${selectedRowIds.length} documento(s) foram atualizados com sucesso.`,
+    });
+
+    setSelectedRowIds([]);
+    setIsBulkEditOpen(false);
+    setBulkEditField('');
+    setBulkEditValue('');
+  };
 
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
@@ -1280,6 +1382,10 @@ export default function DocumentosPage() {
         description={pageDescription}
       >
         <div className="flex flex-wrap items-center gap-2">
+           <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
+              <PenSquare className="mr-2 h-4 w-4" />
+              Alterar em Bloco ({selectedRowIds.length})
+            </Button>
            <Button variant="outline" onClick={handleImportClick}>
               <Upload className="mr-2 h-4 w-4" />
               Importar CSV
@@ -2057,6 +2163,74 @@ export default function DocumentosPage() {
             </DialogFooter>
         </DialogContent>
     </Dialog>
+    
+    <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        setBulkEditField('');
+        setBulkEditValue('');
+      }
+      setIsBulkEditOpen(isOpen);
+    }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Alteração em Bloco</DialogTitle>
+          <DialogDescription>
+            Selecione o campo e o novo valor para aplicar a todos os {selectedRowIds.length} documentos selecionados.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="bulk-field" className="text-right">
+              Campo a Alterar
+            </Label>
+            <Select onValueChange={(value) => {
+              setBulkEditField(value);
+              setBulkEditValue('');
+            }} value={bulkEditField}>
+              <SelectTrigger id="bulk-field" className="col-span-3">
+                <SelectValue placeholder="Selecione um campo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {bulkEditableFields.map(field => (
+                  <SelectItem key={field.value} value={field.value}>{field.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {selectedBulkField && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="bulk-value" className="text-right">
+                Novo Valor
+              </Label>
+              <div className="col-span-3">
+                {selectedBulkField.type === 'text' && (
+                  <Input id="bulk-value" value={bulkEditValue} onChange={(e) => setBulkEditValue(e.target.value)} />
+                )}
+                {selectedBulkField.type === 'date' && (
+                  <DateInputPicker value={bulkEditValue} onChange={setBulkEditValue} />
+                )}
+                {selectedBulkField.type === 'select' && (
+                  <Select onValueChange={setBulkEditValue} value={bulkEditValue}>
+                    <SelectTrigger id="bulk-value">
+                      <SelectValue placeholder="Selecione um valor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedBulkField.options?.map(option => (
+                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>Cancelar</Button>
+          <Button onClick={handleBulkUpdate} disabled={!selectedBulkField}>Aplicar Alterações</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     </TooltipProvider>
   );
@@ -2064,3 +2238,4 @@ export default function DocumentosPage() {
 
 
     
+
