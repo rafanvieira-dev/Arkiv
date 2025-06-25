@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import type { AuditLog } from "@/types";
 import { initialUsers } from "@/lib/mock-data";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -171,7 +171,7 @@ export default function AuditoriaPage() {
                                     </TableRow>
                                 )}
                             </TableBody>
-                         <ScrollBar orientation="vertical" />
+                        </Table>
                     </ScrollArea>
                 </CardContent>
             </Card>
