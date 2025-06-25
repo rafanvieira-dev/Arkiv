@@ -48,7 +48,7 @@ const chartColors = [
 ];
 
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor' | 'categoria';
 
 
 export default function EstatisticasPage() {
@@ -65,6 +65,7 @@ export default function EstatisticasPage() {
   const [desarquivadosPorSetorData, setDesarquivadosPorSetorData] = React.useState<any[]>([]);
   const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
   const [transferenciasPorSetorData, setTransferenciasPorSetorData] = React.useState<any[]>([]);
+  const [categoriaData, setCategoriaData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
@@ -74,6 +75,7 @@ export default function EstatisticasPage() {
   const [emprestimoChartConfig, setEmprestimoChartConfig] = React.useState<ChartConfig>({});
   const [desarquivamentoChartConfig, setDesarquivamentoChartConfig] = React.useState<ChartConfig>({});
   const [transferenciaChartConfig, setTransferenciaChartConfig] = React.useState<ChartConfig>({});
+  const [categoriaChartConfig, setCategoriaChartConfig] = React.useState<ChartConfig>({});
 
 
   const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chartType: ChartType } | null>(null);
@@ -216,6 +218,27 @@ export default function EstatisticasPage() {
       setMeioData(meioChartData);
        setMeioChartConfig(
         meioChartData.reduce((acc, entry) => {
+            acc[entry.name] = { label: entry.name, color: entry.fill };
+            return acc;
+        }, {} as ChartConfig)
+      );
+
+      // Process "Documentos por Categoria"
+      const categoriaCounts = allDocs.reduce((acc, doc) => {
+        const categoria = doc.categoria || "Indefinida";
+        acc[categoria] = (acc[categoria] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const categoriaChartData = Object.entries(categoriaCounts).map(([name, value], index) => ({
+        name,
+        value,
+        percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
+        fill: chartColors[(index + 3) % chartColors.length],
+      }));
+      setCategoriaData(categoriaChartData);
+      setCategoriaChartConfig(
+        categoriaChartData.reduce((acc, entry) => {
             acc[entry.name] = { label: entry.name, color: entry.fill };
             return acc;
         }, {} as ChartConfig)
@@ -492,6 +515,24 @@ export default function EstatisticasPage() {
     </ChartContainer>
   );
 
+  const CategoriaChart = (
+    <ChartContainer config={categoriaChartConfig} className="mx-auto aspect-square h-full w-full">
+        <PieChart>
+             <ChartTooltip formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }}
+            content={<ChartTooltipContent hideLabel />} 
+          />
+            <Pie data={categoriaData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
+                {categoriaData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+        </PieChart>
+    </ChartContainer>
+  );
+
   const DestinacaoCaixaChart = (
     <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-full w-full">
         <PieChart>
@@ -597,7 +638,7 @@ export default function EstatisticasPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", 'status')}>
           <CardHeader>
             <CardTitle>Documentos por Status</CardTitle>
@@ -606,6 +647,32 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{StatusChart}</CardContent>
         </Card>
 
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Categoria", "Distribuição de documentos por categoria.", 'categoria')}>
+          <CardHeader>
+            <CardTitle>Documentos por Categoria</CardTitle>
+            <CardDescription>Distribuição de documentos por categoria.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">{CategoriaChart}</CardContent>
+        </Card>
+
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", 'meio')}>
+          <CardHeader>
+            <CardTitle>Documentos por Tipo de Meio</CardTitle>
+            <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">{MeioChart}</CardContent>
+        </Card>
+
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
+          <CardHeader>
+            <CardTitle>Documentos por Destinação Final</CardTitle>
+            <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", 'year')}>
           <CardHeader>
             <CardTitle>Documentos por Ano de Arquivamento</CardTitle>
@@ -630,22 +697,6 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{EliminadoPorAnoChart}</CardContent>
         </Card>
         
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", 'destinacao')}>
-          <CardHeader>
-            <CardTitle>Documentos por Destinação Final</CardTitle>
-            <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", 'meio')}>
-          <CardHeader>
-            <CardTitle>Documentos por Tipo de Meio</CardTitle>
-            <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">{MeioChart}</CardContent>
-        </Card>
-
         <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Destinação de Conteúdo", "Distribuição de caixas com base na destinação dos documentos.", 'destinacaoCaixa')}>
           <CardHeader>
             <CardTitle>Caixas por Destinação de Conteúdo</CardTitle>
@@ -654,7 +705,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[300px]">{DestinacaoCaixaChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", 'classification')}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-2" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", 'classification')}>
           <CardHeader>
             <CardTitle>Top 10 Classificações</CardTitle>
             <CardDescription>Classificações com o maior número de documentos.</CardDescription>
@@ -662,7 +713,7 @@ export default function EstatisticasPage() {
           <CardContent className="h-[350px]">{ClassificationChart}</CardContent>
         </Card>
 
-        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", 'tipoDocumento')}>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg lg:col-span-2" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", 'tipoDocumento')}>
           <CardHeader>
             <CardTitle>Top 10 Espécies Documentais</CardTitle>
             <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
@@ -715,6 +766,7 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'anoEliminacao' && AnoEliminacaoChart}
                     {modalContent?.chartType === 'destinacao' && DestinacaoChart}
                     {modalContent?.chartType === 'meio' && MeioChart}
+                    {modalContent?.chartType === 'categoria' && CategoriaChart}
                     {modalContent?.chartType === 'destinacaoCaixa' && DestinacaoCaixaChart}
                     {modalContent?.chartType === 'classification' && ClassificationChart}
                     {modalContent?.chartType === 'tipoDocumento' && TipoDocumentoChart}
