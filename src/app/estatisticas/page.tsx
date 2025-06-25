@@ -9,6 +9,19 @@ import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTool
 import type { Documento, Classificacao, Caixa } from "@/types";
 import { getYear, parseISO, isValid } from "date-fns";
 import { placeholderDocumentos, initialClassificacoes, initialCaixas } from "@/lib/mock-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { toPng } from 'html-to-image';
+import { useToast } from "@/hooks/use-toast";
+
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
@@ -62,6 +75,7 @@ const CustomTooltipContent = ({ active, payload, label }: any) => {
   };
 
 export default function EstatisticasPage() {
+  const { toast } = useToast();
   const [statusData, setStatusData] = React.useState<ChartData[]>([]);
   const [yearData, setYearData] = React.useState<ChartData[]>([]);
   const [anoEliminacaoData, setAnoEliminacaoData] = React.useState<ChartData[]>([]);
@@ -76,6 +90,32 @@ export default function EstatisticasPage() {
   const [destinacaoChartConfig, setDestinacaoChartConfig] = React.useState<ChartConfig>({});
   const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
+
+  const [modalContent, setModalContent] = React.useState<{ title: string; description: string; chart: React.ReactNode } | null>(null);
+  const chartRef = React.useRef<HTMLDivElement>(null);
+
+  const handleDownload = React.useCallback(() => {
+    if (chartRef.current === null) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Referência do gráfico não encontrada.' });
+        return;
+    }
+    toPng(chartRef.current, { cacheBust: true, pixelRatio: 2 })
+        .then((dataUrl) => {
+            const link = document.createElement('a');
+            link.download = `${modalContent?.title.replace(/ /g, '_').toLowerCase() || 'chart'}.png`;
+            link.href = dataUrl;
+            link.click();
+        })
+        .catch((err) => {
+            console.error('oops, something went wrong!', err);
+            toast({ variant: 'destructive', title: 'Erro ao baixar o gráfico', description: 'Por favor, tente novamente.' });
+        });
+  }, [modalContent?.title, toast]);
+
+  const handleChartClick = (title: string, description: string, chart: React.ReactNode) => {
+    setModalContent({ title, description, chart });
+  };
+
 
   React.useEffect(() => {
     try {
@@ -283,231 +323,196 @@ export default function EstatisticasPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   if (isLoading) {
     return <div className="container mx-auto py-2"><PageHeader title="Carregando Estatísticas..." /></div>;
   }
+
+  const StatusChart = (
+    <ChartContainer config={statusChartConfig} className="mx-auto aspect-square h-full w-full">
+      <PieChart>
+        <ChartTooltip content={<CustomTooltipContent />} />
+        <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+            {statusData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+        </Pie>
+        <ChartLegend content={<ChartLegendContent />} />
+      </PieChart>
+    </ChartContainer>
+  );
+
+  const YearChart = (
+    <ChartContainer config={{}} className="h-full w-full">
+      <BarChart data={yearData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis />
+        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+        <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={4} name="Documentos"/>
+      </BarChart>
+    </ChartContainer>
+  );
+  
+  const AnoEliminacaoChart = (
+     <ChartContainer config={{}} className="h-full w-full">
+        <BarChart data={anoEliminacaoData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+            <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} name="Documentos"/>
+        </BarChart>
+    </ChartContainer>
+  );
+
+  const DestinacaoChart = (
+    <ChartContainer config={destinacaoChartConfig} className="mx-auto aspect-square h-full w-full">
+        <PieChart>
+            <ChartTooltip content={<CustomTooltipContent />} />
+            <Pie data={destinacaoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+                {destinacaoData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent />} />
+        </PieChart>
+    </ChartContainer>
+  );
+
+  const MeioChart = (
+    <ChartContainer config={meioChartConfig} className="mx-auto aspect-square h-full w-full">
+        <PieChart>
+            <ChartTooltip content={<CustomTooltipContent />} />
+            <Pie data={meioData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+                {meioData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent />} />
+        </PieChart>
+    </ChartContainer>
+  );
+
+  const DestinacaoCaixaChart = (
+    <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-full w-full">
+        <PieChart>
+            <ChartTooltip content={<CustomTooltipContent />} />
+            <Pie data={destinacaoCaixaData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} labelLine={false} label={({ percentage }) => `${percentage?.toFixed(1)}%`}>
+                {destinacaoCaixaData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent />} />
+        </PieChart>
+    </ChartContainer>
+  );
+
+  const ClassificationChart = (
+    <ChartContainer config={{}} className="h-full w-full">
+        <BarChart data={classificationData} margin={{ top: 20, right: 20, left: 0, bottom: 100 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-60} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
+            <YAxis />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+            <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} name="Documentos" />
+        </BarChart>
+    </ChartContainer>
+  );
+  
+  const TipoDocumentoChart = (
+    <ChartContainer config={{}} className="h-full w-full">
+        <BarChart data={tipoDocumentoData} margin={{ top: 20, right: 20, left: 0, bottom: 100 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-60} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
+            <YAxis />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+            <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={4} name="Documentos" />
+        </BarChart>
+    </ChartContainer>
+  );
   
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Estatísticas do Acervo" description="Visualização de dados e métricas sobre os documentos arquivados." />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Status", "Distribuição dos documentos com base no status atual.", StatusChart)}>
           <CardHeader>
             <CardTitle>Documentos por Status</CardTitle>
             <CardDescription>Distribuição dos documentos com base no status atual.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={statusChartConfig} className="mx-auto aspect-square h-[300px]">
-              <PieChart>
-                <ChartTooltip content={<CustomTooltipContent />} />
-                <Pie 
-                    data={statusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
-                >
-                    {statusData.map((entry) => (
-                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                 <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{StatusChart}</CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Arquivamento", "Quantidade de documentos arquivados por ano.", YearChart)}>
           <CardHeader>
             <CardTitle>Documentos por Ano de Arquivamento</CardTitle>
             <CardDescription>Quantidade de documentos arquivados por ano.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[300px] w-full">
-              <BarChart data={yearData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis />
-                <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
-                <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={4} name="Documentos"/>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{YearChart}</CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Ano de Eliminação Previsto", "Quantidade de documentos com previsão de eliminação por ano.", AnoEliminacaoChart)}>
           <CardHeader>
             <CardTitle>Documentos por Ano de Eliminação Previsto</CardTitle>
             <CardDescription>Quantidade de documentos com previsão de eliminação por ano.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[300px] w-full">
-              <BarChart data={anoEliminacaoData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis />
-                <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
-                <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} name="Documentos"/>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{AnoEliminacaoChart}</CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Destinação Final", "Distribuição conforme a destinação final prevista.", DestinacaoChart)}>
           <CardHeader>
             <CardTitle>Documentos por Destinação Final</CardTitle>
             <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <ChartContainer config={destinacaoChartConfig} className="mx-auto aspect-square h-[300px]">
-              <PieChart>
-                <ChartTooltip content={<CustomTooltipContent />} />
-                <Pie 
-                    data={destinacaoData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
-                >
-                   {destinacaoData.map((entry) => (
-                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{DestinacaoChart}</CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Documentos por Tipo de Meio", "Distribuição entre meios físico, digital e híbrido.", MeioChart)}>
           <CardHeader>
             <CardTitle>Documentos por Tipo de Meio</CardTitle>
             <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={meioChartConfig} className="mx-auto aspect-square h-[300px]">
-              <PieChart>
-                <ChartTooltip content={<CustomTooltipContent />} />
-                <Pie
-                    data={meioData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
-                >
-                     {meioData.map((entry) => (
-                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                 <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{MeioChart}</CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Destinação de Conteúdo", "Distribuição de caixas com base na destinação dos documentos.", DestinacaoCaixaChart)}>
           <CardHeader>
             <CardTitle>Caixas por Destinação de Conteúdo</CardTitle>
             <CardDescription>Distribuição de caixas com base na destinação dos documentos.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <ChartContainer config={destinacaoCaixaChartConfig} className="mx-auto aspect-square h-[300px]">
-              <PieChart>
-                <ChartTooltip content={<CustomTooltipContent />} />
-                <Pie 
-                    data={destinacaoCaixaData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
-                >
-                   {destinacaoCaixaData.map((entry) => (
-                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[300px]">{DestinacaoCaixaChart}</CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Classificações", "Classificações com o maior número de documentos.", ClassificationChart)}>
           <CardHeader>
             <CardTitle>Top 10 Classificações</CardTitle>
             <CardDescription>Classificações com o maior número de documentos.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[350px] w-full">
-              <BarChart data={classificationData} margin={{ top: 5, right: 20, left: 0, bottom: 100 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickMargin={8} 
-                  angle={-60}
-                  textAnchor="end"
-                  interval={0}
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis />
-                <Tooltip
-                  cursor={{ fill: 'hsl(var(--muted))' }}
-                  content={<CustomTooltipContent />}
-                />
-                <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} name="Documentos" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[350px]">{ClassificationChart}</CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Top 10 Espécies Documentais", "Espécies de documento com a maior quantidade no acervo.", TipoDocumentoChart)}>
           <CardHeader>
             <CardTitle>Top 10 Espécies Documentais</CardTitle>
             <CardDescription>Espécies de documento com a maior quantidade no acervo.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <ChartContainer config={{}} className="h-[350px] w-full">
-              <BarChart data={tipoDocumentoData} margin={{ top: 5, right: 20, left: 0, bottom: 100 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickMargin={8} 
-                  angle={-60}
-                  textAnchor="end"
-                  interval={0}
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis />
-                <Tooltip
-                  cursor={{ fill: 'hsl(var(--muted))' }}
-                  content={<CustomTooltipContent />}
-                />
-                <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={4} name="Documentos" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
+          <CardContent className="h-[350px]">{TipoDocumentoChart}</CardContent>
         </Card>
-
       </div>
+
+       <Dialog open={!!modalContent} onOpenChange={(isOpen) => !isOpen && setModalContent(null)}>
+            <DialogContent className="max-w-4xl h-[85vh]">
+                <DialogHeader>
+                    <DialogTitle>{modalContent?.title}</DialogTitle>
+                    <DialogDescription>{modalContent?.description}</DialogDescription>
+                </DialogHeader>
+                <div className="h-[calc(100%-120px)]" ref={chartRef}>
+                    {modalContent?.chart}
+                </div>
+                <DialogFooter className="sm:justify-end">
+                     <Button type="button" variant="outline" onClick={() => setModalContent(null)}>Fechar</Button>
+                    <Button type="button" onClick={handleDownload}>
+                        <Download className="mr-2 h-4 w-4" /> Baixar Gráfico
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }
