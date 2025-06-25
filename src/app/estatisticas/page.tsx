@@ -70,6 +70,10 @@ export default function EstatisticasPage() {
   const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
+  const [statusChartConfig, setStatusChartConfig] = React.useState<ChartConfig>({});
+  const [destinacaoChartConfig, setDestinacaoChartConfig] = React.useState<ChartConfig>({});
+  const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
+
   React.useEffect(() => {
     try {
       const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
@@ -92,7 +96,13 @@ export default function EstatisticasPage() {
         fill: chartColors[index % chartColors.length],
       }));
       setStatusData(statusChartData);
-      
+      setStatusChartConfig(
+        statusChartData.reduce((acc, entry) => {
+            acc[entry.name] = { label: entry.name, color: entry.fill };
+            return acc;
+        }, {} as ChartConfig)
+      );
+
       // Process year data
       const yearCounts = allDocs.reduce((acc, doc) => {
         if (doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
@@ -145,6 +155,12 @@ export default function EstatisticasPage() {
         fill: chartColors[index % chartColors.length],
       }));
       setDestinacaoData(destinacaoChartData);
+      setDestinacaoChartConfig(
+        destinacaoChartData.reduce((acc, entry) => {
+            acc[entry.name] = { label: entry.name, color: entry.fill };
+            return acc;
+        }, {} as ChartConfig)
+      );
 
       // Process tipo de meio data
       const meioCounts = allDocs.reduce((acc, doc) => {
@@ -160,6 +176,12 @@ export default function EstatisticasPage() {
         fill: chartColors[index % chartColors.length],
       }));
       setMeioData(meioChartData);
+       setMeioChartConfig(
+        meioChartData.reduce((acc, entry) => {
+            acc[entry.name] = { label: entry.name, color: entry.fill };
+            return acc;
+        }, {} as ChartConfig)
+      );
       
       // Process classification data
       const classificationCounts = allDocs.reduce((acc, doc) => {
@@ -215,11 +237,6 @@ export default function EstatisticasPage() {
     }
   }, []);
 
-  const pieChartConfig = {
-    value: { label: "Documentos" },
-  } as ChartConfig;
-
-
   if (isLoading) {
     return <div className="container mx-auto py-2"><PageHeader title="Carregando Estatísticas..." /></div>;
   }
@@ -235,7 +252,7 @@ export default function EstatisticasPage() {
             <CardDescription>Distribuição dos documentos com base no status atual.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
+            <ChartContainer config={statusChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
                 <ChartTooltip content={<CustomTooltipContent />} />
                 <Pie 
@@ -248,8 +265,8 @@ export default function EstatisticasPage() {
                     labelLine={false}
                     label={({ percentage }) => `${percentage?.toFixed(1)}%`}
                 >
-                    {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                    {statusData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                     ))}
                 </Pie>
                  <ChartLegend content={<ChartLegendContent />} />
@@ -300,7 +317,7 @@ export default function EstatisticasPage() {
             <CardDescription>Distribuição conforme a destinação final prevista.</CardDescription>
           </CardHeader>
           <CardContent>
-             <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
+             <ChartContainer config={destinacaoChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
                 <ChartTooltip content={<CustomTooltipContent />} />
                 <Pie 
@@ -314,8 +331,8 @@ export default function EstatisticasPage() {
                     labelLine={false}
                     label={({ percentage }) => `${percentage?.toFixed(1)}%`}
                 >
-                   {destinacaoData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                   {destinacaoData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                     ))}
                 </Pie>
                 <ChartLegend content={<ChartLegendContent />} />
@@ -330,7 +347,7 @@ export default function EstatisticasPage() {
             <CardDescription>Distribuição entre meios físico, digital e híbrido.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
+            <ChartContainer config={meioChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
                 <ChartTooltip content={<CustomTooltipContent />} />
                 <Pie
@@ -343,8 +360,8 @@ export default function EstatisticasPage() {
                     labelLine={false}
                     label={({ percentage }) => `${percentage?.toFixed(1)}%`}
                 >
-                     {meioData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                     {meioData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                     ))}
                 </Pie>
                  <ChartLegend content={<ChartLegendContent />} />
