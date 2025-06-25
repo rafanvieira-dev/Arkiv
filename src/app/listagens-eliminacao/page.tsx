@@ -4,11 +4,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, Documento } from "@/types";
-import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -48,6 +48,8 @@ import { Badge } from "@/components/ui/badge";
 import { placeholderDocumentos, placeholderClassificacoesSimulado, simulatedListagensData } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { parseISO, isAfter, isBefore } from "date-fns";
 
 
 type SimulatedDocumentForDialog = Pick<
@@ -78,6 +80,18 @@ const initialFormState: Partial<ListagemEliminacao> = {
   dataProducaoTermoEliminacao: undefined,
   observacoes: "",
 };
+
+const initialFiltersState = {
+  numeroListagem: "",
+  status: "",
+  numeroEditalCiencia: "",
+  numeroTermoEliminacao: "",
+  dataProducaoDe: undefined as Date | undefined,
+  dataProducaoAte: undefined as Date | undefined,
+  dataPublicacaoDe: undefined as Date | undefined,
+  dataPublicacaoAte: undefined as Date | undefined,
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
 type DialogTableSortConfig = { id: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string; direction: 'asc' | 'desc'; };
 type DialogTableFilters = { anoEliminacaoPrevisto: string; };
@@ -201,6 +215,9 @@ export default function ListagensEliminacaoPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'numeroEditalCiencia', label: 'Nº Edital Ciência', type: 'text' },
@@ -455,6 +472,24 @@ export default function ListagensEliminacaoPage() {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value }));
   };
+  
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+  
+  const handleFilterDateChange = (name: keyof typeof initialFiltersState) => (date?: Date) => {
+    setFilters(prev => ({...prev, [name]: date}));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
+
 
   const handleDateChange = (id: keyof ListagemEliminacao) => (date?: Date) => {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
@@ -652,9 +687,33 @@ export default function ListagensEliminacaoPage() {
   };
 
   React.useEffect(() => {
-    let sortedListagens = [...listagens];
+    const getStatus = (item: ListagemEliminacao) => {
+        if (item.dataProducaoTermoEliminacao) return "Efetivada";
+        if (item.dataPublicacaoEdital) return "Edital Publicado";
+        return "Tramitando";
+    };
+
+    let itemsToDisplay = listagens.filter(item => {
+      if (filters.numeroListagem && !item.numeroListagem.toLowerCase().includes(filters.numeroListagem.toLowerCase())) return false;
+      if (filters.numeroEditalCiencia && !item.numeroEditalCiencia?.toLowerCase().includes(filters.numeroEditalCiencia.toLowerCase())) return false;
+      if (filters.numeroTermoEliminacao && !item.numeroTermoEliminacao?.toLowerCase().includes(filters.numeroTermoEliminacao.toLowerCase())) return false;
+      if (filters.status && getStatus(item) !== filters.status) return false;
+
+      const dataProducaoDate = parseISO(item.dataProducaoListagem);
+      if (filters.dataProducaoDe && isBefore(dataProducaoDate, filters.dataProducaoDe)) return false;
+      if (filters.dataProducaoAte && isAfter(dataProducaoDate, filters.dataProducaoAte)) return false;
+
+      if (filters.dataPublicacaoDe || filters.dataPublicacaoAte) {
+        if (!item.dataPublicacaoEdital) return false;
+        const dataPublicacaoDate = parseISO(item.dataPublicacaoEdital);
+        if (filters.dataPublicacaoDe && isBefore(dataPublicacaoDate, filters.dataPublicacaoDe)) return false;
+        if (filters.dataPublicacaoAte && isAfter(dataPublicacaoDate, filters.dataPublicacaoAte)) return false;
+      }
+      return true;
+    });
+
     if (sorting.length > 0) {
-      sortedListagens.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sorting) {
           const valA = getSortableValue(a, sortConfig.id as string);
           const valB = getSortableValue(b, sortConfig.id as string);
@@ -669,8 +728,9 @@ export default function ListagensEliminacaoPage() {
         return 0;
       });
     }
-    setDisplayedListagens(sortedListagens);
-  }, [sorting, listagens]);
+    setDisplayedListagens(itemsToDisplay);
+  }, [filters, sorting, listagens]);
+
 
   const handleSort = (columnId: string) => {
     const columnConfig = ALL_COLUMNS_CONFIG_LISTAGENS.find(col => col.id === columnId);
@@ -837,6 +897,10 @@ export default function ListagensEliminacaoPage() {
 
   const numDisplayed = displayedListagens.length;
   const numSelected = selectedRowIds.length;
+  
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
 
   return (
     <TooltipProvider>
@@ -1012,10 +1076,79 @@ export default function ListagensEliminacaoPage() {
             </Dialog>
           </div>
         </PageHeader>
+        
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros das Listagens</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de listagens de eliminação aplicando um ou mais filtros abaixo.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+              <div className="space-y-2">
+                <Label htmlFor="filterNumeroListagem">Nº da Listagem</Label>
+                <Input id="filterNumeroListagem" name="numeroListagem" value={filters.numeroListagem} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterStatus">Status</Label>
+                <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                  <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                    <SelectItem value="Tramitando">Tramitando</SelectItem>
+                    <SelectItem value="Edital Publicado">Edital Publicado</SelectItem>
+                    <SelectItem value="Efetivada">Efetivada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterNumeroEditalCiencia">Nº do Edital</Label>
+                <Input id="filterNumeroEditalCiencia" name="numeroEditalCiencia" value={filters.numeroEditalCiencia} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterNumeroTermoEliminacao">Nº do Termo</Label>
+                <Input id="filterNumeroTermoEliminacao" name="numeroTermoEliminacao" value={filters.numeroTermoEliminacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDataProducaoDe">Data de Produção (De)</Label>
+                <DateInputPicker value={filters.dataProducaoDe} onChange={handleFilterDateChange('dataProducaoDe')} placeholder="dd/mm/aaaa" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDataProducaoAte">Data de Produção (Até)</Label>
+                <DateInputPicker value={filters.dataProducaoAte} onChange={handleFilterDateChange('dataProducaoAte')} placeholder="dd/mm/aaaa" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDataPublicacaoDe">Data de Publicação (De)</Label>
+                <DateInputPicker value={filters.dataPublicacaoDe} onChange={handleFilterDateChange('dataPublicacaoDe')} placeholder="dd/mm/aaaa" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterDataPublicacaoAte">Data de Publicação (Até)</Label>
+                <DateInputPicker value={filters.dataPublicacaoAte} onChange={handleFilterDateChange('dataPublicacaoAte')} placeholder="dd/mm/aaaa" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-        <Card className="mt-6">
+        <Card className="mt-0">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-headline text-primary">Listagens Cadastradas</CardTitle>
+            <div>
+              <CardTitle className="font-headline text-primary">Listagens Cadastradas</CardTitle>
+              <CardDescription className="mt-1 text-sm text-muted-foreground">
+                {filtersAreActive
+                  ? `Exibindo ${displayedListagens.length} de ${listagens.length} listagens com base nos filtros aplicados.`
+                  : `Exibindo todas as ${listagens.length} listagens cadastradas.`}
+              </CardDescription>
+            </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1211,3 +1344,4 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
