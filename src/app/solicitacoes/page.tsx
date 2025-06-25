@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import type { Solicitacao, Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ListFilter,
-  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet
+  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet, Printer
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ import {
   simulatedListagensData,
   type SimulatedDocumentForSolicitacaoDialog
 } from "@/lib/mock-data";
+import Link from "next/link";
 
 
 const initialFormStateSolicitacao: Partial<Solicitacao> = {
@@ -881,8 +882,8 @@ export default function SolicitacoesPage() {
                                       <TableCell className="py-1 px-2 sticky left-12 bg-card z-10 font-medium">{doc.numeroDocumento || "N/A"}</TableCell>
                                       <TableCell className="py-1 px-2">{doc.tipoDocumento || "N/A"}</TableCell>
                                       <TableCell className="py-1 px-2">
-                                        <span className="block max-w-xs truncate" title={doc.descricaoDocumento || ""}>
-                                          {doc.descricaoDocumento || "N/A"}
+                                        <span className="block max-w-xs truncate" title={doc.segredoJustica === 'Sim' ? '*** Segredo de Justiça ***' : doc.descricaoDocumento || ""}>
+                                           {doc.segredoJustica === 'Sim' ? <span className="text-destructive font-semibold">*** Segredo de Justiça ***</span> : (doc.descricaoDocumento || "N/A")}
                                         </span>
                                       </TableCell>
                                       <TableCell className="py-1 px-2">{doc.codigosCaixa || "N/A"}</TableCell>
@@ -1030,6 +1031,16 @@ export default function SolicitacoesPage() {
                     )}
                     <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
                        <div className="flex items-center justify-end">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link href={`/solicitacoes/print/${item.id}`} target="_blank">
+                              <Button variant="ghost" size="icon" aria-label="Imprimir Guia de Remessa">
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Imprimir Guia de Remessa</p></TooltipContent>
+                        </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" aria-label="Editar Solicitação" onClick={() => handleOpenDialog(item)} >

@@ -7,16 +7,18 @@ import { MainLayout } from './main-layout';
 import { useUserSession } from '@/hooks/use-user-session';
 
 // Routes that should NOT have the main layout
-const noLayoutRoutes = ['/login', '/transferencias/publica', '/solicitacoes/publica'];
+const noLayoutRoutes = ['/login', '/transferencias/publica', '/solicitacoes/publica', '/solicitacoes/print'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useUserSession();
 
+  const isNoLayoutRoute = noLayoutRoutes.some(route => pathname.startsWith(route));
+
   useEffect(() => {
     // Don't run authentication logic for public routes
-    if (noLayoutRoutes.includes(pathname)) {
+    if (isNoLayoutRoute) {
       return;
     }
     
@@ -24,10 +26,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!isLoading && !user) {
       router.push('/login');
     }
-  }, [isLoading, user, router, pathname]);
+  }, [isLoading, user, router, pathname, isNoLayoutRoute]);
 
   // If the current route is one of the public no-layout routes, just render the children.
-  if (noLayoutRoutes.includes(pathname)) {
+  if (isNoLayoutRoute) {
     return <>{children}</>;
   }
 

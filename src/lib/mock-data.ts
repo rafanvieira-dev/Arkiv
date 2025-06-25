@@ -315,7 +315,7 @@ export const placeholderSolicitacoesInitial: Solicitacao[] = [
 ];
 
 export type SimulatedDocumentForSolicitacaoDialog = Pick<Documento, 
-  'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa'
+  'id' | 'numeroDocumento' | 'tipoDocumento' | 'descricaoDocumento' | 'status' | 'codigosCaixa' | 'segredoJustica'
 >;
 
 export const allPermissions: { id: keyof Usuario['permissoes']; label: string; description: string }[] = [

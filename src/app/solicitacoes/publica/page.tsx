@@ -330,7 +330,11 @@ export default function PublicSolicitacaoPage() {
                               <TableCell><Checkbox checked={selectedDocIdsInDialog.includes(doc.id)} onCheckedChange={(checked) => setSelectedDocIdsInDialog(p => checked ? [...p, doc.id] : p.filter(id => id !== doc.id))} disabled={!selectable} /></TableCell>
                               <TableCell>{doc.numeroDocumento || "N/A"}</TableCell>
                               <TableCell>{doc.tipoDocumento || "N/A"}</TableCell>
-                              <TableCell><span className="block max-w-xs truncate" title={doc.descricaoDocumento}>{doc.descricaoDocumento || "N/A"}</span></TableCell>
+                              <TableCell>
+                                <span className="block max-w-xs truncate" title={doc.segredoJustica === 'Sim' ? '*** Segredo de Justiça ***' : doc.descricaoDocumento || ""}>
+                                  {doc.segredoJustica === 'Sim' ? <span className="text-destructive font-semibold">*** Segredo de Justiça ***</span> : (doc.descricaoDocumento || "N/A")}
+                                </span>
+                              </TableCell>
                               <TableCell>{doc.codigosCaixa || "N/A"}</TableCell>
                               <TableCell><Badge variant={doc.status !== 'Arquivado' ? 'destructive' : 'secondary'}>{doc.status}</Badge></TableCell>
                             </TableRow>
