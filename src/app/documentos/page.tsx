@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -74,7 +75,7 @@ import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
 
 
-const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
+const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
   status: "Arquivado",
   orgao: "TRF2",
   origem: "",
@@ -99,6 +100,7 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   dataBaixa: undefined,
   descricaoDocumento: "",
   partes: [],
+  tipoPlanoClassificacao: 'Administrativo',
   codigoClassificacaoArquivisticaInput: "",
   classificacaoArquivisticaId: "",
   assuntoClassificacaoDisplay: "",
@@ -197,7 +199,7 @@ export default function DocumentosPage() {
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<Partial<Documento> & { codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
+  const [formState, setFormState] = React.useState<Partial<Documento> & { tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
@@ -245,9 +247,11 @@ export default function DocumentosPage() {
       
       let assunto = "Não encontrado";
       let classId = doc.classificacaoArquivisticaId || "";
+      let tipoPlano: 'Administrativo' | 'Judicial' = 'Administrativo';
       const classCode = existingClassification ? existingClassification.codigo : "";
 
       if (existingClassification) {
+        tipoPlano = existingClassification.tipoPlanoClassificacao;
         if (existingClassification.status === 'Inativo') {
           assunto = "Código inválido. Um novo será criado ao salvar.";
           classId = ""; // Force creation of a new one on save
@@ -259,6 +263,7 @@ export default function DocumentosPage() {
       setFormState({
         ...initialFormState, 
         ...doc,
+        tipoPlanoClassificacao: tipoPlano,
         codigoClassificacaoArquivisticaInput: classCode,
         assuntoClassificacaoDisplay: assunto,
         classificacaoArquivisticaId: classId,
@@ -634,7 +639,7 @@ export default function DocumentosPage() {
     }
   };
 
-  const handleSelectChange = (id: keyof Partial<Documento>) => (value: string) => {
+  const handleSelectChange = (id: keyof Partial<Documento> | 'tipoPlanoClassificacao') => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
 
@@ -646,7 +651,7 @@ export default function DocumentosPage() {
     const codigoInput = formState.codigoClassificacaoArquivisticaInput?.trim();
     if (codigoInput) {
       const foundClassification = classificacoes.find(
-        c => c.codigo === codigoInput
+        c => c.codigo === codigoInput && c.tipoPlanoClassificacao === formState.tipoPlanoClassificacao
       );
       if (foundClassification) {
         if (foundClassification.status === 'Inativo') {
@@ -750,7 +755,7 @@ export default function DocumentosPage() {
     let resolvedClassificationId = formStateToSave.classificacaoArquivisticaId;
   
     if (codigoInput && !resolvedClassificationId) {
-      const existingClassif = classificacoes.find(c => c.codigo === codigoInput);
+      const existingClassif = classificacoes.find(c => c.codigo === codigoInput && c.tipoPlanoClassificacao === formState.tipoPlanoClassificacao);
       if (!existingClassif || existingClassif.status === 'Inativo') {
         const newClassification: Classificacao = {
           id: `CLA_AUTO_${Date.now()}`,
@@ -760,7 +765,7 @@ export default function DocumentosPage() {
           status: 'Pendente de Complemento',
           prazoGuardaFaseIntermediariaAnos: 0,
           destinacaoFinal: 'Eliminação',
-          tipoPlanoClassificacao: 'Administrativo',
+          tipoPlanoClassificacao: formState.tipoPlanoClassificacao || 'Administrativo',
           tipoPrazoFaseCorrente: 'Anos',
           prazoGuardaFaseCorrenteAnos: 0,
         };
@@ -1398,7 +1403,7 @@ export default function DocumentosPage() {
     { value: 'digitalizado', label: 'Digitalizado', type: 'select', options: ['Sim', 'Não'] },
     { value: 'segredoJustica', label: 'Segredo de Justiça', type: 'select', options: ['Sim', 'Não'] },
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
-    { value: 'classificacaoArquivisticaId', label: 'Classificação (por código)', type: 'text' },
+    { value: 'classificacaoArquivisticaId', label: 'Classificação (PLANO:CÓDIGO)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
     { value: 'processoOriginario', label: 'Processo Originário', type: 'text' },
     { value: 'numeroAntigo', label: 'Número Antigo', type: 'text' },
@@ -1423,17 +1428,29 @@ export default function DocumentosPage() {
     });
 
     if (bulkEditField === 'classificacaoArquivisticaId') {
-      const classificationCode = bulkEditValue;
-      const classification = classificacoes.find(c => c.codigo === classificationCode);
+        const [plan, code] = String(bulkEditValue).split(':').map(s => s.trim().toUpperCase());
+        const validPlans = ['ADMINISTRATIVO', 'JUDICIAL'];
 
-      if (!classification) {
-        toast({ title: "Erro", description: `Código de classificação "${classificationCode}" não encontrado.` });
-        return;
-      }
-      if (classification.status !== 'Ativo') {
-        toast({ title: "Erro", description: `A classificação "${classificationCode}" não está ativa.` });
-        return;
-      }
+        if (!plan || !code || !validPlans.includes(plan)) {
+            toast({
+                variant: "destructive",
+                title: "Formato Inválido",
+                description: `Formato de classificação inválido. Use PLANO:CÓDIGO (ex: ADM:020.1). Planos válidos: ADM, JUD.`,
+            });
+            return;
+        }
+
+        const tipoPlano = plan === 'ADM' ? 'Administrativo' : 'Judicial';
+        const classification = classificacoes.find(c => c.codigo === code && c.tipoPlanoClassificacao === tipoPlano);
+
+        if (!classification) {
+            toast({ title: "Erro", description: `Classificação "${bulkEditValue}" não encontrada.` });
+            return;
+        }
+        if (classification.status !== 'Ativo') {
+            toast({ title: "Erro", description: `A classificação "${bulkEditValue}" não está ativa.` });
+            return;
+        }
 
       setDocumentos(prevDocs =>
         prevDocs.map(doc => {
@@ -1864,6 +1881,16 @@ export default function DocumentosPage() {
                                   <AccordionContent>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
+                                              <Label htmlFor="tipoPlanoClassificacao">Tipo de Plano*</Label>
+                                              <Select onValueChange={handleSelectChange('tipoPlanoClassificacao')} value={formState.tipoPlanoClassificacao} disabled={isFormDisabled}>
+                                                <SelectTrigger id="tipoPlanoClassificacao"><SelectValue placeholder="Selecione o tipo de plano" /></SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="Administrativo">Administrativo</SelectItem>
+                                                  <SelectItem value="Judicial">Judicial</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
                                               <Label htmlFor="codigoClassificacaoArquivisticaInput">Código de Classificação Arquivística*</Label>
                                               <Input 
                                               id="codigoClassificacaoArquivisticaInput" 
@@ -2018,7 +2045,7 @@ export default function DocumentosPage() {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
                     <div className="space-y-2">
                       <Label htmlFor="filterStatus">Status</Label>
-                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                      <Select onValueChange={handleSelectChange('status')} value={filters.status}>
                         <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>

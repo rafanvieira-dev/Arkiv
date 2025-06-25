@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -370,6 +371,21 @@ export default function ClassificacaoPage() {
       destinacaoFinal: formState.destinacaoFinal as Classificacao['destinacaoFinal'],
       observacoes: formState.observacoes,
     };
+
+    const isDuplicate = classificacoes.some(c =>
+      c.codigo === classificacaoDataToSave.codigo &&
+      c.tipoPlanoClassificacao === classificacaoDataToSave.tipoPlanoClassificacao &&
+      c.id !== editingClassificacaoId
+    );
+
+    if (isDuplicate) {
+        toast({
+            variant: "destructive",
+            title: "Código duplicado",
+            description: `Já existe uma classificação com o código "${classificacaoDataToSave.codigo}" para o Tipo de Plano "${classificacaoDataToSave.tipoPlanoClassificacao}".`,
+        });
+        return;
+    }
 
     let updatedClassificacoes;
     if (isEditing && editingClassificacaoId) {
