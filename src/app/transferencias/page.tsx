@@ -3,11 +3,11 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Transferencia } from "@/types";
-import { Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare } from "lucide-react";
+import { Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -31,8 +31,22 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DateInputPicker } from "@/components/date-input-picker";
+import { isBefore, isAfter, parseISO } from "date-fns";
 
 const TRANSFERENCIAS_STORAGE_KEY = 'arquivocentral_transferencias';
+
+const initialFiltersState = {
+  id: "",
+  status: "",
+  nomeServidor: "",
+  matricula: "",
+  setorRemetente: "",
+  dataTransferenciaDe: undefined as Date | undefined,
+  dataTransferenciaAte: undefined as Date | undefined,
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
 type ColumnConfig = {
   id: keyof Transferencia | string;
@@ -59,6 +73,9 @@ export default function TransferenciasManagementPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const bulkEditableFields = [
     { value: 'status', label: 'Status', type: 'select', options: ['Pendente', 'Aprovada', 'Reprovada'] },
@@ -137,9 +154,25 @@ export default function TransferenciasManagementPage() {
   }, [ALL_COLUMNS_CONFIG]);
 
   React.useEffect(() => {
-    let sortedItems = [...transferencias];
+    let itemsToDisplay = transferencias.filter(item => {
+        if (filters.id && !item.id.toLowerCase().includes(filters.id.toLowerCase())) return false;
+        if (filters.status && item.status !== filters.status) return false;
+        if (filters.nomeServidor && !item.nomeServidor.toLowerCase().includes(filters.nomeServidor.toLowerCase())) return false;
+        if (filters.matricula && !item.matricula.toLowerCase().includes(filters.matricula.toLowerCase())) return false;
+        if (filters.setorRemetente && !item.setorRemetente.toLowerCase().includes(filters.setorRemetente.toLowerCase())) return false;
+        
+        if (filters.dataTransferenciaDe || filters.dataTransferenciaAte) {
+            if (!item.dataTransferencia) return false;
+            const itemDate = parseISO(item.dataTransferencia);
+            if (filters.dataTransferenciaDe && isBefore(itemDate, filters.dataTransferenciaDe)) return false;
+            if (filters.dataTransferenciaAte && isAfter(itemDate, filters.dataTransferenciaAte)) return false;
+        }
+
+        return true;
+    });
+
     if (sorting.length > 0) {
-      sortedItems.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sorting) {
           const valA = getSortableValue(a, sortConfig.id);
           const valB = getSortableValue(b, sortConfig.id);
@@ -157,8 +190,8 @@ export default function TransferenciasManagementPage() {
         return 0;
       });
     }
-    setDisplayedTransferencias(sortedItems);
-  }, [sorting, transferencias, getSortableValue]);
+    setDisplayedTransferencias(itemsToDisplay);
+  }, [filters, sorting, transferencias, getSortableValue]);
 
   const handleSort = (columnId: string) => {
     const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
@@ -372,10 +405,31 @@ export default function TransferenciasManagementPage() {
     };
     reader.readAsText(file);
   };
+  
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+  
+  const handleFilterDateChange = (name: keyof typeof initialFiltersState) => (date?: Date) => {
+    setFilters(prev => ({...prev, [name]: date}));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
 
 
   const numDisplayed = displayedTransferencias.length;
   const numSelected = selectedRowIds.length;
+  
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
 
   return (
     <TooltipProvider>
@@ -407,10 +461,75 @@ export default function TransferenciasManagementPage() {
                 </Button>
             </div>
         </PageHeader>
+        
+        <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+            <AccordionItem value="filters" className="border rounded-lg">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                        <FilterIcon className="h-5 w-5 text-primary" />
+                        <CardTitle className="font-headline text-primary text-xl">Filtros das Transferências</CardTitle>
+                    </div>
+                    {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardDescription className="px-6 pb-4 text-sm">
+                        Refine a lista de transferências aplicando um ou mais filtros abaixo.
+                    </CardDescription>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                        <div className="space-y-2">
+                            <Label htmlFor="filterId">Nº da Transferência</Label>
+                            <Input id="filterId" name="id" value={filters.id} onChange={handleFilterInputChange} placeholder="Contém..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterStatus">Status</Label>
+                            <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                            <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                                <SelectItem value="Pendente">Pendente</SelectItem>
+                                <SelectItem value="Aprovada">Aprovada</SelectItem>
+                                <SelectItem value="Reprovada">Reprovada</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterNomeServidor">Nome do Servidor</Label>
+                            <Input id="filterNomeServidor" name="nomeServidor" value={filters.nomeServidor} onChange={handleFilterInputChange} placeholder="Contém..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterMatricula">Matrícula</Label>
+                            <Input id="filterMatricula" name="matricula" value={filters.matricula} onChange={handleFilterInputChange} placeholder="Contém..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterSetorRemetente">Setor Remetente</Label>
+                            <Input id="filterSetorRemetente" name="setorRemetente" value={filters.setorRemetente} onChange={handleFilterInputChange} placeholder="Contém..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterDataTransferenciaDe">Data de Transferência (De)</Label>
+                            <DateInputPicker value={filters.dataTransferenciaDe} onChange={handleFilterDateChange('dataTransferenciaDe')} placeholder="dd/mm/aaaa" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="filterDataTransferenciaAte">Data de Transferência (Até)</Label>
+                            <DateInputPicker value={filters.dataTransferenciaAte} onChange={handleFilterDateChange('dataTransferenciaAte')} placeholder="dd/mm/aaaa" />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                        <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                    </CardFooter>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
 
-        <Card className="mt-6">
+        <Card className="mt-0">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-headline text-primary">Lista de Transferências</CardTitle>
+            <div>
+                <CardTitle className="font-headline text-primary">Lista de Transferências</CardTitle>
+                <CardDescription className="mt-1 text-sm text-muted-foreground">
+                {filtersAreActive
+                    ? `Exibindo ${displayedTransferencias.length} de ${transferencias.length} transferências com base nos filtros aplicados.`
+                    : `Exibindo todas as ${transferencias.length} transferências cadastradas.`}
+                </CardDescription>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -583,3 +702,4 @@ export default function TransferenciasManagementPage() {
     </TooltipProvider>
   );
 }
+
