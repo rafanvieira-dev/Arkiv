@@ -65,6 +65,7 @@ import { useUserSession } from "@/hooks/use-user-session";
 const initialFormStateCaixa: Partial<Caixa> & { anosArquivamento?: string; prazosGuarda?: string; anosEliminacao?: string; } = {
   codigoCaixa: "",
   descricao: "",
+  observacoes: "",
   proveniencia: "",
   tipo: "",
   status: "Aberta",
@@ -137,7 +138,8 @@ export default function CaixasPage() {
     { value: 'tipo', label: 'Tipo', type: 'select', options: tiposCaixa.sort((a,b) => a.localeCompare(b)) },
     { value: 'status', label: 'Status', type: 'select', options: ['Aberta', 'Fechada'] },
     { value: 'localizacao', label: 'Localização', type: 'text' },
-    { value: 'situacao', label: 'Situação', type: 'select', options: ['Completa', 'Incompleta'] }
+    { value: 'situacao', label: 'Situação', type: 'select', options: ['Completa', 'Incompleta'] },
+    { value: 'observacoes', label: 'Observações', type: 'text' }
   ];
   
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
@@ -202,6 +204,7 @@ export default function CaixasPage() {
         return anos.join(', ') || "N/A";
       }
     },
+    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   ], [documentos]);
 
   React.useEffect(() => {
@@ -483,7 +486,7 @@ export default function CaixasPage() {
         toast({variant: "destructive", description: "Nenhuma caixa selecionada para exportar."});
         return;
     }
-    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
+    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'observacoes', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(caixa => {
@@ -497,6 +500,7 @@ export default function CaixasPage() {
           status: caixa.status,
           localizacao: caixa.localizacao || '',
           situacao: caixa.situacao,
+          observacoes: caixa.observacoes || '',
           anosArquivamento: derived.anos,
           prazosGuarda: derived.prazos,
           anosEliminacao: derived.eliminacao,
@@ -527,7 +531,7 @@ export default function CaixasPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao'];
+    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'observacoes'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -558,11 +562,9 @@ export default function CaixasPage() {
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
             const headers = parseCsvRow(headerRow);
-            const expectedHeaders = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao'];
             
-            const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
-            if (!hasAllHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Por favor, utilize o modelo fornecido." });
+            if (!headers.includes('codigoCaixa')) {
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. A coluna 'codigoCaixa' é obrigatória." });
                  return;
             }
 
@@ -583,6 +585,7 @@ export default function CaixasPage() {
                     status: (newCaixaData.status as Caixa['status']) || 'Aberta',
                     localizacao: newCaixaData.localizacao,
                     situacao: (newCaixaData.situacao as Caixa['situacao']) || 'Incompleta',
+                    observacoes: newCaixaData.observacoes || '',
                     documentoIds: []
                 };
                 newCaixasFromCsv.push(newCaixa);
@@ -732,6 +735,10 @@ export default function CaixasPage() {
                         <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="descricao">Descrição</Label>
                           <Textarea id="descricao" placeholder="Detalhes adicionais sobre a caixa" value={formStateCaixa.descricao || ""} onChange={handleFormInputChange} />
+                        </div>
+                         <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="observacoes">Observações</Label>
+                          <Textarea id="observacoes" placeholder="Outras informações relevantes sobre a caixa" value={formStateCaixa.observacoes || ""} onChange={handleFormInputChange} />
                         </div>
                         <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="proveniencia">Proveniência</Label>

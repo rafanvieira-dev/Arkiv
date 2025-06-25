@@ -133,6 +133,7 @@ export interface Caixa {
   localizacao?: string;
   situacao: 'Completa' | 'Incompleta';
   documentoIds?: string[];
+  observacoes?: string;
 }
 
 export interface Usuario {
