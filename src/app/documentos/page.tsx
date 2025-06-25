@@ -1362,15 +1362,15 @@ export default function DocumentosPage() {
 
   if (isFilteredByReport && reportContext) {
     pageTitle = reportContext;
-    pageDescription = `Documentos filtrados a partir do Relatório de Previsão de Eliminação.`;
+    pageDescription = `Exibindo ${numDisp} documento(s) filtrado(s) a partir do Relatório de Previsão de Eliminação.`;
   } else if (isFilteredByListagem) {
     pageTitle = numeroListagemFromQuery
       ? `Documentos da Listagem de Eliminação nº ${numeroListagemFromQuery}`
       : "Documentos da Listagem de Eliminação";
-    pageDescription = "Documentos incluídos na listagem de eliminação selecionada.";
+    pageDescription = `Exibindo ${numDisp} documento(s) incluído(s) na listagem de eliminação selecionada.`;
   } else if (codigoCaixaFromUrl) {
     pageTitle = `Documentos na Caixa: ${codigoCaixaFromUrl}`;
-    pageDescription = `Documentos pertencentes à caixa ${codigoCaixaFromUrl}.`;
+    pageDescription = `Exibindo ${numDisp} documento(s) pertencente(s) à caixa ${codigoCaixaFromUrl}.`;
   }
 
 
@@ -2238,4 +2238,5 @@ export default function DocumentosPage() {
 
 
     
+
 
