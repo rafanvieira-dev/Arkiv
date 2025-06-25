@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialUsers } from '@/lib/mock-data';
 import Link from "next/link";
 import { logAction } from "@/lib/audit";
+import { Logo } from "@/components/icons/logo";
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
@@ -96,8 +97,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-card rounded-lg shadow-lg p-8 space-y-6">
-          <div className="text-left">
-              <h1 className="text-xl font-semibold text-foreground">Acesso ao Sistema de Gestão Arquivística</h1>
+          <div className="flex flex-col items-center justify-center text-center space-y-2">
+              <Logo className="h-12 w-12 text-primary" />
+              <h1 className="text-2xl font-bold font-headline text-primary">ARKIV</h1>
+              <p className="text-sm text-muted-foreground">Sistema de Gestão Arquivística</p>
           </div>
           
           <form onSubmit={handleLogin} className="space-y-4">
