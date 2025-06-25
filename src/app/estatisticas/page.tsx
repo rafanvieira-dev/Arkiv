@@ -48,7 +48,7 @@ const chartColors = [
 ];
 
 
-type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'condicaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor' | 'categoria';
+type ChartType = 'status' | 'year' | 'anoEliminacao' | 'destinacao' | 'meio' | 'destinacaoCaixa' | 'condicaoCaixa' | 'situacaoCaixa' | 'classification' | 'tipoDocumento' | 'emprestimoPorSetor' | 'eliminadoPorAno' | 'desarquivamentoPorSetor' | 'transferenciaPorSetor' | 'categoria';
 
 
 export default function EstatisticasPage() {
@@ -62,6 +62,7 @@ export default function EstatisticasPage() {
   const [tipoDocumentoData, setTipoDocumentoData] = React.useState<ChartData[]>([]);
   const [destinacaoCaixaData, setDestinacaoCaixaData] = React.useState<ChartData[]>([]);
   const [condicaoCaixaData, setCondicaoCaixaData] = React.useState<ChartData[]>([]);
+  const [situacaoCaixaData, setSituacaoCaixaData] = React.useState<ChartData[]>([]);
   const [emprestimosPorSetorData, setEmprestimosPorSetorData] = React.useState<any[]>([]);
   const [desarquivadosPorSetorData, setDesarquivadosPorSetorData] = React.useState<any[]>([]);
   const [eliminadoPorAnoData, setEliminadoPorAnoData] = React.useState<ChartData[]>([]);
@@ -74,6 +75,7 @@ export default function EstatisticasPage() {
   const [meioChartConfig, setMeioChartConfig] = React.useState<ChartConfig>({});
   const [destinacaoCaixaChartConfig, setDestinacaoCaixaChartConfig] = React.useState<ChartConfig>({});
   const [condicaoCaixaChartConfig, setCondicaoCaixaChartConfig] = React.useState<ChartConfig>({});
+  const [situacaoCaixaChartConfig, setSituacaoCaixaChartConfig] = React.useState<ChartConfig>({});
   const [emprestimoChartConfig, setEmprestimoChartConfig] = React.useState<ChartConfig>({});
   const [desarquivamentoChartConfig, setDesarquivamentoChartConfig] = React.useState<ChartConfig>({});
   const [transferenciaChartConfig, setTransferenciaChartConfig] = React.useState<ChartConfig>({});
@@ -304,6 +306,27 @@ export default function EstatisticasPage() {
       setCondicaoCaixaData(condicaoCaixaChartData);
       setCondicaoCaixaChartConfig(
           condicaoCaixaChartData.reduce((acc, entry) => {
+              acc[entry.name] = { label: entry.name, color: entry.fill };
+              return acc;
+          }, {} as ChartConfig)
+      );
+
+      // Process caixas por situação
+      const situacaoCaixaCounts = allCaixas.reduce((acc, caixa) => {
+          const situacao = caixa.situacao || "Indefinida";
+          acc[situacao] = (acc[situacao] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+
+      const situacaoCaixaChartData = Object.entries(situacaoCaixaCounts).map(([name, value], index) => ({
+          name,
+          value,
+          percentage: allCaixas.length > 0 ? (value / allCaixas.length) * 100 : 0,
+          fill: chartColors[(index + 2) % chartColors.length],
+      }));
+      setSituacaoCaixaData(situacaoCaixaChartData);
+      setSituacaoCaixaChartConfig(
+          situacaoCaixaChartData.reduce((acc, entry) => {
               acc[entry.name] = { label: entry.name, color: entry.fill };
               return acc;
           }, {} as ChartConfig)
@@ -591,6 +614,24 @@ export default function EstatisticasPage() {
         </PieChart>
     </ChartContainer>
   );
+  
+  const SituacaoCaixaChart = (
+    <ChartContainer config={situacaoCaixaChartConfig} className="mx-auto aspect-square h-full w-full">
+        <PieChart>
+            <ChartTooltip formatter={(value, name, props) => {
+              const { payload } = props;
+              const percentage = payload.percentage?.toFixed(1);
+              return `${value} (${percentage}%)`;
+            }}
+            content={<ChartTooltipContent hideLabel />}
+          />
+            <Pie data={situacaoCaixaData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} labelLine={false} label={({ value, percentage }) => `${value} (${percentage?.toFixed(1)}%)`}>
+                {situacaoCaixaData.map((entry) => (<Cell key={`cell-${entry.name}`} fill={entry.fill} />))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+        </PieChart>
+    </ChartContainer>
+  );
 
   const ClassificationChart = (
     <ChartContainer config={{value: {label: "Documentos", color: "hsl(var(--chart-3))"}}} className="h-full w-full">
@@ -715,13 +756,20 @@ export default function EstatisticasPage() {
 
       <div className="mt-6">
         <h2 className="text-2xl font-headline font-semibold text-primary mb-4">Estatísticas das Caixas</h2>
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
             <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Condição", "Distribuição das caixas por condição (ocupada ou vazia).", 'condicaoCaixa')}>
                 <CardHeader>
                     <CardTitle>Caixas por Condição</CardTitle>
                     <CardDescription>Distribuição das caixas por condição (ocupada ou vazia).</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">{CondicaoCaixaChart}</CardContent>
+            </Card>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Situação", "Distribuição das caixas por situação (completa ou incompleta).", 'situacaoCaixa')}>
+                <CardHeader>
+                    <CardTitle>Caixas por Situação</CardTitle>
+                    <CardDescription>Distribuição das caixas por situação (completa ou incompleta).</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">{SituacaoCaixaChart}</CardContent>
             </Card>
             <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => handleChartClick("Caixas por Destinação de Conteúdo", "Distribuição de caixas com base na destinação dos documentos.", 'destinacaoCaixa')}>
               <CardHeader>
@@ -824,6 +872,7 @@ export default function EstatisticasPage() {
                     {modalContent?.chartType === 'categoria' && CategoriaChart}
                     {modalContent?.chartType === 'destinacaoCaixa' && DestinacaoCaixaChart}
                     {modalContent?.chartType === 'condicaoCaixa' && CondicaoCaixaChart}
+                    {modalContent?.chartType === 'situacaoCaixa' && SituacaoCaixaChart}
                     {modalContent?.chartType === 'classification' && ClassificationChart}
                     {modalContent?.chartType === 'tipoDocumento' && TipoDocumentoChart}
                     {modalContent?.chartType === 'emprestimoPorSetor' && EmprestimoPorSetorChart}
