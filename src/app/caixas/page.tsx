@@ -162,18 +162,17 @@ export default function CaixasPage() {
         </Link>
       )
     },
-    { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
-    { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-    { id: 'proveniencia', header: 'Proveniência', accessorKey: 'proveniencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-    { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
-    { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-    { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
     { id: 'condicao', header: 'Condição', accessorKey: 'condicao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Ocupada' ? 'default' : 'outline'}>{value}</Badge> },
+    { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Fechada' ? 'default' : 'secondary'}>{value}</Badge> },
+    { id: 'situacao', header: 'Situação', accessorKey: 'situacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Completa' ? 'secondary' : 'outline'}>{value}</Badge> },
+    { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
+    { id: 'proveniencia', header: 'Proveniência', accessorKey: 'proveniencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
       id: 'anosArquivamento',
       header: 'Ano(s) Arquivamento',
       accessorKey: 'anosArquivamento', // Dummy accessor
-      defaultVisible: false,
+      defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -186,7 +185,7 @@ export default function CaixasPage() {
       id: 'prazosGuarda',
       header: 'Prazo(s) Guarda',
       accessorKey: 'prazosGuarda',
-      defaultVisible: false,
+      defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -199,7 +198,7 @@ export default function CaixasPage() {
       id: 'anosEliminacao',
       header: 'Ano(s) Eliminação',
       accessorKey: 'anosEliminacao',
-      defaultVisible: false,
+      defaultVisible: true,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -208,7 +207,8 @@ export default function CaixasPage() {
         return anos.join(', ') || "N/A";
       }
     },
-    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   ], [documentos]);
 
   React.useEffect(() => {
