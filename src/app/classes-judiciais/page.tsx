@@ -135,6 +135,8 @@ export default function ClassesJudiciaisPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
@@ -225,6 +227,20 @@ export default function ClassesJudiciaisPage() {
     toast({ title: "Sucesso", description: "Classe Judicial excluída." });
   };
   
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_CLASSES_JUDICIAIS', {
+      count: selectedRowIds.length,
+      classeIds: selectedRowIds,
+    });
+    setClassesJudiciais(prev => prev.filter(c => !selectedRowIds.includes(c.id)));
+    toast({
+      title: "Exclusão em Bloco Concluída",
+      description: `${selectedRowIds.length} classe(s) judicial(is) foram removidas com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
+  };
+
     const handleBulkUpdate = () => {
     if (!bulkEditField || (bulkEditValue === '' || bulkEditValue === undefined)) {
       toast({
@@ -507,6 +523,10 @@ export default function ClassesJudiciaisPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Cadastro de Classes Judiciais" description="Gerencie os códigos de classe judicial, prazos e destinações.">
         <div className="flex flex-wrap items-center gap-2">
+            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedRowIds.length})
+            </Button>
             <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
@@ -877,6 +897,21 @@ export default function ClassesJudiciaisPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} classe(s) judicial(is) selecionada(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </div>
     </TooltipProvider>
   );

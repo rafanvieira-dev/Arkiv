@@ -25,6 +25,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -166,6 +177,8 @@ export default function SolicitacoesPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
@@ -651,6 +664,20 @@ export default function SolicitacoesPage() {
         description: "A solicitação foi removida com sucesso.",
     });
   };
+  
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_SOLICITACOES', {
+      count: selectedRowIds.length,
+      solicitacaoIds: selectedRowIds,
+    });
+    setSolicitacoes(prev => prev.filter(s => !selectedRowIds.includes(s.id)));
+    toast({
+      title: "Exclusão em Bloco Concluída",
+      description: `${selectedRowIds.length} solicitação(ões) foram removidas com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
+  };
 
   const handleExportCSV = () => {
     const headers = [
@@ -801,6 +828,10 @@ export default function SolicitacoesPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Gerenciamento de Solicitações" description="Cadastre e acompanhe empréstimos e desarquivamentos.">
         <div className="flex flex-wrap items-center gap-2">
+            <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir ({selectedRowIds.length})
+            </Button>
             <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
@@ -1251,14 +1282,30 @@ export default function SolicitacoesPage() {
                           </TooltipTrigger>
                           <TooltipContent><p>Editar Solicitação</p></TooltipContent>
                         </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação" onClick={() => handleDelete(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Excluir Solicitação</p></TooltipContent>
-                        </Tooltip>
+                         <AlertDialog>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                               <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Solicitação">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Excluir Solicitação</p></TooltipContent>
+                          </Tooltip>
+                           <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a solicitação "{item.numeroSolicitacao}".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                        </div>
                     </TableCell>
                   </TableRow>
@@ -1340,6 +1387,21 @@ export default function SolicitacoesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+    <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} solicitação(ões) selecionada(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </div>
     </TooltipProvider>
   );

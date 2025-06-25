@@ -27,7 +27,23 @@ import { initialTransferencias } from "@/lib/mock-data";
 import Link from "next/link";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -73,6 +89,8 @@ export default function TransferenciasManagementPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
+  
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
   
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
@@ -238,8 +256,23 @@ export default function TransferenciasManagementPage() {
   };
 
   const handleDelete = (id: string) => {
+    logAction('DELETE_TRANSFERENCIA', { transferenciaId: id });
     setTransferencias(prev => prev.filter(t => t.id !== id));
     toast({ title: "Transferência Excluída" });
+  };
+  
+  const handleBulkDelete = () => {
+    logAction('BULK_DELETE_TRANSFERENCIAS', {
+      count: selectedRowIds.length,
+      transferenciaIds: selectedRowIds,
+    });
+    setTransferencias(prev => prev.filter(t => !selectedRowIds.includes(t.id)));
+    toast({
+      title: "Exclusão em Bloco Concluída",
+      description: `${selectedRowIds.length} transferência(s) foram removidas com sucesso.`,
+    });
+    setSelectedRowIds([]);
+    setIsBulkDeleteOpen(false);
   };
   
   const handleBulkUpdate = () => {
@@ -436,6 +469,10 @@ export default function TransferenciasManagementPage() {
       <div className="container mx-auto py-2">
         <PageHeader title="Gerenciamento de Transferências" description="Aprove ou reprove as solicitações de transferência de documentos para o arquivo.">
             <div className="flex flex-wrap items-center gap-2">
+                <Button variant="destructive" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir ({selectedRowIds.length})
+                </Button>
                  <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsBulkEditOpen(true)}>
                     <PenSquare className="mr-2 h-4 w-4" />
                     Alterar em Bloco ({selectedRowIds.length})
@@ -612,14 +649,30 @@ export default function TransferenciasManagementPage() {
                       )}
                       <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
                         <div className="flex items-center justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência" onClick={() => handleDelete(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Excluir</p></TooltipContent>
-                          </Tooltip>
+                           <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Transferência">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Excluir</p></TooltipContent>
+                              </Tooltip>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a transferência "{item.id}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -699,7 +752,21 @@ export default function TransferenciasManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedRowIds.length} transferência(s) selecionada(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Sim, excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </TooltipProvider>
   );
 }
-
