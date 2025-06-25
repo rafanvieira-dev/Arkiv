@@ -15,6 +15,7 @@ import {
   Settings,
   Users,
   ArrowRightLeft,
+  BarChartHorizontal,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { href: '/transferencias', label: 'Transferências', icon: ArrowRightLeft, permissionKey: 'transferencias' },
   { href: '/solicitacoes', label: 'Solicitações', icon: Send, permissionKey: 'solicitacoes' },
   { href: '/busca-avancada', label: 'Busca Avançada', icon: Search, permissionKey: 'buscaAvancada' },
+  { href: '/estatisticas', label: 'Estatísticas', icon: BarChartHorizontal, permissionKey: 'estatisticas' },
 ];
 
 const secondaryNavItems: NavItem[] = [

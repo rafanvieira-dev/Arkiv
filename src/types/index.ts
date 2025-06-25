@@ -160,6 +160,7 @@ export interface Usuario {
     transferencias: boolean;
     usuarios: boolean;
     configuracoes: boolean;
+    estatisticas: boolean;
   };
 }
 
