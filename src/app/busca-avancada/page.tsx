@@ -33,6 +33,7 @@ import { initialTiposOrigem } from "@/lib/mock-data";
 
 const initialFilters = {
   numeroDocumento: "",
+  processoOriginario: "",
   origem: "",
   tipoDocumento: "",
   descricaoDocumento: "",
@@ -104,6 +105,7 @@ export default function BuscaAvancadaPage() {
         </Link>
       )
     },
+    { id: 'processoOriginario', header: 'Proc. Originário', accessorKey: 'processoOriginario', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Arquivado' ? 'secondary' : value === 'Eliminado' ? 'destructive' : 'default'}>{value}</Badge> },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
@@ -185,6 +187,7 @@ export default function BuscaAvancadaPage() {
   const handleSearch = () => {
     const filtered = allDocuments.filter(doc => {
         if (filters.numeroDocumento && !doc.numeroDocumento?.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) return false;
+        if (filters.processoOriginario && !doc.processoOriginario?.toLowerCase().includes(filters.processoOriginario.toLowerCase())) return false;
         if (filters.origem && doc.origem !== filters.origem) return false;
         if (filters.tipoDocumento && !doc.tipoDocumento?.toLowerCase().includes(filters.tipoDocumento.toLowerCase())) return false;
         if (filters.descricaoDocumento && !doc.descricaoDocumento?.toLowerCase().includes(filters.descricaoDocumento.toLowerCase())) return false;
@@ -323,6 +326,10 @@ export default function BuscaAvancadaPage() {
           <div className="space-y-2">
             <Label htmlFor="numeroDocumento">Número do Documento</Label>
             <Input id="numeroDocumento" placeholder="Ex: PRC-2023-001" value={filters.numeroDocumento} onChange={handleInputChange} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="processoOriginario">Processo Originário</Label>
+            <Input id="processoOriginario" placeholder="Contém..." value={filters.processoOriginario} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="origem">Origem</Label>

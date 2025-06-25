@@ -83,6 +83,7 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   categoria: "Documento",
   tipoDocumento: "",
   numeroDocumento: "",
+  processoOriginario: "",
   dataAbrangente: "",
   dataArquivamento: undefined,
   quantidadeVolumes: undefined,
@@ -322,6 +323,7 @@ export default function DocumentosPage() {
     { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'processoOriginario', header: 'Proc. Originário', accessorKey: 'processoOriginario', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { 
@@ -1173,7 +1175,7 @@ export default function DocumentosPage() {
   const handleDownloadTemplate = () => {
     const templateHeaders = [
         'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
-        'tipoDocumento', 'numeroDocumento', 'dataAbrangente', 'descricaoDocumento', 
+        'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
         'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
@@ -1307,6 +1309,7 @@ export default function DocumentosPage() {
                     categoria: newDocData.categoria || 'Documento',
                     tipoDocumento: newDocData.tipoDocumento,
                     numeroDocumento: newDocData.numeroDocumento,
+                    processoOriginario: newDocData.processoOriginario,
                     dataAbrangente: newDocData.dataAbrangente,
                     descricaoDocumento: newDocData.descricaoDocumento,
                     partes: partes,
@@ -1390,6 +1393,7 @@ export default function DocumentosPage() {
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
     { value: 'classificacaoArquivisticaId', label: 'Classificação (por código)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
+    { value: 'processoOriginario', label: 'Processo Originário', type: 'text' },
   ];
 
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
@@ -1681,6 +1685,10 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="numeroDocumento">Número do Documento</Label>
                                               <Input id="numeroDocumento" value={formState.numeroDocumento || ""} onChange={handleInputChange} placeholder="Ex: 123/2024 ou PRC-001/2024" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="processoOriginario">Processo Originário</Label>
+                                              <Input id="processoOriginario" value={formState.processoOriginario || ""} onChange={handleInputChange} placeholder="Nº do processo que deu origem" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
@@ -2499,4 +2507,3 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
-

@@ -30,6 +30,7 @@ export interface Documento {
   categoria: 'Documento' | 'Dossiê' | 'Processo Judicial' | 'Processo Administrativo'; // 1.6 - Opção padrão "Documento"
   tipoDocumento: string; // 1.7 - Campo para cadastramento do Tipo de Documento.
   numeroDocumento?: string; // 1.8
+  processoOriginario?: string;
   dataAbrangente?: string; // 1.9 - Pode ser data completa, mês/ano, ou um intervalo. Ex.: 01/2023 – 12/2024
   descricaoDocumento?: string; // 1.21 - Antigo 'observacoes' ou campo principal de descrição.
   partes?: ParteDocumento[]; // 1.29 - Replaces nomePartePrincipal, etc.
