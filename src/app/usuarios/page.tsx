@@ -3,11 +3,11 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Usuario } from "@/types";
-import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldCheck, ShieldX, ShieldQuestion, Upload, Download, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { initialUsers, allPermissions } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
@@ -73,6 +74,15 @@ const initialFormState: UserFormState = {
   statusAprovacao: "Pendente",
   permissoes: Object.fromEntries(allPermissions.map(p => [p.id, false])),
 };
+
+const initialFiltersState = {
+  nomeCompleto: "",
+  email: "",
+  sigla: "",
+  setor: "",
+  statusAprovacao: "",
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
 type ColumnConfigUsuarios = {
   id: keyof Usuario | string;
@@ -135,6 +145,9 @@ export default function UsuariosPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+  
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
 
   React.useEffect(() => {
@@ -171,7 +184,14 @@ export default function UsuariosPage() {
   };
 
   React.useEffect(() => {
-    let itemsToDisplay = [...users];
+    let itemsToDisplay = users.filter(user => {
+        if (filters.nomeCompleto && !user.nomeCompleto.toLowerCase().includes(filters.nomeCompleto.toLowerCase())) return false;
+        if (filters.email && !user.email.toLowerCase().includes(filters.email.toLowerCase())) return false;
+        if (filters.sigla && !user.sigla?.toLowerCase().includes(filters.sigla.toLowerCase())) return false;
+        if (filters.setor && !user.setor?.toLowerCase().includes(filters.setor.toLowerCase())) return false;
+        if (filters.statusAprovacao && user.statusAprovacao !== filters.statusAprovacao) return false;
+        return true;
+    });
 
     if (sorting.length > 0) {
       itemsToDisplay.sort((a, b) => {
@@ -194,7 +214,7 @@ export default function UsuariosPage() {
       });
     }
     setDisplayedUsers(itemsToDisplay);
-  }, [users, sorting]);
+  }, [users, filters, sorting]);
 
   const resetForm = () => {
     setFormState(initialFormState);
@@ -471,8 +491,25 @@ export default function UsuariosPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
   
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
+  
   const numDisplayed = displayedUsers.length;
   const numSelected = selectedRowIds.length;
+
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
 
   return (
     <TooltipProvider>
@@ -596,9 +633,67 @@ export default function UsuariosPage() {
           </Dialog>
         </div>
       </PageHeader>
-      <Card className="mt-6">
+      
+      <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+        <AccordionItem value="filters" className="border rounded-lg">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="font-headline text-primary text-xl">Filtros de Usuários</CardTitle>
+            </div>
+            {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </AccordionTrigger>
+          <AccordionContent>
+            <CardDescription className="px-6 pb-4 text-sm">
+              Refine a lista de usuários aplicando um ou mais filtros abaixo.
+            </CardDescription>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+              <div className="space-y-2">
+                <Label htmlFor="filterNomeCompleto">Nome Completo</Label>
+                <Input id="filterNomeCompleto" name="nomeCompleto" value={filters.nomeCompleto} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterEmail">Email</Label>
+                <Input id="filterEmail" name="email" value={filters.email} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterSigla">Sigla</Label>
+                <Input id="filterSigla" name="sigla" value={filters.sigla} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterSetor">Setor</Label>
+                <Input id="filterSetor" name="setor" value={filters.setor} onChange={handleFilterInputChange} placeholder="Contém..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filterStatusAprovacao">Status</Label>
+                <Select onValueChange={handleFilterSelectChange('statusAprovacao')} value={filters.statusAprovacao}>
+                  <SelectTrigger id="filterStatusAprovacao"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                    <SelectItem value="Aprovado">Aprovado</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
+                    <SelectItem value="Reprovado">Reprovado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+              <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+            </CardFooter>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      
+      <Card className="mt-0">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-headline text-primary">Lista de Usuários</CardTitle>
+          <div>
+            <CardTitle className="font-headline text-primary">Lista de Usuários</CardTitle>
+            <CardDescription className="mt-1 text-sm text-muted-foreground">
+              {filtersAreActive
+                ? `Exibindo ${displayedUsers.length} de ${users.length} usuários com base nos filtros aplicados.`
+                : `Exibindo todos os ${users.length} usuários cadastrados.`}
+            </CardDescription>
+          </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
