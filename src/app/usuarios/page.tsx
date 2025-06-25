@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -52,7 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { initialUsers, allPermissions } from "@/lib/mock-data";
+import { initialUsers, allPermissions, allTruePermissions, standardUserPermissions } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useUserSession } from "@/hooks/use-user-session";
@@ -60,9 +61,10 @@ import { useUserSession } from "@/hooks/use-user-session";
 
 const USUARIOS_STORAGE_KEY = 'arquivocentral_usuarios';
 
-type UserFormState = Partial<Omit<Usuario, 'senhaHash'>> & {
+type UserFormState = Partial<Omit<Usuario, 'senhaHash' | 'permissoes'>> & {
   senha?: string;
   confirmarSenha?: string;
+  permissoes: Usuario['permissoes'];
 };
 
 const initialFormState: UserFormState = {
@@ -73,7 +75,8 @@ const initialFormState: UserFormState = {
   sigla: "",
   setor: "",
   statusAprovacao: "Pendente",
-  permissoes: Object.fromEntries(allPermissions.map(p => [p.id, false])),
+  tipoUsuario: "Padrão",
+  permissoes: standardUserPermissions,
 };
 
 const initialFiltersState = {
@@ -232,6 +235,7 @@ export default function UsuariosPage() {
         ...user,
         senha: "",
         confirmarSenha: "",
+        tipoUsuario: user.tipoUsuario || 'Padrão',
       });
     } else {
       resetForm();
@@ -246,6 +250,20 @@ export default function UsuariosPage() {
 
   const handleSelectChange = (value: Usuario['statusAprovacao']) => {
     setFormState(prev => ({ ...prev, statusAprovacao: value }));
+  };
+  
+  const handleProfileChange = (value: 'Administrador' | 'Padrão') => {
+    let newPermissions = { ...formState.permissoes };
+    if (value === 'Administrador') {
+      newPermissions = { ...allTruePermissions };
+    } else {
+      newPermissions = { ...standardUserPermissions };
+    }
+    setFormState(prev => ({ 
+      ...prev, 
+      tipoUsuario: value,
+      permissoes: newPermissions
+    }));
   };
 
   const handlePermissionChange = (permissionId: string) => (checked: boolean | 'indeterminate') => {
@@ -290,6 +308,7 @@ export default function UsuariosPage() {
         sigla: formState.sigla,
         setor: formState.setor,
         statusAprovacao: formState.statusAprovacao!,
+        tipoUsuario: formState.tipoUsuario || 'Padrão',
         permissoes: formState.permissoes!,
     };
 
@@ -337,7 +356,7 @@ export default function UsuariosPage() {
   
   const handleExportCSV = () => {
     const permissionKeys = allPermissions.map(p => p.id);
-    const headers = ['id', 'nomeCompleto', 'email', 'sigla', 'setor', 'statusAprovacao', ...permissionKeys];
+    const headers = ['id', 'nomeCompleto', 'email', 'sigla', 'setor', 'statusAprovacao', 'tipoUsuario', ...permissionKeys];
     const csvRows = [headers.join(',')];
 
     users.forEach(user => {
@@ -348,6 +367,7 @@ export default function UsuariosPage() {
           sigla: user.sigla || '',
           setor: user.setor || '',
           statusAprovacao: user.statusAprovacao,
+          tipoUsuario: user.tipoUsuario,
           ...user.permissoes,
         };
         const row = headers.map(header => `"${String(rowData[header] ?? '').replace(/"/g, '""')}"`);
@@ -367,7 +387,7 @@ export default function UsuariosPage() {
 
   const handleDownloadTemplate = () => {
     const permissionKeys = allPermissions.map(p => p.id);
-    const headers = ['nomeCompleto', 'email', 'senha', 'sigla', 'setor', 'statusAprovacao', ...permissionKeys];
+    const headers = ['nomeCompleto', 'email', 'senha', 'sigla', 'setor', 'statusAprovacao', 'tipoUsuario', ...permissionKeys];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -422,6 +442,7 @@ export default function UsuariosPage() {
                     sigla: newItemData.sigla,
                     setor: newItemData.setor,
                     statusAprovacao: newItemData.statusAprovacao || 'Pendente',
+                    tipoUsuario: newItemData.tipoUsuario || 'Padrão',
                     permissoes,
                 };
                 newItemsFromCsv.push(newItem);
@@ -585,20 +606,35 @@ export default function UsuariosPage() {
                       <Label htmlFor="setor">Setor</Label>
                       <Input id="setor" value={formState.setor || ""} onChange={handleInputChange} />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="statusAprovacao">Status da Aprovação*</Label>
-                    <Select onValueChange={handleSelectChange} value={formState.statusAprovacao}>
-                        <SelectTrigger id="statusAprovacao">
-                          <SelectValue placeholder="Selecione o status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Aprovado">Aprovado</SelectItem>
-                          <SelectItem value="Pendente">Pendente</SelectItem>
-                          <SelectItem value="Reprovado">Reprovado</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-2">
+                      <Label htmlFor="tipoUsuario">Perfil de Usuário*</Label>
+                      <Select 
+                        onValueChange={handleProfileChange} 
+                        value={formState.tipoUsuario}
+                        disabled={!permissions.usuarios || editingUserId === 'USR001'}
+                      >
+                          <SelectTrigger id="tipoUsuario">
+                            <SelectValue placeholder="Selecione o perfil" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Padrão">Padrão</SelectItem>
+                            <SelectItem value="Administrador">Administrador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="statusAprovacao">Status da Aprovação*</Label>
+                      <Select onValueChange={handleSelectChange} value={formState.statusAprovacao}>
+                          <SelectTrigger id="statusAprovacao">
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Aprovado">Aprovado</SelectItem>
+                            <SelectItem value="Pendente">Pendente</SelectItem>
+                            <SelectItem value="Reprovado">Reprovado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-3">

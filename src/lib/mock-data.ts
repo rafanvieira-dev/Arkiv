@@ -330,11 +330,11 @@ export const allPermissions: { id: keyof Usuario['permissoes']; label: string; d
   { id: 'manual', label: 'Manual', description: 'Permite acessar o manual do sistema.' },
 ];
 
-const allTruePermissions: Usuario['permissoes'] = {
+export const allTruePermissions: Usuario['permissoes'] = {
   dashboard: true, acervo: true, caixas: true, classificacao: true, classesJudiciais: true, listagens: true, solicitacoes: true, buscaAvancada: true, usuarios: true, configuracoes: true, transferencias: true, estatisticas: true, relatorios: true, auditoria: true, manual: true,
 };
 
-const standardUserPermissions: Usuario['permissoes'] = {
+export const standardUserPermissions: Usuario['permissoes'] = {
   ...allTruePermissions,
   usuarios: false,
   configuracoes: false,
@@ -343,10 +343,10 @@ const standardUserPermissions: Usuario['permissoes'] = {
 
 
 export const initialUsers: Usuario[] = [
-  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", permissoes: allTruePermissions },
-  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", permissoes: standardUserPermissions },
-  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", permissoes: {} as Usuario['permissoes'] },
-  { id: "USR004", nomeCompleto: "Usuário 'r'", email: "r", senhaHash: "hashed_password_4", sigla: "R", setor: "Gabinete X", statusAprovacao: "Aprovado", permissoes: { ...standardUserPermissions, dashboard: false, acervo: false, caixas: false, classificacao: false, classesJudiciais: false, listagens: false, buscaAvancada: false, transferencias: false } },
+  { id: "USR001", nomeCompleto: "Administrador do Sistema", email: "admin@sistem.com", senhaHash: "hashed_password_1", sigla: "ADM", setor: "TI", statusAprovacao: "Aprovado", tipoUsuario: "Administrador", permissoes: allTruePermissions },
+  { id: "USR002", nomeCompleto: "Usuário Padrão", email: "user@sistem.com", senhaHash: "hashed_password_2", sigla: "USER", setor: "Arquivo", statusAprovacao: "Aprovado", tipoUsuario: "Padrão", permissoes: standardUserPermissions },
+  { id: "USR003", nomeCompleto: "Usuário Pendente", email: "pending@sistem.com", senhaHash: "hashed_password_3", sigla: "PEND", setor: "Estágio", statusAprovacao: "Pendente", tipoUsuario: "Padrão", permissoes: {} as Usuario['permissoes'] },
+  { id: "USR004", nomeCompleto: "Usuário 'r'", email: "r", senhaHash: "hashed_password_4", sigla: "R", setor: "Gabinete X", statusAprovacao: "Aprovado", tipoUsuario: "Padrão", permissoes: { ...standardUserPermissions, dashboard: false, acervo: false, caixas: false, classificacao: false, classesJudiciais: false, listagens: false, buscaAvancada: false, transferencias: false } },
 ];
 
 

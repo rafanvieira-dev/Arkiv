@@ -143,6 +143,7 @@ export interface Usuario {
   sigla?: string;
   setor?: string;
   statusAprovacao: 'Aprovado' | 'Pendente' | 'Reprovado';
+  tipoUsuario: 'Administrador' | 'Padrão';
   permissoes: {
     dashboard: boolean;
     acervo: boolean;
