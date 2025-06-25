@@ -18,6 +18,7 @@ interface ChartData {
   name: string;
   value: number;
   fill: string;
+  percentage?: number;
 }
 
 const chartColors = [
@@ -29,6 +30,35 @@ const chartColors = [
   "hsl(210 50% 52%)", // Primary
   "hsl(16 100% 66%)", // Accent
 ];
+
+// A single custom tooltip component for all charts
+const CustomTooltipContent = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      const { name, value } = data;
+      const { percentage, fill } = data.payload;
+  
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+          <div className="font-bold text-foreground mb-1">{label || name}</div>
+          <div className="flex items-center text-muted-foreground">
+            <div
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px] mr-2"
+              style={{ backgroundColor: fill }}
+            />
+            <div>
+              <span className="font-medium text-foreground">{value}</span>
+              {percentage !== undefined && (
+                <span className="ml-1 text-xs">({percentage.toFixed(1)}%)</span>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+  
+    return null;
+  };
 
 export default function EstatisticasPage() {
   const [statusData, setStatusData] = React.useState<ChartData[]>([]);
@@ -44,6 +74,7 @@ export default function EstatisticasPage() {
     try {
       const storedDocs = window.localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
       const allDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : placeholderDocumentos;
+      const totalDocs = allDocs.length;
       
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes;
@@ -57,6 +88,7 @@ export default function EstatisticasPage() {
       const statusChartData = Object.entries(statusCounts).map(([name, value], index) => ({
         name,
         value,
+        percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
         fill: chartColors[index % chartColors.length],
       }));
       setStatusData(statusChartData);
@@ -71,7 +103,12 @@ export default function EstatisticasPage() {
       }, {} as Record<string, number>);
       
       const yearChartData = Object.entries(yearCounts)
-        .map(([name, value], index) => ({ name, value, fill: "hsl(var(--chart-1))" }))
+        .map(([name, value], index) => ({
+             name,
+             value,
+             percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
+             fill: "hsl(var(--chart-1))"
+        }))
         .sort((a,b) => parseInt(a.name) - parseInt(b.name));
       setYearData(yearChartData);
 
@@ -85,7 +122,12 @@ export default function EstatisticasPage() {
       }, {} as Record<string, number>);
 
       const anoEliminacaoChartData = Object.entries(anoEliminacaoCounts)
-        .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-2))" }))
+        .map(([name, value]) => ({
+            name,
+            value,
+            percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
+            fill: "hsl(var(--chart-2))"
+        }))
         .sort((a,b) => parseInt(a.name) - parseInt(b.name));
       setAnoEliminacaoData(anoEliminacaoChartData);
       
@@ -99,6 +141,7 @@ export default function EstatisticasPage() {
       const destinacaoChartData = Object.entries(destinacaoCounts).map(([name, value], index) => ({
         name,
         value,
+        percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
         fill: chartColors[index % chartColors.length],
       }));
       setDestinacaoData(destinacaoChartData);
@@ -113,6 +156,7 @@ export default function EstatisticasPage() {
       const meioChartData = Object.entries(meioCounts).map(([name, value], index) => ({
         name,
         value,
+        percentage: totalDocs > 0 ? (value / totalDocs) * 100 : 0,
         fill: chartColors[index % chartColors.length],
       }));
       setMeioData(meioChartData);
@@ -124,12 +168,19 @@ export default function EstatisticasPage() {
         }
         return acc;
       }, {} as Record<string, number>);
+      
+      const totalClassifiedDocs = Object.values(classificationCounts).reduce((sum, count) => sum + count, 0);
 
       const classificationChartData = Object.entries(classificationCounts)
         .map(([id, value]) => {
             const classif = allClassificacoes.find(c => c.id === id);
             const name = classif ? `${classif.codigo} - ${classif.descricao}` : `ID: ${id}`;
-            return { name, value, fill: "hsl(var(--chart-3))" };
+            return {
+                name,
+                value,
+                percentage: totalClassifiedDocs > 0 ? (value / totalClassifiedDocs) * 100 : 0,
+                fill: "hsl(var(--chart-3))"
+            };
         })
         .sort((a, b) => b.value - a.value)
         .slice(0, 10);
@@ -143,8 +194,15 @@ export default function EstatisticasPage() {
         return acc;
       }, {} as Record<string, number>);
 
+      const totalTipoDocs = Object.values(tipoDocumentoCounts).reduce((sum, count) => sum + count, 0);
+
       const tipoDocumentoChartData = Object.entries(tipoDocumentoCounts)
-        .map(([name, value]) => ({ name, value, fill: "hsl(var(--chart-4))" }))
+        .map(([name, value]) => ({
+            name,
+            value,
+            percentage: totalTipoDocs > 0 ? (value / totalTipoDocs) * 100 : 0,
+            fill: "hsl(var(--chart-4))"
+        }))
         .sort((a,b) => b.value - a.value)
         .slice(0,10);
       setTipoDocumentoData(tipoDocumentoChartData);
@@ -179,8 +237,17 @@ export default function EstatisticasPage() {
           <CardContent>
             <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
-                <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} label={({ name, value }) => `${name}: ${value}`}>
+                <ChartTooltip content={<CustomTooltipContent />} />
+                <Pie 
+                    data={statusData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={110}
+                    labelLine={false}
+                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
+                >
                     {statusData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -202,8 +269,8 @@ export default function EstatisticasPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis />
-                <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={4} />
+                <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+                <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={4} name="Documentos"/>
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -220,8 +287,8 @@ export default function EstatisticasPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis />
-                <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} />
+                <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<CustomTooltipContent />} />
+                <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={4} name="Documentos"/>
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -235,8 +302,18 @@ export default function EstatisticasPage() {
           <CardContent>
              <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
-                <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                <Pie data={destinacaoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={110} label>
+                <ChartTooltip content={<CustomTooltipContent />} />
+                <Pie 
+                    data={destinacaoData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={110}
+                    labelLine={false}
+                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
+                >
                    {destinacaoData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -255,8 +332,17 @@ export default function EstatisticasPage() {
           <CardContent>
             <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[300px]">
               <PieChart>
-                <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                <Pie data={meioData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} label>
+                <ChartTooltip content={<CustomTooltipContent />} />
+                <Pie
+                    data={meioData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={110}
+                    labelLine={false}
+                    label={({ percentage }) => `${percentage?.toFixed(1)}%`}
+                >
                      {meioData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -289,9 +375,9 @@ export default function EstatisticasPage() {
                 <YAxis />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))' }}
-                  content={<ChartTooltipContent hideLabel />}
+                  content={<CustomTooltipContent />}
                 />
-                <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} />
+                <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={4} name="Documentos" />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -319,9 +405,9 @@ export default function EstatisticasPage() {
                 <YAxis />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))' }}
-                  content={<ChartTooltipContent hideLabel />}
+                  content={<CustomTooltipContent />}
                 />
-                <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={4} />
+                <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={4} name="Documentos" />
               </BarChart>
             </ChartContainer>
           </CardContent>
