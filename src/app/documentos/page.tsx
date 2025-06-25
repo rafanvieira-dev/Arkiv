@@ -84,6 +84,7 @@ const initialFormState: Partial<Documento> & { codigoClassificacaoArquivisticaIn
   tipoDocumento: "",
   numeroDocumento: "",
   processoOriginario: "",
+  numeroAntigo: "",
   dataAbrangente: "",
   dataArquivamento: undefined,
   quantidadeVolumes: undefined,
@@ -120,6 +121,7 @@ const initialFiltersState = {
   status: "",
   origemDocumento: "",
   numeroDocumento: "",
+  numeroAntigo: "",
   descricao: "",
   codClassificacao: "",
   destinacaoFinal: "",
@@ -140,6 +142,7 @@ const initialFiltersState = {
   prazoCorrente: "",
   prazoIntermediario: "",
   numeroListagemEliminacao: "",
+  processoOriginario: "",
 };
 
 const initialParteState: ParteDocumento = {
@@ -323,6 +326,7 @@ export default function DocumentosPage() {
     { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: true, enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', defaultVisible: true, enableSorting: true },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', defaultVisible: true, enableSorting: true },
+    { id: 'numeroAntigo', header: 'Nº Antigo', accessorKey: 'numeroAntigo', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'processoOriginario', header: 'Proc. Originário', accessorKey: 'processoOriginario', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', defaultVisible: true, enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
@@ -982,6 +986,8 @@ export default function DocumentosPage() {
             if (filters.status && doc.status !== filters.status) return false;
             if (filters.origemDocumento && doc.origem && !doc.origem.toLowerCase().includes(filters.origemDocumento.toLowerCase())) return false;
             if (filters.numeroDocumento && doc.numeroDocumento && !doc.numeroDocumento.toLowerCase().includes(filters.numeroDocumento.toLowerCase())) return false;
+            if (filters.processoOriginario && doc.processoOriginario && !doc.processoOriginario.toLowerCase().includes(filters.processoOriginario.toLowerCase())) return false;
+            if (filters.numeroAntigo && doc.numeroAntigo && !doc.numeroAntigo.toLowerCase().includes(filters.numeroAntigo.toLowerCase())) return false;
             if (filters.descricao && doc.descricaoDocumento && !doc.descricaoDocumento.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
             
             if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
@@ -1175,7 +1181,7 @@ export default function DocumentosPage() {
   const handleDownloadTemplate = () => {
     const templateHeaders = [
         'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
-        'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'dataAbrangente', 'descricaoDocumento', 
+        'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
         'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
@@ -1310,6 +1316,7 @@ export default function DocumentosPage() {
                     tipoDocumento: newDocData.tipoDocumento,
                     numeroDocumento: newDocData.numeroDocumento,
                     processoOriginario: newDocData.processoOriginario,
+                    numeroAntigo: newDocData.numeroAntigo,
                     dataAbrangente: newDocData.dataAbrangente,
                     descricaoDocumento: newDocData.descricaoDocumento,
                     partes: partes,
@@ -1394,6 +1401,7 @@ export default function DocumentosPage() {
     { value: 'classificacaoArquivisticaId', label: 'Classificação (por código)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
     { value: 'processoOriginario', label: 'Processo Originário', type: 'text' },
+    { value: 'numeroAntigo', label: 'Número Antigo', type: 'text' },
   ];
 
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
@@ -1689,6 +1697,10 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="processoOriginario">Processo Originário</Label>
                                               <Input id="processoOriginario" value={formState.processoOriginario || ""} onChange={handleInputChange} placeholder="Nº do processo que deu origem" disabled={isFormDisabled} />
+                                          </div>
+                                           <div className="space-y-2">
+                                              <Label htmlFor="numeroAntigo">Número Antigo</Label>
+                                              <Input id="numeroAntigo" value={formState.numeroAntigo || ""} onChange={handleInputChange} placeholder="Nº antigo do processo" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
@@ -2026,6 +2038,14 @@ export default function DocumentosPage() {
                     <div className="space-y-2">
                       <Label htmlFor="filterNumeroDocumento">Número do Documento</Label>
                       <Input id="filterNumeroDocumento" name="numeroDocumento" value={filters.numeroDocumento} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="filterNumeroAntigo">Número Antigo</Label>
+                      <Input id="filterNumeroAntigo" name="numeroAntigo" value={filters.numeroAntigo} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterProcessoOriginario">Processo Originário</Label>
+                      <Input id="filterProcessoOriginario" name="processoOriginario" value={filters.processoOriginario} onChange={handleFilterInputChange} placeholder="Contém..." />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="filterDescricao">Descrição</Label>

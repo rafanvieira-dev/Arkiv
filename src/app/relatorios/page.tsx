@@ -61,6 +61,7 @@ export default function RelatoriosPage() {
       { id: 'categoria', header: 'Categoria', accessorKey: 'categoria' },
       { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento' },
       { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento' },
+      { id: 'numeroAntigo', header: 'Nº Antigo', accessorKey: 'numeroAntigo' },
       { id: 'processoOriginario', header: 'Proc. Originário', accessorKey: 'processoOriginario' },
       { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente' },
       { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento' },
