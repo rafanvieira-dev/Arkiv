@@ -885,21 +885,45 @@ export default function DocumentosPage() {
   };
 
   const handleDelete = (docId: string) => {
+    const docToDelete = documentos.find(d => d.id === docId);
+    if (docToDelete?.status === 'Eliminado') {
+      toast({ variant: "destructive", title: "Ação não permitida", description: "Documentos com status 'Eliminado' não podem ser excluídos." });
+      return;
+    }
     logAction('DELETE_DOCUMENT', { documentId: docId });
     setDocumentos(prev => prev.filter(d => d.id !== docId));
     toast({ title: "Sucesso", description: "Documento excluído." });
   };
   
   const handleBulkDelete = () => {
-    logAction('BULK_DELETE_DOCUMENTS', {
-        count: selectedRowIds.length,
-        documentIds: selectedRowIds,
+    const deletableIds = selectedRowIds.filter(id => {
+        const doc = documentos.find(d => d.id === id);
+        return doc && doc.status !== 'Eliminado';
     });
-    setDocumentos(prev => prev.filter(doc => !selectedRowIds.includes(doc.id)));
-    toast({
-        title: "Exclusão em Bloco Concluída",
-        description: `${selectedRowIds.length} documento(s) foram removidos com sucesso.`,
-    });
+    
+    const nonDeletableCount = selectedRowIds.length - deletableIds.length;
+
+    if (nonDeletableCount > 0) {
+        toast({
+            variant: "destructive",
+            title: "Ação Parcialmente Bloqueada",
+            description: `${nonDeletableCount} documento(s) com status "Eliminado" não podem ser excluídos e foram ignorados.`,
+            duration: 7000,
+        });
+    }
+
+    if (deletableIds.length > 0) {
+        logAction('BULK_DELETE_DOCUMENTS', {
+            count: deletableIds.length,
+            documentIds: deletableIds,
+        });
+        setDocumentos(prev => prev.filter(doc => !deletableIds.includes(doc.id)));
+        toast({
+            title: "Exclusão em Bloco Concluída",
+            description: `${deletableIds.length} documento(s) foram removidos com sucesso.`,
+        });
+    }
+    
     setSelectedRowIds([]);
     setIsBulkDeleteOpen(false);
   };
@@ -2204,7 +2228,7 @@ export default function DocumentosPage() {
                                     </Button>
                                   </AlertDialogTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent><p>Excluir Documento</p></TooltipContent>
+                                <TooltipContent><p>{doc.status === 'Eliminado' ? 'Não pode ser excluído' : 'Excluir Documento'}</p></TooltipContent>
                               </Tooltip>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
