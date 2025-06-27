@@ -1156,7 +1156,14 @@ export default function DocumentosPage() {
     dataToExport.forEach(doc => {
         const row = headers.map(header => {
             const value = doc[header as keyof Documento];
-            const stringValue = value === null || value === undefined ? "" : String(value);
+            
+            let stringValue;
+            if (header === 'partes' && Array.isArray(value)) {
+                stringValue = JSON.stringify(value);
+            } else {
+                stringValue = value === null || value === undefined ? "" : String(value);
+            }
+            
             return `"${stringValue.replace(/"/g, '""')}"`;
         });
         csvRows.push(row.join(','));
@@ -1306,7 +1313,17 @@ export default function DocumentosPage() {
                     anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
                 }
                 
-                const partes = newDocData.partes ? JSON.parse(newDocData.partes) : [];
+                let partes: ParteDocumento[] = [];
+                if (newDocData.partes) {
+                    try {
+                        const parsedPartes = JSON.parse(newDocData.partes);
+                        if (Array.isArray(parsedPartes)) {
+                            partes = parsedPartes;
+                        }
+                    } catch (e) {
+                        console.warn(`Could not parse 'partes' JSON for row ${index + 2}:`, newDocData.partes);
+                    }
+                }
 
                 const newDoc: Documento = {
                     id: `DOC_IMP_${Date.now()}_${index}`,
@@ -2554,3 +2571,4 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
