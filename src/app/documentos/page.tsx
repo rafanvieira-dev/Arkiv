@@ -379,7 +379,7 @@ export default function DocumentosPage() {
               if (p.usarIniciais) {
                 const masterKey = `${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
                 const masterPart = masterPartesMap.get(masterKey);
-                return masterPart?.iniciais || p.nome;
+                return masterPart?.iniciais ?? gerarIniciais(p.nome);
               }
               return p.nome;
             }).join(', ');

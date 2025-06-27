@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { Search, RotateCcw, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { DateInputPicker } from "@/components/date-input-picker";
-import type { Documento, Classificacao, TipoOrigem, ParteDocumento } from "@/types";
+import type { Documento, Classificacao, TipoOrigem, ParteDocumento, ParteDetalhe } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, isAfter, isBefore } from "date-fns";
@@ -28,7 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { initialTiposOrigem } from "@/lib/mock-data";
+import { initialTiposOrigem, initialPartes } from "@/lib/mock-data";
+import { gerarIniciais } from "@/lib/utils";
 
 
 const initialFilters = {
@@ -76,6 +77,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
+const PARTES_STORAGE_KEY = 'arquivocentral_partes';
 
 
 export default function BuscaAvancadaPage() {
@@ -87,11 +89,13 @@ export default function BuscaAvancadaPage() {
   const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
   const [allClassificacoes, setAllClassificacoes] = React.useState<Classificacao[]>([]);
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
+  const [masterPartes, setMasterPartes] = React.useState<ParteDetalhe[]>([]);
   
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
+  const masterPartesMap = React.useMemo(() => new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p])), [masterPartes]);
 
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
     { 
@@ -132,14 +136,21 @@ export default function BuscaAvancadaPage() {
     { id: 'numeroListagemEliminacao', header: 'Nº Listagem Eliminação', accessorKey: 'numeroListagemEliminacao', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'destructive' : 'outline'}>{value}</Badge> },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'secondary' : 'outline'}>{value}</Badge> },
-    { id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', defaultVisible: true, enableSorting: false, cellFormatter: (partes: ParteDocumento[]) => {
+    { id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', defaultVisible: true, enableSorting: false, cellFormatter: (partes?: ParteDocumento[]) => {
         if (!partes || partes.length === 0) return 'N/A';
-        const names = partes.map(p => p.nome).join(', ');
-        return <span className="block max-w-xs truncate" title={names}>{names}</span>
+        const names = partes.map(p => {
+          if (p.usarIniciais) {
+            const masterKey = `${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
+            const masterPart = masterPartesMap.get(masterKey);
+            return masterPart?.iniciais ?? gerarIniciais(p.nome);
+          }
+          return p.nome;
+        }).join(', ');
+        return <span className="block max-w-xs truncate" title={names}>{names}</span>;
       } 
     },
     { id: 'dataAbrangente', header: 'Data do Documento', accessorKey: 'dataAbrangente', defaultVisible: false, enableSorting: true },
-  ], [allClassificacoes]);
+  ], [allClassificacoes, masterPartesMap]);
 
    React.useEffect(() => {
     setColumnVisibility(
@@ -157,6 +168,9 @@ export default function BuscaAvancadaPage() {
 
       const storedTiposOrigem = window.localStorage.getItem(TIPOS_ORIGEM_STORAGE_KEY);
       setTiposOrigem(storedTiposOrigem ? JSON.parse(storedTiposOrigem) : initialTiposOrigem);
+
+      const storedMasterPartes = window.localStorage.getItem(PARTES_STORAGE_KEY);
+      setMasterPartes(storedMasterPartes ? JSON.parse(storedMasterPartes) : initialPartes);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
     }
