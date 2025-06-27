@@ -751,8 +751,21 @@ export default function DocumentosPage() {
   };
 
   const handleSelectChange = (id: keyof Partial<Documento> | 'tipoPlanoClassificacao') => (value: string) => {
-    setFormState(prev => ({ ...prev, [id]: value }));
-  };
+    if (id === 'categoria' && value !== 'Processo Judicial') {
+      setFormState(prev => ({ 
+        ...prev, 
+        [id]: value,
+        tipoBaixa: "",
+        dataBaixa: undefined,
+        codigoClassificacaoJudicialId: "",
+        nomeClasseProcessualDisplay: "",
+        prazoGuardaClasseProcessualDisplay: "",
+        destinacaoFinalClasseProcessualDisplay: "",
+      }));
+    } else {
+      setFormState(prev => ({ ...prev, [id]: value }));
+    }
+};
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
@@ -2046,7 +2059,7 @@ export default function DocumentosPage() {
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="dataBaixa">Data da Baixa</Label>
@@ -2054,7 +2067,7 @@ export default function DocumentosPage() {
                                               value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
                                               onChange={(date) => handleDateChange('dataBaixa')(date)} 
                                               placeholder="dd/mm/aaaa"
-                                              disabled={isFormDisabled}
+                                              disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}
                                               />
                                           </div>
                                           <div className="space-y-2">
@@ -2308,8 +2321,7 @@ export default function DocumentosPage() {
                                               onChange={handleInputChange} 
                                               onBlur={handleCodigoClasseJudicialBlur}
                                               placeholder="Cód. da classe processual" 
-                                              disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
-                                              className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
+                                              disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}
                                               />
                                           </div>
                                           <div className="space-y-2">
