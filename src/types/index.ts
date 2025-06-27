@@ -1,5 +1,11 @@
 
 
+export interface ParteDetalhe {
+  id: string;
+  nome: string;
+  cpfCnpj?: string;
+}
+
 export interface ParteDocumento {
   id: string; // UUID for the part entry itself
   nome: string;

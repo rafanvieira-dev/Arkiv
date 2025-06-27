@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer, Check, ChevronsUpDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +59,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { DateInputPicker } from "@/components/date-input-picker";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -68,7 +70,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
@@ -147,7 +149,7 @@ const initialFiltersState = {
   processoOriginario: "",
 };
 
-const initialParteState: ParteDocumento = {
+const initialParteState: Partial<ParteDocumento> = {
   id: '',
   nome: '',
   cpfCnpj: '',
@@ -177,6 +179,8 @@ const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+const PARTES_STORAGE_KEY = 'arquivocentral_partes';
+
 
 const parseDateString = (dateStr?: string): string | undefined => {
   if (!dateStr || !dateStr.trim()) return undefined;
@@ -226,8 +230,9 @@ export default function DocumentosPage() {
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
-  const [parteFormState, setParteFormState] = React.useState<ParteDocumento>(initialParteState);
+  const [parteFormState, setParteFormState] = React.useState<Partial<ParteDocumento>>(initialParteState);
   const [isEditingParte, setIsEditingParte] = React.useState(false);
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
@@ -250,6 +255,7 @@ export default function DocumentosPage() {
   const [tiposParte, setTiposParte] = React.useState<string[]>([]);
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [caixas, setCaixas] = React.useState<Caixa[]>([]);
+  const [masterPartes, setMasterPartes] = React.useState<ParteDetalhe[]>([]);
   
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
@@ -466,6 +472,10 @@ export default function DocumentosPage() {
       
       const storedCaixas = window.localStorage.getItem(CAIXAS_STORAGE_KEY);
       setCaixas(storedCaixas ? JSON.parse(storedCaixas) : initialCaixas);
+      
+      const storedMasterPartes = window.localStorage.getItem(PARTES_STORAGE_KEY);
+      setMasterPartes(storedMasterPartes ? JSON.parse(storedMasterPartes) : initialPartes);
+
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -479,6 +489,7 @@ export default function DocumentosPage() {
       setTiposMidia(initialTiposMidia);
       setTiposOrigem(initialTiposOrigem);
       setCaixas(initialCaixas);
+      setMasterPartes(initialPartes);
     }
     setIsDataLoaded(true);
   }, []);
@@ -504,8 +515,9 @@ export default function DocumentosPage() {
       window.localStorage.setItem(TIPOS_MIDIA_STORAGE_KEY, JSON.stringify(tiposMidia));
       window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
       window.localStorage.setItem(CAIXAS_STORAGE_KEY, JSON.stringify(caixas));
+      window.localStorage.setItem(PARTES_STORAGE_KEY, JSON.stringify(masterPartes));
     }
-  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, caixas]);
+  }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, caixas, masterPartes]);
 
   React.useEffect(() => {
     if (!isDataLoaded) return;
@@ -752,16 +764,33 @@ export default function DocumentosPage() {
         toast({ variant: "destructive", title: "Erro", description: "O nome da parte é obrigatório." });
         return;
     }
+
+    const newMasterPartes: ParteDetalhe[] = [];
+    const trimmedNome = parteFormState.nome.trim();
+    const trimmedCpfCnpj = parteFormState.cpfCnpj?.trim() || "";
+    
+    // Check against master list
+    const existingMasterPart = masterPartes.find(p => p.nome.toLowerCase() === trimmedNome.toLowerCase() && (p.cpfCnpj || "").toLowerCase() === (trimmedCpfCnpj || "").toLowerCase());
+
+    if (!existingMasterPart) {
+      newMasterPartes.push({ id: `parte${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj });
+    }
+    
     setFormState(prev => {
         const newPartes = [...(prev.partes || [])];
         if (isEditingParte) {
             const index = newPartes.findIndex(p => p.id === parteFormState.id);
-            if (index > -1) newPartes[index] = parteFormState;
+            if (index > -1) newPartes[index] = { ...parteFormState as ParteDocumento, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj };
         } else {
-            newPartes.push({ ...parteFormState, id: `p${Date.now()}` });
+            newPartes.push({ ...parteFormState as Partial<ParteDocumento>, id: `p${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj } as ParteDocumento);
         }
         return { ...prev, partes: newPartes };
     });
+
+    if (newMasterPartes.length > 0) {
+      setMasterPartes(prev => [...prev, ...newMasterPartes]);
+    }
+    
     setIsParteDialogOpen(false);
   };
 
@@ -827,6 +856,25 @@ export default function DocumentosPage() {
       return;
     }
     
+    // Update Master Parts List
+    const newMasterPartesToCreate: ParteDetalhe[] = [];
+    const masterPartesMap = new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p]));
+    formStateToSave.partes?.forEach(docParte => {
+        const key = `${docParte.nome.toLowerCase()}|${(docParte.cpfCnpj || "").toLowerCase()}`;
+        if (!masterPartesMap.has(key)) {
+            newMasterPartesToCreate.push({
+                id: `parte${Date.now()}_${Math.random()}`,
+                nome: docParte.nome,
+                cpfCnpj: docParte.cpfCnpj
+            });
+            masterPartesMap.set(key, newMasterPartesToCreate[newMasterPartesToCreate.length - 1]); // Avoid re-adding
+        }
+    });
+
+    if (newMasterPartesToCreate.length > 0) {
+        setMasterPartes(prev => [...prev, ...newMasterPartesToCreate]);
+    }
+
     const isCreating = documentIdToDisplay === "(Automático após salvar)";
     const finalFormState: Documento = {
       ...initialFormState, 
@@ -864,7 +912,7 @@ export default function DocumentosPage() {
                     tipo: "JUD", 
                     status: "Aberta",
                     situacao: "Incompleta",
-                    documentoIds: []
+                    condicao: 'Ocupada'
                 };
                 newCaixasToCreate.push(newCaixa);
                 currentCaixaCodes.add(code); 
@@ -1277,6 +1325,8 @@ export default function DocumentosPage() {
 
             const newDocsFromCsv: Documento[] = [];
             let newClassificationsFromCsv: Classificacao[] = [];
+            let newMasterPartesFromCsv: ParteDetalhe[] = [];
+            const tempMasterPartes = [...masterPartes];
             const newTiposDocSet = new Set<string>();
             const newTiposOrigemSet = new Set<string>();
             const newTiposParteSet = new Set<string>();
@@ -1290,6 +1340,7 @@ export default function DocumentosPage() {
             const currentGeneros = new Set(generosDocumentais);
             const currentTiposMidia = new Set(tiposMidia);
             const currentCaixaCodes = new Set(caixas.map(c => c.codigoCaixa));
+            const masterPartesMap = new Map(tempMasterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p]));
 
             const tempClassificacoes = [...classificacoes];
 
@@ -1332,7 +1383,7 @@ export default function DocumentosPage() {
                                 tipo: "JUD",
                                 status: "Aberta",
                                 situacao: "Incompleta",
-                                documentoIds: []
+                                condicao: "Ocupada",
                             };
                             newCaixasMap.set(code, newCaixa);
                         }
@@ -1394,6 +1445,17 @@ export default function DocumentosPage() {
                         const parsedPartes = JSON.parse(newDocData.partes);
                         if (Array.isArray(parsedPartes)) {
                             partes = parsedPartes;
+                            parsedPartes.forEach(p => {
+                                const key = `${p.nome?.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
+                                if (p.nome && !masterPartesMap.has(key)) {
+                                    const newMasterPart = { id: `parte_imp_${Date.now()}_${Math.random()}`, nome: p.nome, cpfCnpj: p.cpfCnpj || "" };
+                                    newMasterPartesFromCsv.push(newMasterPart);
+                                    masterPartesMap.set(key, newMasterPart);
+                                }
+                                if(p.tipoParte && !currentTiposParte.has(p.tipoParte)){
+                                    newTiposParteSet.add(p.tipoParte);
+                                }
+                            });
                         }
                     } catch (e) {
                         console.warn(`Could not parse 'partes' JSON for row ${index + 2}:`, newDocData.partes);
@@ -1458,6 +1520,9 @@ export default function DocumentosPage() {
             }
             if (newTiposParteSet.size > 0) {
                 setTiposParte(prev => [...prev, ...Array.from(newTiposParteSet)]);
+            }
+            if (newMasterPartesFromCsv.length > 0) {
+                setMasterPartes(prev => [...prev, ...newMasterPartesFromCsv]);
             }
             if (newGenerosSet.size > 0) {
                 setGenerosDocumentais(prev => [...prev, ...Array.from(newGenerosSet)]);
@@ -2528,33 +2593,74 @@ export default function DocumentosPage() {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isParteDialogOpen} onOpenChange={setIsParteDialogOpen}>
+        <Dialog open={isParteDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setComboboxOpen(false);
+          }
+          setIsParteDialogOpen(isOpen);
+        }}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                 <DialogTitle>{isEditingParte ? 'Editar Parte' : 'Adicionar Nova Parte'}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="parte-nome" className="text-right">Nome*</Label>
-                    <Input id="parte-nome" value={parteFormState.nome} onChange={e => setParteFormState(p => ({...p, nome: e.target.value}))} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="parte-cpf" className="text-right">CPF/CNPJ</Label>
-                    <Input id="parte-cpf" value={parteFormState.cpfCnpj || ''} onChange={e => setParteFormState(p => ({...p, cpfCnpj: e.target.value}))} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="parte-tipo" className="text-right">Tipo</Label>
-                    <Select onValueChange={(value) => setParteFormState(p => ({...p, tipoParte: value}))} value={parteFormState.tipoParte}>
-                        <SelectTrigger className="col-span-3" id="parte-tipo">
-                            <SelectValue placeholder="Selecione o tipo de parte" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {tiposParte.sort().map(tipo => (
-                                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="parte-nome" className="text-right">Nome*</Label>
+                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="col-span-3 justify-between">
+                                    {parteFormState.nome || "Selecione ou digite um nome..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command shouldFilter={false}>
+                                    <CommandInput 
+                                      placeholder="Buscar parte..."
+                                      value={parteFormState.nome}
+                                      onValueChange={(value) => setParteFormState(p => ({...p, nome: value}))}
+                                    />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhuma parte encontrada. Prossiga para criar uma nova.</CommandEmpty>
+                                        <CommandGroup>
+                                            {masterPartes
+                                                .filter(p => p.nome.toLowerCase().includes((parteFormState.nome || "").toLowerCase()))
+                                                .map(parte => (
+                                                <CommandItem
+                                                    key={parte.id}
+                                                    value={parte.nome}
+                                                    onSelect={() => {
+                                                        setParteFormState(prev => ({...prev, nome: parte.nome, cpfCnpj: parte.cpfCnpj}));
+                                                        setComboboxOpen(false);
+                                                    }}
+                                                >
+                                                    <Check className={cn("mr-2 h-4 w-4", parte.nome === parteFormState.nome ? "opacity-100" : "opacity-0")} />
+                                                    {parte.nome}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="parte-cpf" className="text-right">CPF/CNPJ</Label>
+                        <Input id="parte-cpf" value={parteFormState.cpfCnpj || ''} onChange={e => setParteFormState(p => ({...p, cpfCnpj: e.target.value}))} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="parte-tipo" className="text-right">Tipo</Label>
+                        <Select onValueChange={(value) => setParteFormState(p => ({...p, tipoParte: value}))} value={parteFormState.tipoParte}>
+                            <SelectTrigger className="col-span-3" id="parte-tipo">
+                                <SelectValue placeholder="Selecione o tipo de parte" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {tiposParte.sort().map(tipo => (
+                                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 <DialogFooter>
                 <Button variant="outline" onClick={() => setIsParteDialogOpen(false)}>Cancelar</Button>
@@ -2649,6 +2755,7 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
 

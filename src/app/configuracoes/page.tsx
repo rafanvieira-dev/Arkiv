@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -30,11 +30,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa } from "@/lib/mock-data";
+import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import type { TipoOrigem } from "@/types";
+import type { TipoOrigem, ParteDetalhe } from "@/types";
 import { parseCsvRow } from "@/lib/utils";
 import { useUserSession } from "@/hooks/use-user-session";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -43,6 +45,7 @@ const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
+const PARTES_STORAGE_KEY = 'arquivocentral_partes';
 
 type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoCaixa';
 
@@ -57,6 +60,7 @@ export default function ConfiguracoesPage() {
   const [tiposMidia, setTiposMidia] = React.useState<string[]>([]);
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
+  const [partes, setPartes] = React.useState<ParteDetalhe[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -67,11 +71,16 @@ export default function ConfiguracoesPage() {
   const [isOrigemDialogOpen, setIsOrigemDialogOpen] = React.useState(false);
   const [origemFormState, setOrigemFormState] = React.useState<{ id?: string; nome: string; sigla: string }>({ nome: "", sigla: "" });
   const [isEditingOrigem, setIsEditingOrigem] = React.useState(false);
+  
+  const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
+  const [parteFormState, setParteFormState] = React.useState<Partial<ParteDetalhe>>({ nome: "", cpfCnpj: "" });
+  const [isEditingParte, setIsEditingParte] = React.useState(false);
+
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const activeImportContext = React.useRef<{
     setter: React.Dispatch<React.SetStateAction<any>>;
-    type: 'simple' | 'origem';
+    type: 'simple' | 'origem' | 'parte';
     listName: string;
   } | null>(null);
 
@@ -95,6 +104,10 @@ export default function ConfiguracoesPage() {
 
       const storedTiposCaixa = window.localStorage.getItem(TIPOS_CAIXA_STORAGE_KEY);
       setTiposCaixa(storedTiposCaixa ? JSON.parse(storedTiposCaixa) : initialTiposCaixa);
+      
+      const storedPartes = window.localStorage.getItem(PARTES_STORAGE_KEY);
+      setPartes(storedPartes ? JSON.parse(storedPartes) : initialPartes);
+
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -104,6 +117,7 @@ export default function ConfiguracoesPage() {
       setTiposMidia(initialTiposMidia);
       setTiposOrigem(initialTiposOrigem);
       setTiposCaixa(initialTiposCaixa);
+      setPartes(initialPartes);
     }
     setIsDataLoaded(true);
   }, []);
@@ -117,11 +131,12 @@ export default function ConfiguracoesPage() {
         window.localStorage.setItem(TIPOS_MIDIA_STORAGE_KEY, JSON.stringify(tiposMidia));
         window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
         window.localStorage.setItem(TIPOS_CAIXA_STORAGE_KEY, JSON.stringify(tiposCaixa));
+        window.localStorage.setItem(PARTES_STORAGE_KEY, JSON.stringify(partes));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, isDataLoaded]);
+  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, partes, isDataLoaded]);
 
   const resetForm = () => {
     setDialogConfig(null);
@@ -191,6 +206,12 @@ export default function ConfiguracoesPage() {
     setIsEditingOrigem(false);
     setIsOrigemDialogOpen(false);
   };
+  
+  const resetParteForm = () => {
+    setParteFormState({ nome: "", cpfCnpj: "" });
+    setIsEditingParte(false);
+    setIsParteDialogOpen(false);
+  };
 
   const handleOpenOrigemDialog = (origem?: TipoOrigem) => {
     if (origem) {
@@ -201,6 +222,17 @@ export default function ConfiguracoesPage() {
         setOrigemFormState({ nome: "", sigla: "" });
     }
     setIsOrigemDialogOpen(true);
+  };
+  
+  const handleOpenParteDialog = (parte?: ParteDetalhe) => {
+    if (parte) {
+      setIsEditingParte(true);
+      setParteFormState({ id: parte.id, nome: parte.nome, cpfCnpj: parte.cpfCnpj || "" });
+    } else {
+      setIsEditingParte(false);
+      setParteFormState({ nome: "", cpfCnpj: "" });
+    }
+    setIsParteDialogOpen(true);
   };
 
   const handleSaveOrigem = () => {
@@ -234,13 +266,53 @@ export default function ConfiguracoesPage() {
     }
     resetOrigemForm();
   };
+  
+  const handleSaveParte = () => {
+    if (!parteFormState.nome?.trim()) {
+      toast({ variant: "destructive", title: "Erro", description: "O nome da parte não pode ser vazio." });
+      return;
+    }
+
+    const trimmedNome = parteFormState.nome.trim();
+    const trimmedCpfCnpj = parteFormState.cpfCnpj?.trim() || "";
+    
+    const isDuplicate = partes.some(p => 
+      p.nome.toLowerCase() === trimmedNome.toLowerCase() &&
+      (p.cpfCnpj || "").toLowerCase() === trimmedCpfCnpj.toLowerCase() &&
+      p.id !== parteFormState.id
+    );
+
+    if (isDuplicate) {
+      toast({ variant: "destructive", title: "Erro", description: "Uma parte com este nome e CPF/CNPJ já existe." });
+      return;
+    }
+    
+    if (isEditingParte) {
+      setPartes(prev => prev.map(p => p.id === parteFormState.id ? { ...p, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj } : p));
+      toast({ title: "Sucesso", description: "Parte atualizada." });
+    } else {
+      const newParte: ParteDetalhe = {
+        id: `parte${Date.now()}`,
+        nome: trimmedNome,
+        cpfCnpj: trimmedCpfCnpj,
+      };
+      setPartes(prev => [...prev, newParte]);
+      toast({ title: "Sucesso", description: "Nova parte adicionada." });
+    }
+    resetParteForm();
+  };
 
   const handleDeleteOrigem = (idToDelete: string) => {
     setTiposOrigem(prev => prev.filter(item => item.id !== idToDelete));
     toast({ title: "Sucesso", description: `Origem removida.` });
   };
   
-  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem', listName: string) => {
+  const handleDeleteParte = (idToDelete: string) => {
+    setPartes(prev => prev.filter(item => item.id !== idToDelete));
+    toast({ title: "Sucesso", description: "Parte removida." });
+  };
+  
+  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem' | 'parte', listName: string) => {
     activeImportContext.current = { setter, type, listName };
     fileInputRef.current?.click();
   };
@@ -258,39 +330,46 @@ export default function ConfiguracoesPage() {
         const rows = text.split('\n').filter(row => row.trim() !== '');
         const headerRow = rows.shift()?.trim();
         if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
+        const headers = parseCsvRow(headerRow);
 
         if (type === 'simple') {
-          const headers = parseCsvRow(headerRow);
           if (headers[0] !== 'nome') throw new Error("Cabeçalho inválido. A primeira coluna deve ser 'nome'.");
-          
           const newItems = rows.map(row => parseCsvRow(row)[0] || '');
           (setter as React.Dispatch<React.SetStateAction<string[]>>)(prev => {
             const existing = new Set(prev.map(i => i.toLowerCase()));
-            const uniqueNewItems = newItems.filter(item => !existing.has(item.toLowerCase()));
+            const uniqueNewItems = newItems.filter(item => item && !existing.has(item.toLowerCase()));
             return [...prev, ...uniqueNewItems].sort((a,b) => a.localeCompare(b));
           });
           toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
         } else if (type === 'origem') {
-          const headers = parseCsvRow(headerRow);
           const requiredHeaders = ['nome'];
           if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. A coluna 'nome' é necessária.");
-
           const newItems: TipoOrigem[] = [];
           rows.forEach((row, index) => {
             const values = parseCsvRow(row);
             const newItemData: { [key: string]: string } = {};
             headers.forEach((h, i) => newItemData[h] = values[i] || "");
-
-            newItems.push({
-              id: `to_imp_${Date.now()}_${index}`,
-              nome: newItemData.nome,
-              sigla: newItemData.sigla || undefined,
-            });
+            newItems.push({ id: `to_imp_${Date.now()}_${index}`, nome: newItemData.nome, sigla: newItemData.sigla || undefined });
           });
-
           (setter as React.Dispatch<React.SetStateAction<TipoOrigem[]>>)(prev => {
             const existingNames = new Set(prev.map(i => i.nome.toLowerCase()));
-            const uniqueNewItems = newItems.filter(item => !existingNames.has(item.nome.toLowerCase()));
+            const uniqueNewItems = newItems.filter(item => item.nome && !existingNames.has(item.nome.toLowerCase()));
+            return [...prev, ...uniqueNewItems].sort((a, b) => a.nome.localeCompare(b.nome));
+          });
+          toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
+        } else if (type === 'parte') {
+          const requiredHeaders = ['nome'];
+          if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. A coluna 'nome' é necessária.");
+          const newItems: ParteDetalhe[] = [];
+          rows.forEach((row, index) => {
+            const values = parseCsvRow(row);
+            const newItemData: { [key: string]: string } = {};
+            headers.forEach((h, i) => newItemData[h] = values[i] || "");
+            newItems.push({ id: `parte_imp_${Date.now()}_${index}`, nome: newItemData.nome, cpfCnpj: newItemData.cpfCnpj || "" });
+          });
+          (setter as React.Dispatch<React.SetStateAction<ParteDetalhe[]>>)(prev => {
+            const existingMap = new Map(prev.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, true]));
+            const uniqueNewItems = newItems.filter(item => item.nome && !existingMap.has(`${item.nome.toLowerCase()}|${(item.cpfCnpj || "").toLowerCase()}`));
             return [...prev, ...uniqueNewItems].sort((a, b) => a.nome.localeCompare(b.nome));
           });
           toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
@@ -315,8 +394,8 @@ export default function ConfiguracoesPage() {
     if (typeof list[0] === 'string') {
       (list as string[]).forEach(item => csvRows.push(`"${item.replace(/"/g, '""')}"`));
     } else {
-      (list as TipoOrigem[]).forEach(item => {
-        const row = headers.map(header => `"${String(item[header as keyof TipoOrigem] ?? '').replace(/"/g, '""')}"`);
+      list.forEach(item => {
+        const row = headers.map(header => `"${String(item[header as keyof typeof item] ?? '').replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
       });
     }
@@ -545,6 +624,89 @@ export default function ConfiguracoesPage() {
             placeholder="Nenhum tipo de caixa cadastrado."
             listName="Tipos de Caixa"
         />
+         <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div>
+                    <CardTitle className="font-headline text-primary">Nomes de Partes</CardTitle>
+                    <CardDescription>Gerencie o cadastro central de partes envolvidas nos documentos.</CardDescription>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
+                      <Button size="sm" variant="outline" onClick={() => handleImportClick(setPartes, 'parte', 'Nomes de Partes')}>
+                          <Upload className="mr-2 h-4 w-4" /> Importar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(partes, 'partes_export.csv', ['nome', 'cpfCnpj'])}>
+                          <Download className="mr-2 h-4 w-4" /> Exportar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_partes.csv', ['nome', 'cpfCnpj'])}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" /> Modelo
+                      </Button>
+                      <Button size="sm" onClick={() => handleOpenParteDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Nova Parte
+                      </Button>
+                  </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-72">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>CPF/CNPJ</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {partes.sort((a,b) => a.nome.localeCompare(b.nome)).map(parte => (
+                                <TableRow key={parte.id}>
+                                    <TableCell>{parte.nome}</TableCell>
+                                    <TableCell>{parte.cpfCnpj || 'N/A'}</TableCell>
+                                    <TableCell className="text-right">
+                                         <Tooltip>
+                                            <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenParteDialog(parte)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Editar</p></TooltipContent>
+                                        </Tooltip>
+                                        <AlertDialog>
+                                            <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" disabled={!permissions.usuarios}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                </AlertDialogTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
+                                            </Tooltip>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a parte "{parte.nome}".
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteParte(parte.id)}>Sim, excluir</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+                {partes.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground py-4">Nenhuma parte cadastrada.</p>
+                )}
+            </CardContent>
+        </Card>
+
       </div>
 
        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -607,6 +769,42 @@ export default function ConfiguracoesPage() {
               </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <Dialog open={isParteDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) resetParteForm();
+          else setIsParteDialogOpen(isOpen);
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{isEditingParte ? "Editar Parte" : "Nova Parte"}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="parte-nome">Nome*</Label>
+                <Input
+                  id="parte-nome"
+                  value={parteFormState.nome || ""}
+                  onChange={(e) => setParteFormState(p => ({...p, nome: e.target.value}))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="parte-cpfCnpj">CPF/CNPJ</Label>
+                <Input
+                  id="parte-cpfCnpj"
+                  value={parteFormState.cpfCnpj || ""}
+                  onChange={(e) => setParteFormState(p => ({...p, cpfCnpj: e.target.value}))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button onClick={handleSaveParte}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
     </div>
     </TooltipProvider>
   );

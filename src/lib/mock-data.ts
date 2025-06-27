@@ -1,13 +1,13 @@
 
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe } from "@/types";
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
 export const initialCaixas: Caixa[] = [
-  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", condicao: "Ocupada", documentoIds: ["DOC001", "DOC003"], observacoes: "Contém processos de alta relevância histórica." },
-  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", condicao: "Ocupada", documentoIds: ["DOC002"], observacoes: "" },
-  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "Pasta", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa", condicao: "Vazia", observacoes: "Manusear com cuidado." },
+  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", condicao: "Ocupada", documentoIds: ["DOC001", "DOC003"] },
+  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", condicao: "Ocupada", documentoIds: ["DOC002"] },
+  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "Pasta", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa", condicao: "Vazia" },
 ];
 
 export const placeholderClassificacoesSimulado: Classificacao[] = [
@@ -444,7 +444,7 @@ export const initialTiposDocumento: string[] = [
 
 export const initialGenerosDocumentais: string[] = ['Textual', 'Iconográfico', 'Cartográfico', 'Sonoro', 'Filmográfico', 'Audiovisual'];
 
-export const initialTiposMidia: string[] = ['CD-R', 'CD-RW', 'Disquete', 'Pen Drive', 'HD'];
+export const initialTiposMidia: string[] = ['CD-R', 'CD-RW', 'Disquete', 'Pen Drive', 'HD', 'Outro'];
 
 export const initialTiposParte: string[] = ["Autor", "Réu", "Magistrado", "Advogado", "Procurador", "Acusado", "Acusador", "Agravado", "Agravante", "Apelado", "Apelante", "Assistente do Réu", "Coator", "Curador", "Declarante", "Depositante", "Depositário", "Depositário Público", "Deprecado", "Deprecante", "Depreciado", "Embargado", "Embargante", "Espólio", "Executado", "Executante", "Exequado", "Exequente", "Falecido", "Impetrado", "Impetrante", "Impugnado", "Impugnante", "Indiciado", "Inventariado", "Inventariante", "Justificante", "Liquidado", "Liquidante", "Litisconsorte", "Notificado", "Notificante", "Paciente", "Requerente", "Requerido", "Requisitado", "Responsável", "Rogado", "Rogante", "Suplicado", "Suplicante", "Testemunhante", "Vítima"];
 
@@ -475,4 +475,13 @@ export const initialClassificacoes: Classificacao[] = [
   { id: "CLA002", tipoPlanoClassificacao: "Administrativo", codigo: "030.5", descricao: "Correspondências Recebidas", tipoPrazoFaseCorrente: "Condição Textual", prazoGuardaFaseCorrenteAnos: undefined, prazoGuardaFaseCorrenteCondicaoTextual: "Até a próxima atualização", prazoGuardaFaseIntermediariaAnos: 3, destinacaoFinal: "Eliminação", observacoes: "", status: "Inativo" },
   { id: "CLA003", tipoPlanoClassificacao: "Administrativo", codigo: "045.2", descricao: "Relatórios Anuais", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 1, prazoGuardaFaseCorrenteCondicaoTextual: undefined, prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente", observacoes: "Manter permanentemente na fase intermediária", status: "Ativo" },
   { id: "CLA004", tipoPlanoClassificacao: "Administrativo", codigo: "020.1", descricao: "Contratos Administrativos", tipoPrazoFaseCorrente: "Anos", prazoGuardaFaseCorrenteAnos: 5, prazoGuardaFaseIntermediariaAnos: 10, destinacaoFinal: "Eliminação", observacoes: "Exemplo de código duplicado em plano diferente.", status: "Ativo" },
+];
+
+export const PARTES_STORAGE_KEY = 'arquivocentral_partes';
+
+export const initialPartes: ParteDetalhe[] = [
+  { id: 'P001', nome: 'Empresa Exemplo Ltda', cpfCnpj: '12.345.678/0001-99' },
+  { id: 'P002', nome: 'Maria Santos', cpfCnpj: '123.456.789-00' },
+  { id: 'P003', nome: 'João da Silva' },
+  { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41' },
 ];
