@@ -4,6 +4,7 @@ export interface ParteDetalhe {
   id: string;
   nome: string;
   cpfCnpj?: string;
+  iniciais?: string;
 }
 
 export interface ParteDocumento {
@@ -11,6 +12,7 @@ export interface ParteDocumento {
   nome: string;
   cpfCnpj?: string;
   tipoParte: string; // "Autor", "Réu", etc. - allow custom
+  usarIniciais?: boolean;
 }
 
 export interface MidiaDetalhe {

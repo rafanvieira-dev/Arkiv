@@ -72,7 +72,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
-import { cn, parseCsvRow } from "@/lib/utils";
+import { cn, parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
 
@@ -154,6 +154,7 @@ const initialParteState: Partial<ParteDocumento> = {
   nome: '',
   cpfCnpj: '',
   tipoParte: '',
+  usarIniciais: false,
 };
 
 const ALL_VALUES_SENTINEL = "ALL_VALUES"; 
@@ -313,6 +314,8 @@ export default function DocumentosPage() {
     setIsDialogOpen(true);
   }, [classificacoes, resetForm]);
 
+  const masterPartesMap = React.useMemo(() => new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p])), [masterPartes]);
+  
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
     { 
       id: 'id', 
@@ -372,7 +375,14 @@ export default function DocumentosPage() {
         enableSorting: false, 
         cellFormatter: (partes?: ParteDocumento[]) => {
             if (!partes || partes.length === 0) return 'N/A';
-            const names = partes.map(p => p.nome).join(', ');
+            const names = partes.map(p => {
+              if (p.usarIniciais) {
+                const masterKey = `${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
+                const masterPart = masterPartesMap.get(masterKey);
+                return masterPart?.iniciais || p.nome;
+              }
+              return p.nome;
+            }).join(', ');
             return <span className="block max-w-xs truncate" title={names}>{names}</span>;
         } 
     },
@@ -433,7 +443,7 @@ export default function DocumentosPage() {
         );
       }
     },
-  ], [classificacoes, listagens, handleOpenDialog]);
+  ], [classificacoes, listagens, handleOpenDialog, masterPartesMap]);
   
   React.useEffect(() => {
     setColumnVisibility(
@@ -773,7 +783,7 @@ export default function DocumentosPage() {
     const existingMasterPart = masterPartes.find(p => p.nome.toLowerCase() === trimmedNome.toLowerCase() && (p.cpfCnpj || "").toLowerCase() === (trimmedCpfCnpj || "").toLowerCase());
 
     if (!existingMasterPart) {
-      newMasterPartes.push({ id: `parte${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj });
+      newMasterPartes.push({ id: `parte${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj, iniciais: gerarIniciais(trimmedNome) });
     }
     
     setFormState(prev => {
@@ -865,7 +875,8 @@ export default function DocumentosPage() {
             newMasterPartesToCreate.push({
                 id: `parte${Date.now()}_${Math.random()}`,
                 nome: docParte.nome,
-                cpfCnpj: docParte.cpfCnpj
+                cpfCnpj: docParte.cpfCnpj,
+                iniciais: gerarIniciais(docParte.nome)
             });
             masterPartesMap.set(key, newMasterPartesToCreate[newMasterPartesToCreate.length - 1]); // Avoid re-adding
         }
@@ -1448,7 +1459,7 @@ export default function DocumentosPage() {
                             parsedPartes.forEach(p => {
                                 const key = `${p.nome?.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
                                 if (p.nome && !masterPartesMap.has(key)) {
-                                    const newMasterPart = { id: `parte_imp_${Date.now()}_${Math.random()}`, nome: p.nome, cpfCnpj: p.cpfCnpj || "" };
+                                    const newMasterPart = { id: `parte_imp_${Date.now()}_${Math.random()}`, nome: p.nome, cpfCnpj: p.cpfCnpj || "", iniciais: gerarIniciais(p.nome) };
                                     newMasterPartesFromCsv.push(newMasterPart);
                                     masterPartesMap.set(key, newMasterPart);
                                 }
@@ -1915,10 +1926,13 @@ export default function DocumentosPage() {
                                               <Card>
                                                   <CardContent className="p-2 space-y-2">
                                                       {formState.partes && formState.partes.length > 0 ? (
-                                                          formState.partes.map(parte => (
+                                                          formState.partes.map(parte => {
+                                                            const masterPart = masterPartesMap.get(`${parte.nome.toLowerCase()}|${(parte.cpfCnpj || "").toLowerCase()}`);
+                                                            const displayName = parte.usarIniciais ? (masterPart?.iniciais || parte.nome) : parte.nome;
+                                                            return(
                                                               <div key={parte.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
                                                                   <div>
-                                                                      <p className="font-medium">{parte.nome}</p>
+                                                                      <p className="font-medium">{displayName}</p>
                                                                       <p className="text-muted-foreground">{parte.tipoParte} {parte.cpfCnpj && `(${parte.cpfCnpj})`}</p>
                                                                   </div>
                                                                   {!isFormDisabled && (
@@ -1928,7 +1942,7 @@ export default function DocumentosPage() {
                                                                   </div>
                                                                   )}
                                                               </div>
-                                                          ))
+                                                          )})
                                                       ) : (
                                                           <p className="text-center text-sm text-muted-foreground p-4">Nenhuma parte adicionada.</p>
                                                       )}
@@ -2661,6 +2675,11 @@ export default function DocumentosPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="usar-iniciais" className="text-right">Anonimizar</Label>
+                        <Checkbox id="usar-iniciais" checked={parteFormState.usarIniciais} onCheckedChange={(checked) => setParteFormState(p => ({...p, usarIniciais: !!checked}))} />
+                        <span className="col-span-2 text-xs text-muted-foreground">Usar iniciais em vez do nome completo.</span>
+                    </div>
                 </div>
                 <DialogFooter>
                 <Button variant="outline" onClick={() => setIsParteDialogOpen(false)}>Cancelar</Button>
@@ -2755,7 +2774,3 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
-
-
-
-

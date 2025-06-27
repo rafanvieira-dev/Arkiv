@@ -30,3 +30,15 @@ export function parseCsvRow(row: string): string[] {
     return finalValue;
   });
 }
+
+export function gerarIniciais(nome: string): string {
+  if (!nome || typeof nome !== 'string') return '';
+  const preposicoes = new Set(['de', 'do', 'da', 'dos', 'das', 'e', "d'"]);
+  const palavras = nome.split(/\s+/);
+  
+  return palavras
+    .filter(palavra => !preposicoes.has(palavra.toLowerCase()))
+    .map(palavra => palavra.charAt(0))
+    .join('')
+    .toUpperCase();
+}

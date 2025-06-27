@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { TipoOrigem, ParteDetalhe } from "@/types";
-import { parseCsvRow } from "@/lib/utils";
+import { parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { useUserSession } from "@/hooks/use-user-session";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -275,6 +275,7 @@ export default function ConfiguracoesPage() {
 
     const trimmedNome = parteFormState.nome.trim();
     const trimmedCpfCnpj = parteFormState.cpfCnpj?.trim() || "";
+    const iniciais = gerarIniciais(trimmedNome);
     
     const isDuplicate = partes.some(p => 
       p.nome.toLowerCase() === trimmedNome.toLowerCase() &&
@@ -288,13 +289,14 @@ export default function ConfiguracoesPage() {
     }
     
     if (isEditingParte) {
-      setPartes(prev => prev.map(p => p.id === parteFormState.id ? { ...p, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj } : p));
+      setPartes(prev => prev.map(p => p.id === parteFormState.id ? { ...p, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj, iniciais } : p));
       toast({ title: "Sucesso", description: "Parte atualizada." });
     } else {
       const newParte: ParteDetalhe = {
         id: `parte${Date.now()}`,
         nome: trimmedNome,
         cpfCnpj: trimmedCpfCnpj,
+        iniciais,
       };
       setPartes(prev => [...prev, newParte]);
       toast({ title: "Sucesso", description: "Nova parte adicionada." });
@@ -365,7 +367,7 @@ export default function ConfiguracoesPage() {
             const values = parseCsvRow(row);
             const newItemData: { [key: string]: string } = {};
             headers.forEach((h, i) => newItemData[h] = values[i] || "");
-            newItems.push({ id: `parte_imp_${Date.now()}_${index}`, nome: newItemData.nome, cpfCnpj: newItemData.cpfCnpj || "" });
+            newItems.push({ id: `parte_imp_${Date.now()}_${index}`, nome: newItemData.nome, cpfCnpj: newItemData.cpfCnpj || "", iniciais: gerarIniciais(newItemData.nome) });
           });
           (setter as React.Dispatch<React.SetStateAction<ParteDetalhe[]>>)(prev => {
             const existingMap = new Map(prev.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, true]));
@@ -635,7 +637,7 @@ export default function ConfiguracoesPage() {
                       <Button size="sm" variant="outline" onClick={() => handleImportClick(setPartes, 'parte', 'Nomes de Partes')}>
                           <Upload className="mr-2 h-4 w-4" /> Importar
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleExport(partes, 'partes_export.csv', ['id', 'nome', 'cpfCnpj'])}>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(partes, 'partes_export.csv', ['id', 'nome', 'cpfCnpj', 'iniciais'])}>
                           <Download className="mr-2 h-4 w-4" /> Exportar
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_partes.csv', ['nome', 'cpfCnpj'])}>
@@ -654,6 +656,7 @@ export default function ConfiguracoesPage() {
                             <TableRow>
                                 <TableHead>ID</TableHead>
                                 <TableHead>Nome</TableHead>
+                                <TableHead>Iniciais</TableHead>
                                 <TableHead>CPF/CNPJ</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
                             </TableRow>
@@ -663,6 +666,7 @@ export default function ConfiguracoesPage() {
                                 <TableRow key={parte.id}>
                                     <TableCell className="font-mono text-xs text-muted-foreground">{parte.id}</TableCell>
                                     <TableCell>{parte.nome}</TableCell>
+                                    <TableCell>{parte.iniciais || 'N/A'}</TableCell>
                                     <TableCell>{parte.cpfCnpj || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                          <Tooltip>
