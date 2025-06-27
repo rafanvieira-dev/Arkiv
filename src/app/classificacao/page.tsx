@@ -286,7 +286,7 @@ export default function ClassificacaoPage() {
   const bulkEditableFields = [
     { value: 'tipoPlanoClassificacao', label: 'Tipo de Plano', type: 'select', options: ['Administrativo', 'Judicial'] },
     { value: 'status', label: 'Status', type: 'select', options: ['Ativo', 'Inativo', 'Pendente de Complemento'] },
-    { value: 'destinacaoFinal', label: 'Destinação Final', type: 'select', options: ['Eliminação', 'Guarda Permanente'] },
+    { value: 'destinacaoFinal', label: 'Destinação Final', type: 'select', options: ['Eliminação', 'Guarda Permanente', 'Vide Guia de Aplicação', 'Não se Aplica'] },
     { value: 'observacoes', label: 'Observações', type: 'text' },
   ];
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
@@ -892,6 +892,8 @@ export default function ClassificacaoPage() {
                           <SelectContent>
                             <SelectItem value="Eliminação">Eliminação</SelectItem>
                             <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                            <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                            <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

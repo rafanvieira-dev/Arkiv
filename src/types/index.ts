@@ -60,7 +60,7 @@ export interface Documento {
   // Campos para exibição, populados a partir da Classificação (manuais por enquanto)
   prazoArquivoCorrenteDisplay?: string; // 1.23
   prazoArquivoIntermediarioDisplay?: string; // 1.24
-  destinacaoFinalDisplay?: 'Eliminação' | 'Guarda Permanente' | string; // 1.25
+  destinacaoFinalDisplay?: 'Eliminação' | 'Guarda Permanente' | 'Vide Guia de Aplicação' | 'Não se Aplica' | string; // 1.25
 
   alteracaoDestinacaoFinal: 'Não Alterar' | 'Guarda Permanente – Guarda Amostral' | 'Guarda Permanente – Decisão da CPAD'; // 1.26 - Opção padrão “Não Alterar”
   anoEliminacaoPrevisto?: string; // 1.27 - Calculado
@@ -87,7 +87,7 @@ export interface Classificacao {
   prazoGuardaFaseCorrenteAnos?: number;
   prazoGuardaFaseCorrenteCondicaoTextual?: string;
   prazoGuardaFaseIntermediariaAnos: number; 
-  destinacaoFinal: 'Eliminação' | 'Guarda Permanente'; 
+  destinacaoFinal: 'Eliminação' | 'Guarda Permanente' | 'Vide Guia de Aplicação' | 'Não se Aplica'; 
   observacoes?: string;
 }
 

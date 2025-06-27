@@ -492,6 +492,8 @@ export default function BuscaAvancadaPage() {
                 <SelectContent>
                     <SelectItem value="Eliminação">Eliminação</SelectItem>
                     <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
                 </SelectContent>
             </Select>
           </div>

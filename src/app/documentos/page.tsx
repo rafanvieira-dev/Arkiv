@@ -648,17 +648,19 @@ export default function DocumentosPage() {
       const destinacao = classification.destinacaoFinal;
 
       let anoEliminacao = "";
-      if (formState.dataArquivamento && isValid(parseISO(formState.dataArquivamento)) &&
-          (destinacao === 'Eliminação' ||
-           (destinacao !== 'Guarda Permanente' && formState.alteracaoDestinacaoFinal !== 'Não Alterar' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Guarda Amostral' && formState.alteracaoDestinacaoFinal !== 'Guarda Permanente – Decisão da CPAD'))) {
-          
+      let effectiveDestination = destinacao;
+      if (formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Guarda Amostral' || formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Decisão da CPAD') {
+        effectiveDestination = 'Guarda Permanente';
+      }
+
+      if (formState.dataArquivamento && isValid(parseISO(formState.dataArquivamento)) && effectiveDestination === 'Eliminação') {
           const dataArquivamentoDate = parseISO(formState.dataArquivamento);
           let prazoIntermediarioAnosNum = 0;
           if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
             prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
           }
           
-          if (!isNaN(prazoIntermediarioAnosNum) && dataArquivamentoDate) {
+          if (!isNaN(prazoIntermediarioAnosNum)) {
             const anoArquivamento = getYear(dataArquivamentoDate);
             anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
           }
@@ -2997,4 +2999,5 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
