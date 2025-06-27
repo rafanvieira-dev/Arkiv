@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import type { Usuario } from '@/types';
 import { useToast } from "@/hooks/use-toast";
-import { initialUsers } from '@/lib/mock-data';
+import { initialUsers } from "@/lib/mock-data";
 import Link from "next/link";
 import { logAction } from "@/lib/audit";
 import { Logo } from "@/components/icons/logo";
@@ -72,19 +72,46 @@ export default function LoginPage() {
   const handleAdminLogin = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Always use the pristine admin user data from the mock data source of truth
     const adminUser = initialUsers.find(u => u.email === 'admin@sistem.com');
 
-    if (adminUser) {
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
-      logAction('LOGIN_SUCCESS', { email: adminUser.email });
-      router.push('/');
-    } else {
-        // This case should ideally never happen if mock-data.ts is correct
+    if (!adminUser) {
         toast({
             variant: "destructive",
             title: "Erro Crítico",
-            description: "A conta de administrador padrão não foi encontrada nos dados iniciais do sistema.",
+            description: "A conta de administrador padrão não foi encontrada.",
+        });
+        return;
+    }
+
+    try {
+        const storedUsers = localStorage.getItem(USUARIOS_STORAGE_KEY);
+        let allUsers: Usuario[] = storedUsers ? JSON.parse(storedUsers) : [...initialUsers];
+
+        const adminIndex = allUsers.findIndex(u => u.id === adminUser.id);
+
+        if (adminIndex > -1) {
+            // Update the existing admin user to restore it to its pristine state
+            allUsers[adminIndex] = adminUser;
+        } else {
+            // If the admin user was deleted, add it back
+            allUsers.push(adminUser);
+        }
+        
+        // Save the potentially "healed" user list back to storage
+        localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(allUsers));
+        
+        // Set the current user for the session
+        localStorage.setItem('currentUser', JSON.stringify(adminUser));
+        
+        logAction('LOGIN_SUCCESS', { email: adminUser.email });
+        router.push('/');
+
+    } catch (error) {
+        console.error("Failed to process admin login:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro de Login",
+            description: "Não foi possível processar o login rápido de administrador.",
         });
     }
   };
