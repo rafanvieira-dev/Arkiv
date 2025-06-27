@@ -215,7 +215,7 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
           {getCellValueClassificacoes(item, column)}
         </TableCell>
       ))}
-      <TableCell className="sticky right-0 bg-background z-10 py-2 px-3 text-right">
+      <TableCell className="sticky right-0 bg-card z-10 py-2 px-3 text-right">
         <div className="flex items-center justify-end">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -950,9 +950,9 @@ export default function ClassificacaoPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="w-full">
+                <ScrollArea className="w-full h-[65vh]">
                   <Table className="min-w-full whitespace-nowrap">
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
                         <TableHead className="py-2 px-3 w-12">
                           <Checkbox
@@ -989,7 +989,7 @@ export default function ClassificacaoPage() {
                             </TableHead>
                           ) : null
                         )}
-                        <TableHead className="sticky right-0 bg-background z-10 text-right py-2 px-3">Ações</TableHead>
+                        <TableHead className="sticky right-0 bg-card z-10 text-right py-2 px-3">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -146,7 +147,7 @@ export default function AuditoriaPage() {
                 <CardContent>
                     <ScrollArea className="h-[60vh] w-full">
                         <Table>
-                            <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableHeader className="sticky top-0 z-10 bg-card">
                                 <TableRow>
                                     <TableHead>Data/Hora</TableHead>
                                     <TableHead>Usuário</TableHead>

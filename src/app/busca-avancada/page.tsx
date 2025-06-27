@@ -597,9 +597,9 @@ export default function BuscaAvancadaPage() {
         <CardContent>
           {searched ? (
             displayedResults.length > 0 ? (
-                <ScrollArea className="w-full">
+                <ScrollArea className="w-full h-[65vh]">
                     <Table className="min-w-full whitespace-nowrap">
-                        <TableHeader>
+                        <TableHeader className="sticky top-0 z-10 bg-card">
                         <TableRow>
                             <TableHead className="w-12 py-2 px-3">
                                 <Checkbox
