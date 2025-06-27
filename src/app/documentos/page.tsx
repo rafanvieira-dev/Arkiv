@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -70,14 +70,21 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes } from "@/lib/mock-data";
+import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes, initialClassesJudiciais } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
 
 
-const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string } = {
+const initialFormState: Partial<Documento> & { 
+  tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', 
+  codigoClassificacaoArquivisticaInput?: string; 
+  assuntoClassificacaoDisplay?: string;
+  nomeClasseProcessualDisplay?: string;
+  prazoGuardaClasseProcessualDisplay?: string;
+  destinacaoFinalClasseProcessualDisplay?: string;
+} = {
   status: "Arquivado",
   orgao: "TRF2",
   origem: "",
@@ -118,6 +125,9 @@ const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Adminis
   codigoClassificacaoJudicialId: "",
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
+  nomeClasseProcessualDisplay: "",
+  prazoGuardaClasseProcessualDisplay: "",
+  destinacaoFinalClasseProcessualDisplay: "",
 };
 
 const initialFiltersState = {
@@ -172,6 +182,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const SOLICITACOES_STORAGE_KEY = 'arquivocentral_solicitacoes';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const CLASSES_JUDICIAIS_STORAGE_KEY = 'arquivocentral_classes_judiciais';
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
 const TIPOS_PARTE_STORAGE_KEY = 'arquivocentral_tipos_parte';
@@ -226,7 +237,14 @@ export default function DocumentosPage() {
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<Partial<Documento> & { tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', codigoClassificacaoArquivisticaInput?: string; assuntoClassificacaoDisplay?: string }>(initialFormState);
+  const [formState, setFormState] = React.useState<Partial<Documento> & { 
+    tipoPlanoClassificacao?: 'Administrativo' | 'Judicial', 
+    codigoClassificacaoArquivisticaInput?: string; 
+    assuntoClassificacaoDisplay?: string;
+    nomeClasseProcessualDisplay?: string;
+    prazoGuardaClasseProcessualDisplay?: string;
+    destinacaoFinalClasseProcessualDisplay?: string;
+  }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
@@ -243,6 +261,7 @@ export default function DocumentosPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [solicitacoes, setSolicitacoes] = React.useState<Solicitacao[]>([]);
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
+  const [classesJudiciais, setClassesJudiciais] = React.useState<ClasseJudicial[]>([]);
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isFormDisabled, setIsFormDisabled] = React.useState(false);
 
@@ -291,6 +310,18 @@ export default function DocumentosPage() {
         }
       }
 
+      let nomeClasse = "", prazoClasse = "", destinacaoClasse = "";
+      if (doc.codigoClassificacaoJudicialId) {
+        const classeJudicial = classesJudiciais.find(c => c.codigo === doc.codigoClassificacaoJudicialId && !c.inativo);
+        if (classeJudicial) {
+          nomeClasse = classeJudicial.descricao;
+          prazoClasse = classeJudicial.prazoGuardaAnos !== undefined ? `${classeJudicial.prazoGuardaAnos} anos` : 'N/A';
+          destinacaoClasse = classeJudicial.destinacaoFinal;
+        } else if (doc.codigoClassificacaoJudicialId) {
+            nomeClasse = "Código não encontrado ou inativo.";
+        }
+      }
+
       setFormState({
         ...initialFormState, 
         ...doc,
@@ -304,6 +335,9 @@ export default function DocumentosPage() {
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
         totalMidias: doc.totalMidias ?? undefined,
         midias: doc.midias || [],
+        nomeClasseProcessualDisplay: nomeClasse,
+        prazoGuardaClasseProcessualDisplay: prazoClasse,
+        destinacaoFinalClasseProcessualDisplay: destinacaoClasse,
       });
       setDocumentIdToDisplay(doc.id);
       setIsFormDisabled(doc.status === 'Eliminado');
@@ -311,7 +345,7 @@ export default function DocumentosPage() {
       resetForm(); 
     }
     setIsDialogOpen(true);
-  }, [classificacoes, resetForm]);
+  }, [classificacoes, resetForm, classesJudiciais]);
 
   const masterPartesMap = React.useMemo(() => new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p])), [masterPartes]);
   
@@ -457,6 +491,9 @@ export default function DocumentosPage() {
 
       const storedClassificacoes = window.localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
       setClassificacoes(storedClassificacoes ? JSON.parse(storedClassificacoes) : initialClassificacoes);
+
+      const storedClassesJudiciais = window.localStorage.getItem(CLASSES_JUDICIAIS_STORAGE_KEY);
+      setClassesJudiciais(storedClassesJudiciais ? JSON.parse(storedClassesJudiciais) : initialClassesJudiciais);
       
       const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
       setListagens(storedListagens ? JSON.parse(storedListagens) : simulatedListagensData);
@@ -488,6 +525,7 @@ export default function DocumentosPage() {
       setDocumentos(placeholderDocumentos);
       setSolicitacoes(placeholderSolicitacoesInitial);
       setClassificacoes(initialClassificacoes);
+      setClassesJudiciais(initialClassesJudiciais);
       setListagens(simulatedListagensData);
       setTiposDocumento(initialTiposDocumento);
       setTiposParte(initialTiposParte);
@@ -765,6 +803,39 @@ export default function DocumentosPage() {
         destinacaoFinalDisplay: undefined,
         anoEliminacaoPrevisto: ""
       }));
+    }
+  };
+
+  const handleCodigoClasseJudicialBlur = () => {
+    const codigoInput = formState.codigoClassificacaoJudicialId?.trim();
+    if (codigoInput) {
+        const foundClasse = classesJudiciais.find(
+            c => c.codigo === codigoInput && !c.inativo
+        );
+
+        if (foundClasse) {
+            setFormState(prev => ({
+                ...prev,
+                nomeClasseProcessualDisplay: foundClasse.descricao,
+                prazoGuardaClasseProcessualDisplay: foundClasse.prazoGuardaAnos !== undefined ? `${foundClasse.prazoGuardaAnos} anos` : 'N/A',
+                destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinal,
+            }));
+        } else {
+            setFormState(prev => ({
+                ...prev,
+                nomeClasseProcessualDisplay: "Código não encontrado ou inativo.",
+                prazoGuardaClasseProcessualDisplay: "",
+                destinacaoFinalClasseProcessualDisplay: "",
+            }));
+        }
+    } else {
+        // Clear fields if input is empty
+        setFormState(prev => ({
+            ...prev,
+            nomeClasseProcessualDisplay: "",
+            prazoGuardaClasseProcessualDisplay: "",
+            destinacaoFinalClasseProcessualDisplay: "",
+        }));
     }
   };
 
@@ -2228,17 +2299,30 @@ export default function DocumentosPage() {
                                <AccordionItem value="item-7">
                                   <AccordionTrigger className="font-semibold">Classe Processual (Judicial)</AccordionTrigger>
                                   <AccordionContent>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
                                               <Label htmlFor="codigoClassificacaoJudicialId">Código da Classe Processual</Label>
                                               <Input 
                                               id="codigoClassificacaoJudicialId" 
                                               value={formState.codigoClassificacaoJudicialId || ""} 
                                               onChange={handleInputChange} 
+                                              onBlur={handleCodigoClasseJudicialBlur}
                                               placeholder="Cód. da classe processual" 
                                               disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
                                               className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
                                               />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="nomeClasseProcessualDisplay">Nome da Classe Processual</Label>
+                                            <Input id="nomeClasseProcessualDisplay" value={formState.nomeClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="prazoGuardaClasseProcessualDisplay">Prazo de Guarda</Label>
+                                              <Input id="prazoGuardaClasseProcessualDisplay" value={formState.prazoGuardaClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="destinacaoFinalClasseProcessualDisplay">Destinação Final</Label>
+                                              <Input id="destinacaoFinalClasseProcessualDisplay" value={formState.destinacaoFinalClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                                           </div>
                                       </div>
                                   </AccordionContent>
