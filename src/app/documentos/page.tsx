@@ -1150,20 +1150,36 @@ export default function DocumentosPage() {
       return;
     }
 
-    const headers = Object.keys(placeholderDocumentos[0]).filter(key => !key.startsWith('outro'));
+    const headers = [
+      'id', 'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
+      'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
+      'partes', 'documentosRelacionadosIds', 
+      'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
+      'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
+      'digitalizado', 'tipoBaixa', 'dataBaixa', 
+      'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
+      'prazoArquivoCorrenteDisplay', 'prazoArquivoIntermediarioDisplay', 'destinacaoFinalDisplay',
+      'alteracaoDestinacaoFinal', 'anoEliminacaoPrevisto', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+      'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
+      'numeroListagemEliminacao'
+    ];
     const csvRows = [headers.join(',')];
 
+    const classificacaoMap = new Map(classificacoes.map(c => [c.id, c]));
+
     dataToExport.forEach(doc => {
+        const classification = doc.classificacaoArquivisticaId ? classificacaoMap.get(doc.classificacaoArquivisticaId) : undefined;
+        
+        const rowData: { [key: string]: any } = {
+            ...doc,
+            partes: JSON.stringify(doc.partes || []),
+            tipoPlanoClassificacao: classification?.tipoPlanoClassificacao || '',
+            codigoClassificacaoArquivistica: classification?.codigo || '',
+        };
+
         const row = headers.map(header => {
-            const value = doc[header as keyof Documento];
-            
-            let stringValue;
-            if (header === 'partes' && Array.isArray(value)) {
-                stringValue = JSON.stringify(value);
-            } else {
-                stringValue = value === null || value === undefined ? "" : String(value);
-            }
-            
+            const value = rowData[header];
+            const stringValue = value === null || value === undefined ? "" : String(value);
             return `"${stringValue.replace(/"/g, '""')}"`;
         });
         csvRows.push(row.join(','));
@@ -1197,7 +1213,8 @@ export default function DocumentosPage() {
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
         'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
-        'digitalizado', 'tipoBaixa', 'dataBaixa', 'classificacaoArquivisticaId', 
+        'digitalizado', 'tipoBaixa', 'dataBaixa', 
+        'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
         'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
         'numeroListagemEliminacao'
@@ -1234,6 +1251,7 @@ export default function DocumentosPage() {
             const headers = parseCsvRow(headerRow);
 
             const newDocsFromCsv: Documento[] = [];
+            let newClassificationsFromCsv: Classificacao[] = [];
             const newTiposDocSet = new Set<string>();
             const newTiposOrigemSet = new Set<string>();
             const newTiposParteSet = new Set<string>();
@@ -1247,6 +1265,8 @@ export default function DocumentosPage() {
             const currentGeneros = new Set(generosDocumentais);
             const currentTiposMidia = new Set(tiposMidia);
             const currentCaixaCodes = new Set(caixas.map(c => c.codigoCaixa));
+
+            const tempClassificacoes = [...classificacoes];
 
             rows.forEach((row, index) => {
                 if(!row.trim()) return;
@@ -1280,7 +1300,7 @@ export default function DocumentosPage() {
                                 id: `CX_IMP_ACERVO_${Date.now()}_${code}`,
                                 codigoCaixa: code,
                                 descricao: "Caixa criada automaticamente via importação de acervo.",
-                                tipo: "JUD", // Default type
+                                tipo: "JUD",
                                 status: "Aberta",
                                 situacao: "Incompleta",
                                 documentoIds: []
@@ -1290,9 +1310,33 @@ export default function DocumentosPage() {
                     });
                 }
                 
-                const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
-                const classification = classificacoes.find(c => c.id === newDocData.classificacaoArquivisticaId);
-                
+                const tipoPlano = newDocData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] | undefined;
+                const codigoClassif = newDocData.codigoClassificacaoArquivistica;
+                let classification: Classificacao | undefined;
+                let classificationId: string | undefined;
+
+                if (tipoPlano && codigoClassif) {
+                    classification = tempClassificacoes.find(c => c.codigo === codigoClassif && c.tipoPlanoClassificacao === tipoPlano);
+                    if (!classification) {
+                        const newClassification: Classificacao = {
+                          id: `CLA_AUTO_IMP_${Date.now()}_${index}`,
+                          codigo: codigoClassif,
+                          descricao: "",
+                          observacoes: "Cadastro gerado automaticamente via importação de acervo.",
+                          status: 'Pendente de Complemento',
+                          prazoGuardaFaseIntermediariaAnos: 0,
+                          destinacaoFinal: 'Eliminação',
+                          tipoPlanoClassificacao: tipoPlano,
+                          tipoPrazoFaseCorrente: 'Anos',
+                          prazoGuardaFaseCorrenteAnos: 0,
+                        };
+                        newClassificationsFromCsv.push(newClassification);
+                        tempClassificacoes.push(newClassification);
+                        classification = newClassification;
+                    }
+                    classificationId = classification.id;
+                }
+
                 let prazoCorrente = "";
                 if (classification) {
                     if (classification.tipoPrazoFaseCorrente === "Anos") {
@@ -1304,7 +1348,7 @@ export default function DocumentosPage() {
 
                 const prazoIntermediario = classification ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` : "";
                 const destinacao = classification?.destinacaoFinal;
-
+                const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
                 let anoEliminacao = "";
                 if (dataArquivamento && isValid(parseISO(dataArquivamento)) && classification && destinacao === 'Eliminação') {
                     const dataArquivamentoDate = parseISO(dataArquivamento);
@@ -1354,7 +1398,7 @@ export default function DocumentosPage() {
                     digitalizado: newDocData.digitalizado || 'Não',
                     tipoBaixa: newDocData.tipoBaixa,
                     dataBaixa: newDocData.dataBaixa ? new Date(newDocData.dataBaixa).toISOString() : undefined,
-                    classificacaoArquivisticaId: newDocData.classificacaoArquivisticaId,
+                    classificacaoArquivisticaId: classificationId,
                     prazoArquivoCorrenteDisplay: prazoCorrente,
                     prazoArquivoIntermediarioDisplay: prazoIntermediario,
                     destinacaoFinalDisplay: destinacao,
@@ -1392,6 +1436,9 @@ export default function DocumentosPage() {
             }
             if (newCaixasMap.size > 0) {
                 setCaixas(prev => [...prev, ...Array.from(newCaixasMap.values())]);
+            }
+            if (newClassificationsFromCsv.length > 0) {
+              setClassificacoes(prev => [...prev, ...newClassificationsFromCsv]);
             }
 
             setDocumentos(prev => [...prev, ...newDocsFromCsv]);
@@ -1452,12 +1499,12 @@ export default function DocumentosPage() {
             toast({
                 variant: "destructive",
                 title: "Formato Inválido",
-                description: `Formato de classificação inválido. Use PLANO:CÓDIGO (ex: ADM:020.1). Planos válidos: ADM, JUD.`,
+                description: `Formato de classificação inválido. Use PLANO:CÓDIGO (ex: ADMINISTRATIVO:020.1). Planos válidos: ADMINISTRATIVO, JUDICIAL.`,
             });
             return;
         }
 
-        const tipoPlano = plan === 'ADM' ? 'Administrativo' : 'Judicial';
+        const tipoPlano = plan === 'ADMINISTRATIVO' ? 'Administrativo' : 'Judicial';
         const classification = classificacoes.find(c => c.codigo === code && c.tipoPlanoClassificacao === tipoPlano);
 
         if (!classification) {
@@ -2062,7 +2109,7 @@ export default function DocumentosPage() {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
                     <div className="space-y-2">
                       <Label htmlFor="filterStatus">Status</Label>
-                      <Select onValueChange={handleSelectChange('status')} value={filters.status}>
+                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
                         <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
@@ -2571,4 +2618,5 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
