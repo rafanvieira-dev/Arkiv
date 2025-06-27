@@ -63,6 +63,7 @@ const initialFilters = {
   caixaMidia: "",
   segredoJustica: false,
   digitalizado: false,
+  necessidadeReclassificacao: "",
 };
 
 type ColumnConfig = {
@@ -126,6 +127,7 @@ export default function BuscaAvancadaPage() {
         return classif ? `${classif.codigo} - ${classif.descricao}` : value || 'N/A';
       }
     },
+    { id: 'necessidadeReclassificacao', header: 'Reclassificar?', accessorKey: 'necessidadeReclassificacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value === 'Sim' ? <Badge variant="destructive">Sim</Badge> : 'Não' },
     { id: 'anoEliminacaoPrevisto', header: 'Ano de Eliminação', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: false, enableSorting: true },
     { id: 'grauSigilo', header: 'Grau de Sigilo', accessorKey: 'grauSigilo', defaultVisible: false, enableSorting: true },
     { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: false, enableSorting: true },
@@ -230,6 +232,7 @@ export default function BuscaAvancadaPage() {
         if (filters.categoria && doc.categoria !== filters.categoria) return false;
         if (filters.destinacaoFinal && doc.destinacaoFinalDisplay !== filters.destinacaoFinal) return false;
         if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) return false;
+        if (filters.necessidadeReclassificacao && (doc.necessidadeReclassificacao || 'Não') !== filters.necessidadeReclassificacao) return false;
 
         if (filters.segredoJustica && doc.segredoJustica !== "Sim") return false;
         if (filters.digitalizado && doc.digitalizado !== "Sim") return false;
@@ -494,6 +497,16 @@ export default function BuscaAvancadaPage() {
                     <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
                     <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
                     <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="necessidadeReclassificacao">Necess. Reclassificação</Label>
+            <Select onValueChange={handleSelectChange('necessidadeReclassificacao')} value={filters.necessidadeReclassificacao}>
+                <SelectTrigger id="necessidadeReclassificacao"><SelectValue placeholder="Ambos" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Sim">Sim</SelectItem>
+                    <SelectItem value="Não">Não</SelectItem>
                 </SelectContent>
             </Select>
           </div>

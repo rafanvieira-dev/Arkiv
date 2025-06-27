@@ -85,6 +85,7 @@ const initialFormState: Partial<Documento> & {
   prazoGuardaClasseProcessualDisplay?: string;
   destinacaoFinalClasseProcessualDisplay?: string;
   isClassificationInactive?: boolean;
+  necessidadeReclassificacao?: 'Sim' | 'Não';
 } = {
   status: "Arquivado",
   orgao: "TRF2",
@@ -116,6 +117,7 @@ const initialFormState: Partial<Documento> & {
   destinacaoFinalDisplay: undefined,
   alteracaoDestinacaoFinal: "Não Alterar",
   anoEliminacaoPrevisto: "", 
+  necessidadeReclassificacao: "Não",
   segredoJustica: "Não",
   grauSigilo: "Ostensivo",
   codigosCaixa: "",
@@ -157,6 +159,7 @@ const initialFiltersState = {
   prazoIntermediario: "",
   numeroListagemEliminacao: "",
   processoOriginario: "",
+  necessidadeReclassificacao: "",
 };
 
 const initialParteState: Partial<ParteDocumento> = {
@@ -246,6 +249,7 @@ export default function DocumentosPage() {
     prazoGuardaClasseProcessualDisplay?: string;
     destinacaoFinalClasseProcessualDisplay?: string;
     isClassificationInactive?: boolean;
+    necessidadeReclassificacao?: 'Sim' | 'Não';
   }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
@@ -328,6 +332,7 @@ export default function DocumentosPage() {
         assuntoClassificacaoDisplay: assunto,
         classificacaoArquivisticaId: classId,
         isClassificationInactive: existingClassification?.status === 'Inativo',
+        necessidadeReclassificacao: doc.necessidadeReclassificacao || (existingClassification?.status === 'Inativo' ? 'Sim' : 'Não'),
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
@@ -440,6 +445,7 @@ export default function DocumentosPage() {
         return display;
       } 
     },
+    { id: 'necessidadeReclassificacao', header: 'Reclassificar?', accessorKey: 'necessidadeReclassificacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value === 'Sim' ? <Badge variant="destructive">Sim</Badge> : 'Não' },
     { id: 'prazoArquivoCorrenteDisplay', header: 'Prazo Arq. Corrente', accessorKey: 'prazoArquivoCorrenteDisplay', defaultVisible: true, enableSorting: true },
     { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: true, enableSorting: true },
     { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
@@ -619,7 +625,8 @@ export default function DocumentosPage() {
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
           anoEliminacaoPrevisto: "",
-          isClassificationInactive: false
+          isClassificationInactive: false,
+          necessidadeReclassificacao: 'Não',
         }));
         return;
       }
@@ -655,6 +662,7 @@ export default function DocumentosPage() {
             anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
           }
       }
+      const isInactive = classification.status === 'Inativo';
 
       setFormState(prev => ({
         ...prev,
@@ -663,7 +671,8 @@ export default function DocumentosPage() {
         prazoArquivoIntermediarioDisplay: prazoIntermediario,
         destinacaoFinalDisplay: destinacao,
         anoEliminacaoPrevisto: anoEliminacao,
-        isClassificationInactive: classification.status === 'Inativo'
+        isClassificationInactive: isInactive,
+        necessidadeReclassificacao: isInactive ? 'Sim' : 'Não',
       }));
 
     } else { 
@@ -676,6 +685,7 @@ export default function DocumentosPage() {
                 destinacaoFinalDisplay: undefined,
                 anoEliminacaoPrevisto: "",
                 isClassificationInactive: false,
+                necessidadeReclassificacao: 'Não',
             }));
        }
     }
@@ -992,6 +1002,7 @@ export default function DocumentosPage() {
       categoria: formState.categoria || 'Documento',
       digitalizado: formState.digitalizado || 'Não',
       alteracaoDestinacaoFinal: formState.alteracaoDestinacaoFinal || 'Não Alterar',
+      necessidadeReclassificacao: formState.necessidadeReclassificacao || 'Não',
       segredoJustica: formState.segredoJustica || 'Não',
       grauSigilo: formState.grauSigilo || 'Ostensivo',
       numeroListagemEliminacao: formState.numeroListagemEliminacao || undefined, 
@@ -1217,6 +1228,8 @@ export default function DocumentosPage() {
             if (filters.numeroListagemEliminacao && doc.numeroListagemEliminacao && !doc.numeroListagemEliminacao.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
             else if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao) return false;
 
+            if (filters.necessidadeReclassificacao && (doc.necessidadeReclassificacao || 'Não') !== filters.necessidadeReclassificacao) return false;
+
             return true;
         });
     }
@@ -1331,7 +1344,7 @@ export default function DocumentosPage() {
       'totalMidias', 'midias',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
-      'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+      'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
       'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
       'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
@@ -1390,7 +1403,7 @@ export default function DocumentosPage() {
         'totalMidias', 'midias',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
-        'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+        'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
         'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
         'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
@@ -1609,6 +1622,7 @@ export default function DocumentosPage() {
                     prazoArquivoIntermediarioDisplay: prazoIntermediario,
                     destinacaoFinalDisplay: destinacao,
                     alteracaoDestinacaoFinal: newItemData.alteracaoDestinacaoFinal || 'Não Alterar',
+                    necessidadeReclassificacao: newItemData.necessidadeReclassificacao || 'Não',
                     anoEliminacaoPrevisto: anoEliminacao,
                     segredoJustica: newItemData.segredoJustica || 'Não',
                     grauSigilo: newItemData.grauSigilo || 'Ostensivo',
@@ -1678,6 +1692,7 @@ export default function DocumentosPage() {
     { value: 'segredoJustica', label: 'Segredo de Justiça', type: 'select', options: ['Sim', 'Não'] },
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
     { value: 'classificacaoArquivisticaId', label: 'Classificação (PLANO:CÓDIGO)', type: 'text' },
+    { value: 'necessidadeReclassificacao', label: 'Necessidade de Reclassificação', type: 'select', options: ['Sim', 'Não'] },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
     { value: 'numeroDocumentoTransferencia', label: 'Nº Doc. de Transferência', type: 'text' },
     { value: 'processoOriginario', label: 'Processo Originário', type: 'text' },
@@ -1744,7 +1759,7 @@ export default function DocumentosPage() {
                 const prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos ?? 0;
                 anoEliminacao = (getYear(dataArquivamentoDate) + prazoIntermediarioAnosNum + 1).toString();
             }
-
+            const isInactive = classification.status === 'Inativo';
             return {
               ...doc,
               classificacaoArquivisticaId: classification.id,
@@ -1752,6 +1767,7 @@ export default function DocumentosPage() {
               prazoArquivoIntermediarioDisplay: prazoIntermediario,
               destinacaoFinalDisplay: destinacao,
               anoEliminacaoPrevisto: anoEliminacao,
+              necessidadeReclassificacao: isInactive ? 'Sim' : 'Não',
             };
           }
           return doc;
@@ -2037,19 +2053,6 @@ export default function DocumentosPage() {
                                               <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
-                                              <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
-                                              <DateInputPicker 
-                                              value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
-                                              onChange={(date) => handleDateChange('dataArquivamento')(date)} 
-                                              placeholder="dd/mm/aaaa"
-                                              disabled={isFormDisabled}
-                                              />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
-                                            <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
-                                          </div>
-                                          <div className="space-y-2">
                                               <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
                                               <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'} />
                                           </div>
@@ -2061,6 +2064,19 @@ export default function DocumentosPage() {
                                               placeholder="dd/mm/aaaa"
                                               disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}
                                               />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
+                                              <DateInputPicker 
+                                              value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
+                                              onChange={(date) => handleDateChange('dataArquivamento')(date)} 
+                                              placeholder="dd/mm/aaaa"
+                                              disabled={isFormDisabled}
+                                              />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
+                                            <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -2284,6 +2300,16 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
                                               <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="necessidadeReclassificacao">Necessidade de Reclassificação?</Label>
+                                              <Select onValueChange={handleSelectChange('necessidadeReclassificacao')} value={formState.necessidadeReclassificacao || 'Não'} disabled={isFormDisabled}>
+                                                <SelectTrigger id="necessidadeReclassificacao"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="Sim">Sim</SelectItem>
+                                                  <SelectItem value="Não">Não</SelectItem>
+                                                </SelectContent>
+                                              </Select>
                                               {formState.isClassificationInactive && (
                                                 <p className="text-sm font-medium text-destructive">
                                                   Código Inativo. Reclassificar.
@@ -2446,6 +2472,17 @@ export default function DocumentosPage() {
                           <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
                           <SelectItem value="Eliminação">Eliminação</SelectItem>
                           <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterNecessidadeReclassificacao">Necess. Reclassificação</Label>
+                      <Select onValueChange={handleFilterSelectChange('necessidadeReclassificacao')} value={filters.necessidadeReclassificacao}>
+                        <SelectTrigger id="filterNecessidadeReclassificacao"><SelectValue placeholder="Ambos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Ambos</SelectItem>
+                          <SelectItem value="Sim">Sim</SelectItem>
+                          <SelectItem value="Não">Não</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2982,6 +3019,7 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
 

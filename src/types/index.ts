@@ -64,6 +64,7 @@ export interface Documento {
 
   alteracaoDestinacaoFinal: 'Não Alterar' | 'Guarda Permanente – Guarda Amostral' | 'Guarda Permanente – Decisão da CPAD'; // 1.26 - Opção padrão “Não Alterar”
   anoEliminacaoPrevisto?: string; // 1.27 - Calculado
+  necessidadeReclassificacao?: 'Sim' | 'Não';
   
   segredoJustica: 'Sim' | 'Não'; // 1.30 - Opção padrão “Não”
   grauSigilo: 'Ostensivo' | 'Reservado' | 'Secreto' | 'Ultrassecreto'; // 1.31 - Opção padrão “Ostensivo” (LAI)
