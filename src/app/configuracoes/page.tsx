@@ -635,7 +635,7 @@ export default function ConfiguracoesPage() {
                       <Button size="sm" variant="outline" onClick={() => handleImportClick(setPartes, 'parte', 'Nomes de Partes')}>
                           <Upload className="mr-2 h-4 w-4" /> Importar
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleExport(partes, 'partes_export.csv', ['nome', 'cpfCnpj'])}>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(partes, 'partes_export.csv', ['id', 'nome', 'cpfCnpj'])}>
                           <Download className="mr-2 h-4 w-4" /> Exportar
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_partes.csv', ['nome', 'cpfCnpj'])}>
@@ -652,6 +652,7 @@ export default function ConfiguracoesPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>ID</TableHead>
                                 <TableHead>Nome</TableHead>
                                 <TableHead>CPF/CNPJ</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
@@ -660,6 +661,7 @@ export default function ConfiguracoesPage() {
                         <TableBody>
                             {partes.sort((a,b) => a.nome.localeCompare(b.nome)).map(parte => (
                                 <TableRow key={parte.id}>
+                                    <TableCell className="font-mono text-xs text-muted-foreground">{parte.id}</TableCell>
                                     <TableCell>{parte.nome}</TableCell>
                                     <TableCell>{parte.cpfCnpj || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
