@@ -60,6 +60,7 @@ const initialFilters = {
   codigoClasseJudicial: "",
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
+  caixaMidia: "",
   segredoJustica: false,
   digitalizado: false,
 };
@@ -132,6 +133,10 @@ export default function BuscaAvancadaPage() {
     { id: 'generoDocumental', header: 'Gênero Documental', accessorKey: 'generoDocumental', defaultVisible: false, enableSorting: true },
     { id: 'categoria', header: 'Categoria', accessorKey: 'categoria', defaultVisible: false, enableSorting: true },
     { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: false, enableSorting: true },
+    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
+    { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
+    { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
+    { id: 'caixaMidia', header: 'Caixa da Mídia', accessorKey: 'caixaMidia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'codigoAtoM', header: 'Código do AtoM', accessorKey: 'codigoAtoM', defaultVisible: false, enableSorting: true },
     { id: 'observacoesGerais', header: 'Observações Gerais', accessorKey: 'observacoesGerais', defaultVisible: false, enableSorting: true },
     { id: 'codigoClassificacaoJudicialId', header: 'Código Classe Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: false, enableSorting: true },
@@ -219,6 +224,7 @@ export default function BuscaAvancadaPage() {
         if (filters.codigoClasseJudicial && !doc.codigoClassificacaoJudicialId?.toLowerCase().includes(filters.codigoClasseJudicial.toLowerCase())) return false;
         if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao?.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
         if (filters.numeroDocumentoTransferencia && !doc.numeroDocumentoTransferencia?.toLowerCase().includes(filters.numeroDocumentoTransferencia.toLowerCase())) return false;
+        if (filters.caixaMidia && !doc.caixaMidia?.toLowerCase().includes(filters.caixaMidia.toLowerCase())) return false;
 
         if (filters.classificacao && doc.classificacaoArquivisticaId !== filters.classificacao) return false;
         if (filters.status && doc.status !== filters.status) return false;
@@ -528,6 +534,10 @@ export default function BuscaAvancadaPage() {
           <div className="space-y-2">
             <Label htmlFor="numeroDocumentoTransferencia">Nº do Doc. de Transferência</Label>
             <Input id="numeroDocumentoTransferencia" placeholder="Contém..." value={filters.numeroDocumentoTransferencia} onChange={handleInputChange} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="caixaMidia">Caixa da Mídia</Label>
+            <Input id="caixaMidia" placeholder="Contém..." value={filters.caixaMidia} onChange={handleInputChange} />
           </div>
           <div className="flex items-center space-x-2 pt-6">
             <Checkbox id="segredoJustica" checked={filters.segredoJustica} onCheckedChange={handleCheckboxChange('segredoJustica')} />

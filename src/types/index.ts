@@ -53,6 +53,7 @@ export interface Documento {
   tipoMidiaDetalhe?: string; // 1.15
   numeroMidiaDetalhe?: string; // 1.16
   paginaMidiaDetalhe?: string; // 1.17
+  caixaMidia?: string;
   
   digitalizado: 'Sim' | 'Não'; // 1.18
   tipoBaixa?: string; // 1.19

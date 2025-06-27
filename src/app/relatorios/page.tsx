@@ -79,6 +79,7 @@ export default function RelatoriosPage() {
       { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe' },
       { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe' },
       { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe' },
+      { id: 'caixaMidia', header: 'Caixa da Mídia', accessorKey: 'caixaMidia' },
       { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado' },
       { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa' },
       { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },

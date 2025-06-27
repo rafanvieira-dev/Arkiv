@@ -97,6 +97,7 @@ const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Adminis
   tipoMidiaDetalhe: undefined,
   numeroMidiaDetalhe: "",
   paginaMidiaDetalhe: "",
+  caixaMidia: "",
   digitalizado: "Não",
   tipoBaixa: "",
   dataBaixa: undefined,
@@ -308,6 +309,7 @@ export default function DocumentosPage() {
         tipoMidiaDetalhe: doc.tipoMidiaDetalhe ?? undefined,
         numeroMidiaDetalhe: doc.numeroMidiaDetalhe ?? "",
         paginaMidiaDetalhe: doc.paginaMidiaDetalhe ?? "",
+        caixaMidia: doc.caixaMidia ?? "",
       });
       setDocumentIdToDisplay(doc.id);
       setIsFormDisabled(doc.status === 'Eliminado');
@@ -397,6 +399,7 @@ export default function DocumentosPage() {
     { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true },
     { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: true, enableSorting: true },
     { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: true, enableSorting: true },
+    { id: 'caixaMidia', header: 'Caixa da Mídia', accessorKey: 'caixaMidia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
     { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: true, enableSorting: true },
     { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
@@ -1240,7 +1243,7 @@ export default function DocumentosPage() {
       'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
       'partes', 'documentosRelacionadosIds', 
       'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-      'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
+      'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 'caixaMidia',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
       'prazoArquivoCorrenteDisplay', 'prazoArquivoIntermediarioDisplay', 'destinacaoFinalDisplay',
@@ -1299,7 +1302,7 @@ export default function DocumentosPage() {
         'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-        'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 
+        'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 'caixaMidia',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
@@ -1502,6 +1505,7 @@ export default function DocumentosPage() {
                     tipoMidiaDetalhe: newDocData.tipoMidiaDetalhe,
                     numeroMidiaDetalhe: newDocData.numeroMidiaDetalhe,
                     paginaMidiaDetalhe: newDocData.paginaMidiaDetalhe,
+                    caixaMidia: newDocData.caixaMidia,
                     digitalizado: newDocData.digitalizado || 'Não',
                     tipoBaixa: newDocData.tipoBaixa,
                     dataBaixa: dataBaixa,
@@ -1578,6 +1582,7 @@ export default function DocumentosPage() {
     { value: 'digitalizado', label: 'Digitalizado', type: 'select', options: ['Sim', 'Não'] },
     { value: 'segredoJustica', label: 'Segredo de Justiça', type: 'select', options: ['Sim', 'Não'] },
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
+    { value: 'caixaMidia', label: 'Caixa da Mídia', type: 'text' },
     { value: 'classificacaoArquivisticaId', label: 'Classificação (PLANO:CÓDIGO)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
     { value: 'numeroDocumentoTransferencia', label: 'Nº Doc. de Transferência', type: 'text' },
@@ -2081,6 +2086,10 @@ export default function DocumentosPage() {
                                               <div className="space-y-2">
                                                   <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
                                                   <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                              </div>
+                                              <div className="space-y-2">
+                                                  <Label htmlFor="caixaMidia">Caixa da Mídia</Label>
+                                                  <Input id="caixaMidia" value={formState.caixaMidia || ""} onChange={handleInputChange} placeholder="Ex: CX-MIDIA-01" disabled={isFormDisabled} />
                                               </div>
                                               </>
                                           )}
