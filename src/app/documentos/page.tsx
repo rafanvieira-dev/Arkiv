@@ -84,6 +84,7 @@ const initialFormState: Partial<Documento> & {
   nomeClasseProcessualDisplay?: string;
   prazoGuardaClasseProcessualDisplay?: string;
   destinacaoFinalClasseProcessualDisplay?: string;
+  isClassificationInactive?: boolean;
 } = {
   status: "Arquivado",
   orgao: "TRF2",
@@ -127,6 +128,7 @@ const initialFormState: Partial<Documento> & {
   nomeClasseProcessualDisplay: "",
   prazoGuardaClasseProcessualDisplay: "",
   destinacaoFinalClasseProcessualDisplay: "",
+  isClassificationInactive: false,
 };
 
 const initialFiltersState = {
@@ -243,6 +245,7 @@ export default function DocumentosPage() {
     nomeClasseProcessualDisplay?: string;
     prazoGuardaClasseProcessualDisplay?: string;
     destinacaoFinalClasseProcessualDisplay?: string;
+    isClassificationInactive?: boolean;
   }>(initialFormState);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
@@ -301,12 +304,8 @@ export default function DocumentosPage() {
 
       if (existingClassification) {
         tipoPlano = existingClassification.tipoPlanoClassificacao;
-        if (existingClassification.status === 'Inativo') {
-          assunto = "Código inválido. Um novo será criado ao salvar.";
-          classId = ""; // Force creation of a new one on save
-        } else {
-          assunto = existingClassification.descricao;
-        }
+        assunto = existingClassification.descricao;
+        classId = doc.classificacaoArquivisticaId || "";
       }
 
       let nomeClasse = "", prazoClasse = "", destinacaoClasse = "";
@@ -328,6 +327,7 @@ export default function DocumentosPage() {
         codigoClassificacaoArquivisticaInput: classCode,
         assuntoClassificacaoDisplay: assunto,
         classificacaoArquivisticaId: classId,
+        isClassificationInactive: existingClassification?.status === 'Inativo',
         dataArquivamento: doc.dataArquivamento ? doc.dataArquivamento : undefined,
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
@@ -611,17 +611,6 @@ export default function DocumentosPage() {
     const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId);
     
     if (classification) {
-       if (classification.status === 'Inativo') {
-         setFormState(prev => ({
-          ...prev,
-          assuntoClassificacaoDisplay: "Código inválido. Um novo será criado ao salvar.",
-          prazoArquivoCorrenteDisplay: "",
-          prazoArquivoIntermediarioDisplay: "",
-          destinacaoFinalDisplay: undefined,
-          anoEliminacaoPrevisto: ""
-        }));
-        return;
-      }
        if (classification.status === 'Pendente de Complemento') {
          setFormState(prev => ({
           ...prev,
@@ -629,7 +618,8 @@ export default function DocumentosPage() {
           prazoArquivoCorrenteDisplay: "",
           prazoArquivoIntermediarioDisplay: "",
           destinacaoFinalDisplay: undefined,
-          anoEliminacaoPrevisto: ""
+          anoEliminacaoPrevisto: "",
+          isClassificationInactive: false
         }));
         return;
       }
@@ -672,7 +662,8 @@ export default function DocumentosPage() {
         prazoArquivoCorrenteDisplay: prazoCorrente,
         prazoArquivoIntermediarioDisplay: prazoIntermediario,
         destinacaoFinalDisplay: destinacao,
-        anoEliminacaoPrevisto: anoEliminacao
+        anoEliminacaoPrevisto: anoEliminacao,
+        isClassificationInactive: classification.status === 'Inativo'
       }));
 
     } else { 
@@ -683,7 +674,8 @@ export default function DocumentosPage() {
                 prazoArquivoCorrenteDisplay: "",
                 prazoArquivoIntermediarioDisplay: "",
                 destinacaoFinalDisplay: undefined,
-                anoEliminacaoPrevisto: ""
+                anoEliminacaoPrevisto: "",
+                isClassificationInactive: false,
             }));
        }
     }
@@ -779,31 +771,16 @@ export default function DocumentosPage() {
         c => c.codigo === codigoInput && c.tipoPlanoClassificacao === formState.tipoPlanoClassificacao
       );
       if (foundClassification) {
-        if (foundClassification.status === 'Inativo') {
-            setFormState(prev => ({
-                ...prev,
-                classificacaoArquivisticaId: "",
-                assuntoClassificacaoDisplay: "Código inválido. Um novo será criado ao salvar.",
-                prazoArquivoCorrenteDisplay: "",
-                prazoArquivoIntermediarioDisplay: "",
-                destinacaoFinalDisplay: undefined,
-                anoEliminacaoPrevisto: ""
-            }));
-        } else {
-            setFormState(prev => ({
-                ...prev,
-                classificacaoArquivisticaId: foundClassification.id,
-            }));
-        }
+        setFormState(prev => ({
+          ...prev,
+          classificacaoArquivisticaId: foundClassification.id,
+        }));
       } else { // Not found
         setFormState(prev => ({
           ...prev,
           classificacaoArquivisticaId: "",
           assuntoClassificacaoDisplay: "Código inválido. Será criado como pendente.",
-          prazoArquivoCorrenteDisplay: "",
-          prazoArquivoIntermediarioDisplay: "",
-          destinacaoFinalDisplay: undefined,
-          anoEliminacaoPrevisto: ""
+          isClassificationInactive: false,
         }));
       }
     } else { // Empty input
@@ -815,7 +792,8 @@ export default function DocumentosPage() {
         prazoArquivoCorrenteDisplay: "",
         prazoArquivoIntermediarioDisplay: "",
         destinacaoFinalDisplay: undefined,
-        anoEliminacaoPrevisto: ""
+        anoEliminacaoPrevisto: "",
+        isClassificationInactive: false,
       }));
     }
   };
@@ -2059,19 +2037,6 @@ export default function DocumentosPage() {
                                               <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
-                                              <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="dataBaixa">Data da Baixa</Label>
-                                              <DateInputPicker 
-                                              value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
-                                              onChange={(date) => handleDateChange('dataBaixa')(date)} 
-                                              placeholder="dd/mm/aaaa"
-                                              disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}
-                                              />
-                                          </div>
-                                          <div className="space-y-2">
                                               <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
                                               <DateInputPicker 
                                               value={formState.dataArquivamento ? parseISO(formState.dataArquivamento) : undefined} 
@@ -2083,6 +2048,19 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                             <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
                                             <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
+                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataBaixa">Data da Baixa</Label>
+                                              <DateInputPicker 
+                                              value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
+                                              onChange={(date) => handleDateChange('dataBaixa')(date)} 
+                                              placeholder="dd/mm/aaaa"
+                                              disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}
+                                              />
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -2306,6 +2284,11 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
                                               <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                              {formState.isClassificationInactive && (
+                                                <p className="text-sm font-medium text-destructive">
+                                                  Código Inativo. Reclassificar.
+                                                </p>
+                                              )}
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -2999,5 +2982,6 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
