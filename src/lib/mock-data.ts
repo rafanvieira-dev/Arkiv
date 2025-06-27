@@ -1,6 +1,6 @@
 
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe } from "@/types";
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
@@ -52,14 +52,14 @@ export const placeholderDocumentos: Documento[] = [
     numeroAntigo: "PA-2015-XYZ",
     dataAbrangente: "01/2023 - 03/2023",
     descricaoDocumento: "Processo referente à disputa contratual X. Este é um exemplo de descrição um pouco mais longa para testar o comportamento da célula na tabela.",
-    partes: [{id: 'p1', nome: 'Empresa Exemplo Ltda', tipoParte: 'Autor', cpfCnpj: '12.345.678/0001-99'}],
+    partes: [{id: 'p1', nome: 'Empresa Exemplo Ltda', tipoParte: 'Autor', cpfCnpj: '12.345.678/0001-99', usarIniciais: true}],
     documentosRelacionadosIds: "DOC002,DOC003",
     dataArquivamento: new Date("2023-01-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 0,
-    tipoMidiaDetalhe: undefined,
+    midias: [],
     digitalizado: "Não", 
     tipoBaixa: "",
     dataBaixa: undefined,
@@ -100,9 +100,7 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 1,
     numerosApensos: "AP001",
     totalMidias: 1,
-    tipoMidiaDetalhe: "DVD-R",
-    numeroMidiaDetalhe: "M001",
-    paginaMidiaDetalhe: "1-10",
+    midias: [{id: "m-d2-1", tipoMidia: 'DVD-R', numeroMidia: 'M001', paginaMidia: '1-10', caixaMidia: 'CX-MIDIA-01'}],
     digitalizado: "Sim", 
     tipoBaixa: "Devolvido ao Arquivo",
     dataBaixa: new Date("2023-04-10").toISOString(),
@@ -142,9 +140,10 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 2,
-    tipoMidiaDetalhe: "Pen Drive",
-    numeroMidiaDetalhe: "M002, M003",
-    paginaMidiaDetalhe: "N/A",
+    midias: [
+      {id: "m-d3-1", tipoMidia: "Pen Drive", numeroMidia: "M002", paginaMidia: "N/A", caixaMidia: "CX-MIDIA-02"},
+      {id: "m-d3-2", tipoMidia: "Pen Drive", numeroMidia: "M003", paginaMidia: "N/A", caixaMidia: "CX-MIDIA-02"},
+    ],
     digitalizado: "Sim", 
     tipoBaixa: "",
     dataBaixa: undefined,
@@ -184,7 +183,7 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 0,
-    tipoMidiaDetalhe: undefined,
+    midias: [],
     digitalizado: "Não", 
     tipoBaixa: "Eliminação Concluída",
     dataBaixa: new Date("2018-12-01").toISOString(),
@@ -224,9 +223,7 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 1,
-    tipoMidiaDetalhe: "Outro",
-    numeroMidiaDetalhe: "ARQ001",
-    paginaMidiaDetalhe: "1-50",
+    midias: [{id: 'm-d5-1', tipoMidia: 'Outro', numeroMidia: 'ARQ001', paginaMidia: '1-50'}],
     digitalizado: "Sim", 
     tipoBaixa: "",
     dataBaixa: undefined,
@@ -266,6 +263,7 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 0,
+    midias: [],
     digitalizado: "Não", 
     classificacaoArquivisticaId: "CLA001",
     prazoArquivoCorrenteDisplay: "5 Anos",
@@ -304,6 +302,7 @@ export const placeholderDocumentos: Documento[] = [
     quantidadeApensos: 0,
     numerosApensos: "",
     totalMidias: 0,
+    midias: [],
     digitalizado: "Sim", 
     classificacaoArquivisticaId: "CLA001",
     prazoArquivoCorrenteDisplay: "5 Anos",
@@ -487,8 +486,8 @@ export const initialClassificacoes: Classificacao[] = [
 export const PARTES_STORAGE_KEY = 'arquivocentral_partes';
 
 export const initialPartes: ParteDetalhe[] = [
-  { id: 'P001', nome: 'Empresa Exemplo Ltda', cpfCnpj: '12.345.678/0001-99' },
-  { id: 'P002', nome: 'Maria Santos', cpfCnpj: '123.456.789-00' },
-  { id: 'P003', nome: 'João da Silva' },
-  { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41' },
+  { id: 'P001', nome: 'Empresa Exemplo Ltda', cpfCnpj: '12.345.678/0001-99', iniciais: 'EEL' },
+  { id: 'P002', nome: 'Maria Santos', cpfCnpj: '123.456.789-00', iniciais: 'MS' },
+  { id: 'P003', nome: 'João da Silva', iniciais: 'JS' },
+  { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41', iniciais: 'FN' },
 ];

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -94,10 +94,7 @@ const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Adminis
   quantidadeApensos: undefined,
   numerosApensos: "",
   totalMidias: undefined,
-  tipoMidiaDetalhe: undefined,
-  numeroMidiaDetalhe: "",
-  paginaMidiaDetalhe: "",
-  caixaMidia: "",
+  midias: [],
   digitalizado: "Não",
   tipoBaixa: "",
   dataBaixa: undefined,
@@ -306,10 +303,7 @@ export default function DocumentosPage() {
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
         totalMidias: doc.totalMidias ?? undefined,
-        tipoMidiaDetalhe: doc.tipoMidiaDetalhe ?? undefined,
-        numeroMidiaDetalhe: doc.numeroMidiaDetalhe ?? "",
-        paginaMidiaDetalhe: doc.paginaMidiaDetalhe ?? "",
-        caixaMidia: doc.caixaMidia ?? "",
+        midias: doc.midias || [],
       });
       setDocumentIdToDisplay(doc.id);
       setIsFormDisabled(doc.status === 'Eliminado');
@@ -396,10 +390,6 @@ export default function DocumentosPage() {
     { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: true, enableSorting: true },
     { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: true, enableSorting: true },
     { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias', defaultVisible: true, enableSorting: true },
-    { id: 'tipoMidiaDetalhe', header: 'Tipo Mídia', accessorKey: 'tipoMidiaDetalhe', defaultVisible: true, enableSorting: true },
-    { id: 'numeroMidiaDetalhe', header: 'Nº Mídia', accessorKey: 'numeroMidiaDetalhe', defaultVisible: true, enableSorting: true },
-    { id: 'paginaMidiaDetalhe', header: 'Página Mídia', accessorKey: 'paginaMidiaDetalhe', defaultVisible: true, enableSorting: true },
-    { id: 'caixaMidia', header: 'Caixa da Mídia', accessorKey: 'caixaMidia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
     { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: true, enableSorting: true },
     { id: 'dataBaixa', header: 'Data Baixa', accessorKey: 'dataBaixa', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
@@ -677,6 +667,28 @@ export default function DocumentosPage() {
     }
   }, [searchParams]);
 
+  React.useEffect(() => {
+    const total = formState.totalMidias || 0;
+    const currentMidias = formState.midias || [];
+
+    if (total === currentMidias.length) return;
+
+    if (total > currentMidias.length) {
+      const newMidiasToAdd = Array.from({ length: total - currentMidias.length }, (_, i) => ({
+        id: `midia_${Date.now()}_${currentMidias.length + i}`,
+        tipoMidia: '',
+        numeroMidia: '',
+        paginaMidia: '',
+        caixaMidia: '',
+      }));
+      setFormState(prev => ({ ...prev, midias: [...currentMidias, ...newMidiasToAdd] }));
+    } else {
+      setFormState(prev => ({ ...prev, midias: currentMidias.slice(0, total) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formState.totalMidias]);
+
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value }));
@@ -688,6 +700,16 @@ export default function DocumentosPage() {
     if (value === "" || (numValue !== undefined && !isNaN(numValue) && numValue >= 0) ) {
         setFormState(prev => ({ ...prev, [id]: numValue }));
     }
+  };
+
+  const handleMidiaChange = (index: number, field: keyof MidiaDetalhe, value: string) => {
+    setFormState(prev => {
+        const newMidias = [...(prev.midias || [])];
+        if (newMidias[index]) {
+            newMidias[index] = { ...newMidias[index], [field]: value };
+        }
+        return { ...prev, midias: newMidias };
+    });
   };
 
   const handleSelectChange = (id: keyof Partial<Documento> | 'tipoPlanoClassificacao') => (value: string) => {
@@ -900,7 +922,7 @@ export default function DocumentosPage() {
       classificacaoArquivisticaId: resolvedClassificationId,
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental!,
-      tipoMidiaDetalhe: formState.tipoMidiaDetalhe,
+      midias: formState.midias || [],
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -1243,7 +1265,7 @@ export default function DocumentosPage() {
       'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
       'partes', 'documentosRelacionadosIds', 
       'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-      'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 'caixaMidia',
+      'totalMidias', 'midias_json',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
       'prazoArquivoCorrenteDisplay', 'prazoArquivoIntermediarioDisplay', 'destinacaoFinalDisplay',
@@ -1261,6 +1283,7 @@ export default function DocumentosPage() {
         const rowData: { [key: string]: any } = {
             ...doc,
             partes: JSON.stringify(doc.partes || []),
+            midias_json: JSON.stringify(doc.midias || []),
             dataArquivamento: formatDateForExport(doc.dataArquivamento),
             dataBaixa: formatDateForExport(doc.dataBaixa),
             tipoPlanoClassificacao: classification?.tipoPlanoClassificacao || '',
@@ -1302,7 +1325,7 @@ export default function DocumentosPage() {
         'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-        'totalMidias', 'tipoMidiaDetalhe', 'numeroMidiaDetalhe', 'paginaMidiaDetalhe', 'caixaMidia',
+        'totalMidias', 'midias_json',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
@@ -1369,28 +1392,41 @@ export default function DocumentosPage() {
                   console.warn(`Skipping row ${index + 2}: has more columns (${values.length}) than headers (${headers.length}).`);
                   return;
                 }
-                const newDocData: { [key: string]: any } = {};
+                const newItemData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
-                  newDocData[header] = values[i] || "";
+                  newItemData[header] = values[i] || "";
                 });
                 
-                if (newDocData.tipoDocumento && !currentTiposDoc.has(newDocData.tipoDocumento)) {
-                    newTiposDocSet.add(newDocData.tipoDocumento);
+                if (newItemData.tipoDocumento && !currentTiposDoc.has(newItemData.tipoDocumento)) {
+                    newTiposDocSet.add(newItemData.tipoDocumento);
                 }
-                if (newDocData.origem && !currentTiposOrigem.has(newDocData.origem)) {
-                    newTiposOrigemSet.add(newDocData.origem);
+                if (newItemData.origem && !currentTiposOrigem.has(newItemData.origem)) {
+                    newTiposOrigemSet.add(newItemData.origem);
                 }
-                if (newDocData.tipoParte && !currentTiposParte.has(newDocData.tipoParte)) {
-                    newTiposParteSet.add(newDocData.tipoParte);
+                if (newItemData.tipoParte && !currentTiposParte.has(newItemData.tipoParte)) {
+                    newTiposParteSet.add(newItemData.tipoParte);
                 }
-                if (newDocData.generoDocumental && !currentGeneros.has(newDocData.generoDocumental)) {
-                    newGenerosSet.add(newDocData.generoDocumental);
+                if (newItemData.generoDocumental && !currentGeneros.has(newItemData.generoDocumental)) {
+                    newGenerosSet.add(newItemData.generoDocumental);
                 }
-                if (newDocData.tipoMidiaDetalhe && !currentTiposMidia.has(newDocData.tipoMidiaDetalhe)) {
-                    newTiposMidiaSet.add(newDocData.tipoMidiaDetalhe);
+                
+                let midias: MidiaDetalhe[] = [];
+                if (newItemData.midias_json) {
+                    try {
+                        const parsedMidias = JSON.parse(newItemData.midias_json);
+                        if (Array.isArray(parsedMidias)) {
+                            midias = parsedMidias;
+                            parsedMidias.forEach(m => {
+                                if (m.tipoMidia && !currentTiposMidia.has(m.tipoMidia)) {
+                                    newTiposMidiaSet.add(m.tipoMidia);
+                                }
+                            });
+                        }
+                    } catch (e) { console.warn(`Could not parse midias_json for row ${index + 2}:`, newItemData.midias_json); }
                 }
-                if (newDocData.codigosCaixa) {
-                    const boxCodes = String(newDocData.codigosCaixa).split(',').map((c: string) => c.trim()).filter(Boolean);
+
+                if (newItemData.codigosCaixa) {
+                    const boxCodes = String(newItemData.codigosCaixa).split(',').map((c: string) => c.trim()).filter(Boolean);
                     boxCodes.forEach((code: string) => {
                         if (!currentCaixaCodes.has(code) && !newCaixasMap.has(code)) {
                             const newCaixa: Caixa = {
@@ -1407,8 +1443,8 @@ export default function DocumentosPage() {
                     });
                 }
                 
-                const tipoPlano = newDocData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] | undefined;
-                const codigoClassif = newDocData.codigoClassificacaoArquivistica;
+                const tipoPlano = newItemData.tipoPlanoClassificacao as Classificacao['tipoPlanoClassificacao'] | undefined;
+                const codigoClassif = newItemData.codigoClassificacaoArquivistica;
                 let classification: Classificacao | undefined;
                 let classificationId: string | undefined;
 
@@ -1445,8 +1481,8 @@ export default function DocumentosPage() {
 
                 const prazoIntermediario = classification ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` : "";
                 const destinacao = classification?.destinacaoFinal;
-                const dataArquivamento = parseDateString(newDocData.dataArquivamento);
-                const dataBaixa = parseDateString(newDocData.dataBaixa);
+                const dataArquivamento = parseDateString(newItemData.dataArquivamento);
+                const dataBaixa = parseDateString(newItemData.dataBaixa);
 
                 let anoEliminacao = "";
                 if (dataArquivamento && isValid(parseISO(dataArquivamento)) && classification && destinacao === 'Eliminação') {
@@ -1457,9 +1493,9 @@ export default function DocumentosPage() {
                 }
                 
                 let partes: ParteDocumento[] = [];
-                if (newDocData.partes) {
+                if (newItemData.partes) {
                     try {
-                        const parsedPartes = JSON.parse(newDocData.partes);
+                        const parsedPartes = JSON.parse(newItemData.partes);
                         if (Array.isArray(parsedPartes)) {
                             partes = parsedPartes;
                             parsedPartes.forEach(p => {
@@ -1475,7 +1511,7 @@ export default function DocumentosPage() {
                             });
                         }
                     } catch (e) {
-                        console.warn(`Could not parse 'partes' JSON for row ${index + 2}:`, newDocData.partes);
+                        console.warn(`Could not parse 'partes' JSON for row ${index + 2}:`, newItemData.partes);
                     }
                 }
 
@@ -1483,46 +1519,43 @@ export default function DocumentosPage() {
                     id: `DOC_IMP_${Date.now()}_${index}`,
                     dataCadastro: new Date().toISOString(),
                     ...initialFormState,
-                    status: newDocData.status || 'Arquivado',
-                    orgao: newDocData.orgao || 'TRF2',
-                    origem: newDocData.origem,
-                    tipoMeio: newDocData.tipoMeio || 'Não digital',
-                    generoDocumental: newDocData.generoDocumental || 'Textual',
-                    categoria: newDocData.categoria || 'Documento',
-                    tipoDocumento: newDocData.tipoDocumento,
-                    numeroDocumento: newDocData.numeroDocumento,
-                    processoOriginario: newDocData.processoOriginario,
-                    numeroAntigo: newDocData.numeroAntigo,
-                    dataAbrangente: newDocData.dataAbrangente,
-                    descricaoDocumento: newDocData.descricaoDocumento,
+                    status: newItemData.status || 'Arquivado',
+                    orgao: newItemData.orgao || 'TRF2',
+                    origem: newItemData.origem,
+                    tipoMeio: newItemData.tipoMeio || 'Não digital',
+                    generoDocumental: newItemData.generoDocumental || 'Textual',
+                    categoria: newItemData.categoria || 'Documento',
+                    tipoDocumento: newItemData.tipoDocumento,
+                    numeroDocumento: newItemData.numeroDocumento,
+                    processoOriginario: newItemData.processoOriginario,
+                    numeroAntigo: newItemData.numeroAntigo,
+                    dataAbrangente: newItemData.dataAbrangente,
+                    descricaoDocumento: newItemData.descricaoDocumento,
                     partes: partes,
-                    documentosRelacionadosIds: newDocData.documentosRelacionadosIds,
+                    documentosRelacionadosIds: newItemData.documentosRelacionadosIds,
                     dataArquivamento,
-                    quantidadeVolumes: newDocData.quantidadeVolumes ? parseInt(newDocData.quantidadeVolumes, 10) : undefined,
-                    quantidadeApensos: newDocData.quantidadeApensos ? parseInt(newDocData.quantidadeApensos, 10) : undefined,
-                    numerosApensos: newDocData.numerosApensos,
-                    totalMidias: newDocData.totalMidias ? parseInt(newDocData.totalMidias, 10) : undefined,
-                    tipoMidiaDetalhe: newDocData.tipoMidiaDetalhe,
-                    numeroMidiaDetalhe: newDocData.numeroMidiaDetalhe,
-                    paginaMidiaDetalhe: newDocData.paginaMidiaDetalhe,
-                    caixaMidia: newDocData.caixaMidia,
-                    digitalizado: newDocData.digitalizado || 'Não',
-                    tipoBaixa: newDocData.tipoBaixa,
+                    quantidadeVolumes: newItemData.quantidadeVolumes ? parseInt(newItemData.quantidadeVolumes, 10) : undefined,
+                    quantidadeApensos: newItemData.quantidadeApensos ? parseInt(newItemData.quantidadeApensos, 10) : undefined,
+                    numerosApensos: newItemData.numerosApensos,
+                    totalMidias: newItemData.totalMidias ? parseInt(newItemData.totalMidias, 10) : midias.length,
+                    midias: midias,
+                    digitalizado: newItemData.digitalizado || 'Não',
+                    tipoBaixa: newItemData.tipoBaixa,
                     dataBaixa: dataBaixa,
                     classificacaoArquivisticaId: classificationId,
                     prazoArquivoCorrenteDisplay: prazoCorrente,
                     prazoArquivoIntermediarioDisplay: prazoIntermediario,
                     destinacaoFinalDisplay: destinacao,
-                    alteracaoDestinacaoFinal: newDocData.alteracaoDestinacaoFinal || 'Não Alterar',
+                    alteracaoDestinacaoFinal: newItemData.alteracaoDestinacaoFinal || 'Não Alterar',
                     anoEliminacaoPrevisto: anoEliminacao,
-                    segredoJustica: newDocData.segredoJustica || 'Não',
-                    grauSigilo: newDocData.grauSigilo || 'Ostensivo',
-                    codigosCaixa: newDocData.codigosCaixa,
-                    codigoAtoM: newDocData.codigoAtoM,
-                    observacoesGerais: newDocData.observacoesGerais,
-                    codigoClassificacaoJudicialId: newDocData.codigoClassificacaoJudicialId,
-                    numeroListagemEliminacao: newDocData.numeroListagemEliminacao,
-                    numeroDocumentoTransferencia: newDocData.numeroDocumentoTransferencia,
+                    segredoJustica: newItemData.segredoJustica || 'Não',
+                    grauSigilo: newItemData.grauSigilo || 'Ostensivo',
+                    codigosCaixa: newItemData.codigosCaixa,
+                    codigoAtoM: newItemData.codigoAtoM,
+                    observacoesGerais: newItemData.observacoesGerais,
+                    codigoClassificacaoJudicialId: newItemData.codigoClassificacaoJudicialId,
+                    numeroListagemEliminacao: newItemData.numeroListagemEliminacao,
+                    numeroDocumentoTransferencia: newItemData.numeroDocumentoTransferencia,
                 };
                 newDocsFromCsv.push(newDoc);
             });
@@ -1582,7 +1615,6 @@ export default function DocumentosPage() {
     { value: 'digitalizado', label: 'Digitalizado', type: 'select', options: ['Sim', 'Não'] },
     { value: 'segredoJustica', label: 'Segredo de Justiça', type: 'select', options: ['Sim', 'Não'] },
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
-    { value: 'caixaMidia', label: 'Caixa da Mídia', type: 'text' },
     { value: 'classificacaoArquivisticaId', label: 'Classificação (PLANO:CÓDIGO)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
     { value: 'numeroDocumentoTransferencia', label: 'Nº Doc. de Transferência', type: 'text' },
@@ -2063,37 +2095,6 @@ export default function DocumentosPage() {
                                               </div>
                                           )}
                                           <div className="space-y-2">
-                                              <Label htmlFor="totalMidias">Total de Mídias</Label>
-                                              <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
-                                          </div>
-                                          {(formState.totalMidias !== undefined && formState.totalMidias > 0) && (
-                                              <>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor="tipoMidiaDetalhe">Tipo de Mídia</Label>
-                                                  <Select onValueChange={handleSelectChange('tipoMidiaDetalhe')} value={formState.tipoMidiaDetalhe} disabled={isFormDisabled}>
-                                                  <SelectTrigger id="tipoMidiaDetalhe"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                                                  <SelectContent>
-                                                      {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
-                                                          <SelectItem key={m} value={m}>{m}</SelectItem>
-                                                      ))}
-                                                  </SelectContent>
-                                                  </Select>
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor="numeroMidiaDetalhe">Número da Mídia</Label>
-                                                  <Input id="numeroMidiaDetalhe" value={formState.numeroMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor="paginaMidiaDetalhe">Página da Mídia</Label>
-                                                  <Input id="paginaMidiaDetalhe" value={formState.paginaMidiaDetalhe || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor="caixaMidia">Caixa da Mídia</Label>
-                                                  <Input id="caixaMidia" value={formState.caixaMidia || ""} onChange={handleInputChange} placeholder="Ex: CX-MIDIA-01" disabled={isFormDisabled} />
-                                              </div>
-                                              </>
-                                          )}
-                                          <div className="space-y-2">
                                               <Label htmlFor="digitalizado">Digitalizado?</Label>
                                               <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
                                               <SelectTrigger id="digitalizado"><SelectValue /></SelectTrigger>
@@ -2103,6 +2104,45 @@ export default function DocumentosPage() {
                                               </SelectContent>
                                               </Select>
                                           </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="totalMidias">Total de Mídias</Label>
+                                              <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
+                                          </div>
+
+                                          {formState.midias && formState.midias.length > 0 && (
+                                              <div className="sm:col-span-2 xl:col-span-3 space-y-4 pt-4">
+                                                  {formState.midias.map((midia, index) => (
+                                                      <div key={midia.id} className="p-4 border rounded-md space-y-4 bg-muted/30">
+                                                          <h4 className="font-semibold text-sm text-primary">Detalhes da Mídia {index + 1}</h4>
+                                                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                              <div className="space-y-2">
+                                                                  <Label htmlFor={`tipoMidia-${index}`}>Tipo de Mídia</Label>
+                                                                  <Select value={midia.tipoMidia || ''} onValueChange={(value) => handleMidiaChange(index, 'tipoMidia', value)} disabled={isFormDisabled}>
+                                                                      <SelectTrigger id={`tipoMidia-${index}`}><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                                                                      <SelectContent>
+                                                                          {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
+                                                                              <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                                          ))}
+                                                                      </SelectContent>
+                                                                  </Select>
+                                                              </div>
+                                                              <div className="space-y-2">
+                                                                  <Label htmlFor={`numeroMidia-${index}`}>Número da Mídia</Label>
+                                                                  <Input id={`numeroMidia-${index}`} value={midia.numeroMidia || ""} onChange={(e) => handleMidiaChange(index, 'numeroMidia', e.target.value)} disabled={isFormDisabled} />
+                                                              </div>
+                                                              <div className="space-y-2">
+                                                                  <Label htmlFor={`paginaMidia-${index}`}>Página da Mídia</Label>
+                                                                  <Input id={`paginaMidia-${index}`} value={midia.paginaMidia || ""} onChange={(e) => handleMidiaChange(index, 'paginaMidia', e.target.value)} disabled={isFormDisabled} />
+                                                              </div>
+                                                              <div className="space-y-2">
+                                                                  <Label htmlFor={`caixaMidia-${index}`}>Caixa da Mídia</Label>
+                                                                  <Input id={`caixaMidia-${index}`} value={midia.caixaMidia || ""} onChange={(e) => handleMidiaChange(index, 'caixaMidia', e.target.value)} placeholder="Ex: CX-MIDIA-01" disabled={isFormDisabled} />
+                                                              </div>
+                                                          </div>
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          )}
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>

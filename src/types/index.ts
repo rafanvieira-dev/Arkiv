@@ -16,10 +16,11 @@ export interface ParteDocumento {
 }
 
 export interface MidiaDetalhe {
-  id: string; // UUID for the midia entry
-  tipoMidia: string;
+  id: string;
+  tipoMidia?: string;
   numeroMidia?: string;
   paginaMidia?: string;
+  caixaMidia?: string;
 }
 
 export interface TipoOrigem {
@@ -49,11 +50,7 @@ export interface Documento {
   quantidadeApensos?: number; // 1.12
   numerosApensos?: string; // 1.13 - Simplificado para string por agora
   totalMidias?: number; // 1.14
-  // Campos para uma mídia, simplificado:
-  tipoMidiaDetalhe?: string; // 1.15
-  numeroMidiaDetalhe?: string; // 1.16
-  paginaMidiaDetalhe?: string; // 1.17
-  caixaMidia?: string;
+  midias?: MidiaDetalhe[];
   
   digitalizado: 'Sim' | 'Não'; // 1.18
   tipoBaixa?: string; // 1.19
