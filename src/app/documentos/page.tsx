@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getYear, parseISO, isValid } from 'date-fns';
+import { getYear, parseISO, isValid, format, parse } from 'date-fns';
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   Dialog,
@@ -177,6 +177,29 @@ const GENEROS_DOCUMENTAIS_STORAGE_KEY = 'arquivocentral_generos_documentais';
 const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const CAIXAS_STORAGE_KEY = 'arquivocentral_caixas';
+
+const parseDateString = (dateStr?: string): string | undefined => {
+  if (!dateStr || !dateStr.trim()) return undefined;
+
+  let parsedDate = parse(dateStr, 'dd/MM/yyyy', new Date());
+  if (isValid(parsedDate)) {
+      return parsedDate.toISOString();
+  }
+
+  parsedDate = parseISO(dateStr);
+  if (isValid(parsedDate)) {
+      return parsedDate.toISOString();
+  }
+  
+  return undefined;
+};
+
+const formatDateForExport = (isoString?: string): string => {
+  if (!isoString || !isValid(parseISO(isoString))) {
+      return "";
+  }
+  return format(parseISO(isoString), 'dd/MM/yyyy');
+};
 
 export default function DocumentosPage() {
   const { toast } = useToast();
@@ -1173,6 +1196,8 @@ export default function DocumentosPage() {
         const rowData: { [key: string]: any } = {
             ...doc,
             partes: JSON.stringify(doc.partes || []),
+            dataArquivamento: formatDateForExport(doc.dataArquivamento),
+            dataBaixa: formatDateForExport(doc.dataBaixa),
             tipoPlanoClassificacao: classification?.tipoPlanoClassificacao || '',
             codigoClassificacaoArquivistica: classification?.codigo || '',
         };
@@ -1272,6 +1297,10 @@ export default function DocumentosPage() {
                 if(!row.trim()) return;
 
                 const values = parseCsvRow(row);
+                if (values.length > headers.length) {
+                  console.warn(`Skipping row ${index + 2}: has more columns (${values.length}) than headers (${headers.length}).`);
+                  return;
+                }
                 const newDocData: { [key: string]: any } = {};
                 headers.forEach((header, i) => {
                   newDocData[header] = values[i] || "";
@@ -1348,7 +1377,9 @@ export default function DocumentosPage() {
 
                 const prazoIntermediario = classification ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` : "";
                 const destinacao = classification?.destinacaoFinal;
-                const dataArquivamento = newDocData.dataArquivamento ? new Date(newDocData.dataArquivamento).toISOString() : undefined;
+                const dataArquivamento = parseDateString(newDocData.dataArquivamento);
+                const dataBaixa = parseDateString(newDocData.dataBaixa);
+
                 let anoEliminacao = "";
                 if (dataArquivamento && isValid(parseISO(dataArquivamento)) && classification && destinacao === 'Eliminação') {
                     const dataArquivamentoDate = parseISO(dataArquivamento);
@@ -1397,7 +1428,7 @@ export default function DocumentosPage() {
                     paginaMidiaDetalhe: newDocData.paginaMidiaDetalhe,
                     digitalizado: newDocData.digitalizado || 'Não',
                     tipoBaixa: newDocData.tipoBaixa,
-                    dataBaixa: newDocData.dataBaixa ? new Date(newDocData.dataBaixa).toISOString() : undefined,
+                    dataBaixa: dataBaixa,
                     classificacaoArquivisticaId: classificationId,
                     prazoArquivoCorrenteDisplay: prazoCorrente,
                     prazoArquivoIntermediarioDisplay: prazoIntermediario,
@@ -2543,7 +2574,7 @@ export default function DocumentosPage() {
             <DialogHeader>
               <DialogTitle>Alteração em Bloco</DialogTitle>
               <DialogDescription>
-                Selecione o campo e o novo valor para aplicar a todos os {selectedRowIds.length} documentos selecionados.
+                Selecione o campo e o novo valor para aplicar a todas as {selectedRowIds.length} documentos selecionados.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -2618,5 +2649,6 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
