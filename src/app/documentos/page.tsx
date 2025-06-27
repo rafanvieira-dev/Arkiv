@@ -1265,7 +1265,7 @@ export default function DocumentosPage() {
       'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
       'partes', 'documentosRelacionadosIds', 
       'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-      'totalMidias', 'midias_json',
+      'totalMidias', 'midias',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
       'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
@@ -1282,7 +1282,7 @@ export default function DocumentosPage() {
         const rowData: { [key: string]: any } = {
             ...doc,
             partes: JSON.stringify(doc.partes || []),
-            midias_json: JSON.stringify(doc.midias || []),
+            midias: JSON.stringify(doc.midias || []),
             dataArquivamento: formatDateForExport(doc.dataArquivamento),
             dataBaixa: formatDateForExport(doc.dataBaixa),
             tipoPlanoClassificacao: classification?.tipoPlanoClassificacao || '',
@@ -1324,7 +1324,7 @@ export default function DocumentosPage() {
         'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
-        'totalMidias', 'midias_json',
+        'totalMidias', 'midias',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
@@ -1410,9 +1410,9 @@ export default function DocumentosPage() {
                 }
                 
                 let midias: MidiaDetalhe[] = [];
-                if (newItemData.midias_json) {
+                if (newItemData.midias) {
                     try {
-                        const parsedMidias = JSON.parse(newItemData.midias_json);
+                        const parsedMidias = JSON.parse(newItemData.midias);
                         if (Array.isArray(parsedMidias)) {
                             midias = parsedMidias;
                             parsedMidias.forEach(m => {
@@ -1421,7 +1421,7 @@ export default function DocumentosPage() {
                                 }
                             });
                         }
-                    } catch (e) { console.warn(`Could not parse midias_json for row ${index + 2}:`, newItemData.midias_json); }
+                    } catch (e) { console.warn(`Could not parse midias_json for row ${index + 2}:`, newItemData.midias); }
                 }
 
                 if (newItemData.codigosCaixa) {
@@ -2226,16 +2226,16 @@ export default function DocumentosPage() {
                                   </AccordionContent>
                               </AccordionItem>
                                <AccordionItem value="item-7">
-                                  <AccordionTrigger className="font-semibold">Classificação Judicial</AccordionTrigger>
+                                  <AccordionTrigger className="font-semibold">Classe Processual (Judicial)</AccordionTrigger>
                                   <AccordionContent>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
-                                              <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
+                                              <Label htmlFor="codigoClassificacaoJudicialId">Código da Classe Processual</Label>
                                               <Input 
                                               id="codigoClassificacaoJudicialId" 
                                               value={formState.codigoClassificacaoJudicialId || ""} 
                                               onChange={handleInputChange} 
-                                              placeholder="ID da Classe Judicial" 
+                                              placeholder="Cód. da classe processual" 
                                               disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
                                               className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
                                               />

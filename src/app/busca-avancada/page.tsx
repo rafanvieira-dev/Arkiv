@@ -520,7 +520,7 @@ export default function BuscaAvancadaPage() {
             <Input id="observacoesGerais" placeholder="Contém..." value={filters.observacoesGerais} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="codigoClasseJudicial">Código da Classe Judicial</Label>
+            <Label htmlFor="codigoClasseJudicial">Código da Classe Processual</Label>
             <Input id="codigoClasseJudicial" placeholder="Contém..." value={filters.codigoClasseJudicial} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
