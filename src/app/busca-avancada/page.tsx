@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -58,6 +59,7 @@ const initialFilters = {
   observacoesGerais: "",
   codigoClasseJudicial: "",
   numeroListagemEliminacao: "",
+  numeroDocumentoTransferencia: "",
   segredoJustica: false,
   digitalizado: false,
 };
@@ -134,6 +136,7 @@ export default function BuscaAvancadaPage() {
     { id: 'observacoesGerais', header: 'Observações Gerais', accessorKey: 'observacoesGerais', defaultVisible: false, enableSorting: true },
     { id: 'codigoClassificacaoJudicialId', header: 'Código Classe Judicial', accessorKey: 'codigoClassificacaoJudicialId', defaultVisible: false, enableSorting: true },
     { id: 'numeroListagemEliminacao', header: 'Nº Listagem Eliminação', accessorKey: 'numeroListagemEliminacao', defaultVisible: false, enableSorting: true },
+    { id: 'numeroDocumentoTransferencia', header: 'Nº Doc. Transferência', accessorKey: 'numeroDocumentoTransferencia', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'destructive' : 'outline'}>{value}</Badge> },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'secondary' : 'outline'}>{value}</Badge> },
     { id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', defaultVisible: true, enableSorting: false, cellFormatter: (partes?: ParteDocumento[]) => {
@@ -215,6 +218,7 @@ export default function BuscaAvancadaPage() {
         if (filters.observacoesGerais && !doc.observacoesGerais?.toLowerCase().includes(filters.observacoesGerais.toLowerCase())) return false;
         if (filters.codigoClasseJudicial && !doc.codigoClassificacaoJudicialId?.toLowerCase().includes(filters.codigoClasseJudicial.toLowerCase())) return false;
         if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao?.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
+        if (filters.numeroDocumentoTransferencia && !doc.numeroDocumentoTransferencia?.toLowerCase().includes(filters.numeroDocumentoTransferencia.toLowerCase())) return false;
 
         if (filters.classificacao && doc.classificacaoArquivisticaId !== filters.classificacao) return false;
         if (filters.status && doc.status !== filters.status) return false;
@@ -520,6 +524,10 @@ export default function BuscaAvancadaPage() {
           <div className="space-y-2">
             <Label htmlFor="numeroListagemEliminacao">Nº da Listagem de Eliminação</Label>
             <Input id="numeroListagemEliminacao" placeholder="Contém..." value={filters.numeroListagemEliminacao} onChange={handleInputChange} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="numeroDocumentoTransferencia">Nº do Doc. de Transferência</Label>
+            <Input id="numeroDocumentoTransferencia" placeholder="Contém..." value={filters.numeroDocumentoTransferencia} onChange={handleInputChange} />
           </div>
           <div className="flex items-center space-x-2 pt-6">
             <Checkbox id="segredoJustica" checked={filters.segredoJustica} onCheckedChange={handleCheckboxChange('segredoJustica')} />

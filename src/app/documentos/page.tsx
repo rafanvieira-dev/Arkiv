@@ -119,6 +119,7 @@ const initialFormState: Partial<Documento> & { tipoPlanoClassificacao?: 'Adminis
   observacoesGerais: "",
   codigoClassificacaoJudicialId: "",
   numeroListagemEliminacao: "",
+  numeroDocumentoTransferencia: "",
 };
 
 const initialFiltersState = {
@@ -444,6 +445,7 @@ export default function DocumentosPage() {
         );
       }
     },
+    { id: 'numeroDocumentoTransferencia', header: 'Nº Doc. Transferência', accessorKey: 'numeroDocumentoTransferencia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
   ], [classificacoes, listagens, handleOpenDialog, masterPartesMap]);
   
   React.useEffect(() => {
@@ -1244,7 +1246,7 @@ export default function DocumentosPage() {
       'prazoArquivoCorrenteDisplay', 'prazoArquivoIntermediarioDisplay', 'destinacaoFinalDisplay',
       'alteracaoDestinacaoFinal', 'anoEliminacaoPrevisto', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
       'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
-      'numeroListagemEliminacao'
+      'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvRows = [headers.join(',')];
 
@@ -1302,7 +1304,7 @@ export default function DocumentosPage() {
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
         'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
-        'numeroListagemEliminacao'
+        'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvContent = templateHeaders.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1516,6 +1518,7 @@ export default function DocumentosPage() {
                     observacoesGerais: newDocData.observacoesGerais,
                     codigoClassificacaoJudicialId: newDocData.codigoClassificacaoJudicialId,
                     numeroListagemEliminacao: newDocData.numeroListagemEliminacao,
+                    numeroDocumentoTransferencia: newDocData.numeroDocumentoTransferencia,
                 };
                 newDocsFromCsv.push(newDoc);
             });
@@ -1577,6 +1580,7 @@ export default function DocumentosPage() {
     { value: 'grauSigilo', label: 'Grau de Sigilo (LAI)', type: 'select', options: ['Ostensivo', 'Reservado', 'Secreto', 'Ultrassecreto'] },
     { value: 'classificacaoArquivisticaId', label: 'Classificação (PLANO:CÓDIGO)', type: 'text' },
     { value: 'numeroListagemEliminacao', label: 'Nº Listagem de Eliminação', type: 'text' },
+    { value: 'numeroDocumentoTransferencia', label: 'Nº Doc. de Transferência', type: 'text' },
     { value: 'processoOriginario', label: 'Processo Originário', type: 'text' },
     { value: 'numeroAntigo', label: 'Número Antigo', type: 'text' },
   ];
@@ -1928,6 +1932,10 @@ export default function DocumentosPage() {
                                            <div className="space-y-2">
                                               <Label htmlFor="numeroAntigo">Número Antigo</Label>
                                               <Input id="numeroAntigo" value={formState.numeroAntigo || ""} onChange={handleInputChange} placeholder="Nº antigo do processo" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
+                                            <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>

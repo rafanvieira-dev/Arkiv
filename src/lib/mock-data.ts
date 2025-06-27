@@ -76,6 +76,7 @@ export const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Nenhuma observação específica para este documento de exemplo.",
     codigoClassificacaoJudicialId: "CJ001",
     numeroListagemEliminacao: "LE-2023-001",
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2023-01-01T10:00:00Z").toISOString(), 
   },
   { 
@@ -117,6 +118,7 @@ export const placeholderDocumentos: Documento[] = [
     codigoAtoM: "ATOM002",
     observacoesGerais: "Prioridade alta.",
     codigoClassificacaoJudicialId: "",
+    numeroDocumentoTransferencia: "TRANSF_1717088500000",
     dataCadastro: new Date("2023-02-15T11:00:00Z").toISOString(), 
   },
   { 
@@ -158,6 +160,7 @@ export const placeholderDocumentos: Documento[] = [
     codigoAtoM: "ATOM003",
     observacoesGerais: "Documento de acesso restrito.",
     codigoClassificacaoJudicialId: "",
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2022-12-01T09:00:00Z").toISOString(), 
   },
    { 
@@ -197,6 +200,7 @@ export const placeholderDocumentos: Documento[] = [
     codigoAtoM: "",
     observacoesGerais: "Documento eliminado conforme edital.",
     codigoClassificacaoJudicialId: "",
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2014-06-01T10:00:00Z").toISOString(), 
   },
   { 
@@ -238,6 +242,7 @@ export const placeholderDocumentos: Documento[] = [
     codigoAtoM: "ATOM005",
     observacoesGerais: "Documento sujeito à análise da CPAD.",
     codigoClassificacaoJudicialId: "CJ001",
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2010-08-01T14:00:00Z").toISOString(), 
   },
   { 
@@ -275,6 +280,7 @@ export const placeholderDocumentos: Documento[] = [
     observacoesGerais: "",
     codigoClassificacaoJudicialId: "CJ001",
     numeroListagemEliminacao: "LE-2023-001", 
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2020-07-01T10:00:00Z").toISOString(), 
   },
   { 
@@ -312,6 +318,7 @@ export const placeholderDocumentos: Documento[] = [
     observacoesGerais: "Documento digitalizado.",
     codigoClassificacaoJudicialId: "CJ001",
     numeroListagemEliminacao: "LE-2024-001", 
+    numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2018-03-01T14:00:00Z").toISOString(), 
   },
 ];

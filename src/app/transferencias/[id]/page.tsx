@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -108,13 +109,10 @@ export default function TransferenciaDetailPage() {
         grauSigilo: 'Ostensivo',
         observacoesGerais: docTransfer.observacoesGerais,
         dataCadastro: new Date().toISOString(),
-        nomePartePrincipal: transferencia.nomeServidor,
-        tipoPartePrincipal: 'Outro',
-        outroTipoPartePrincipal: 'Servidor Remetente',
+        partes: [{ id: `p_transf_${Date.now()}`, nome: transferencia.nomeServidor, tipoParte: "Outro" }],
         documentosRelacionadosIds: '',
         totalMidias: undefined,
         tipoMidiaDetalhe: undefined,
-        outroTipoMidiaDetalhe: '',
         numeroMidiaDetalhe: '',
         paginaMidiaDetalhe: '',
         tipoBaixa: '',
@@ -123,6 +121,7 @@ export default function TransferenciaDetailPage() {
         codigoAtoM: '',
         codigoClassificacaoJudicialId: '',
         numeroListagemEliminacao: '',
+        numeroDocumentoTransferencia: transferencia.id,
       };
       return newDoc;
     });

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -97,6 +98,7 @@ export default function RelatoriosPage() {
       { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa' },
       { id: 'codigoAtoM', header: 'AtoM', accessorKey: 'codigoAtoM' },
       { id: 'numeroListagemEliminacao', header: 'Listagem Eliminação', accessorKey: 'numeroListagemEliminacao' },
+      { id: 'numeroDocumentoTransferencia', header: 'Nº Doc. Transferência', accessorKey: 'numeroDocumentoTransferencia' },
       { id: 'dataCadastro', header: 'Data de Cadastro', accessorKey: 'dataCadastro', cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
   ], [allClassificacoes]);
 
