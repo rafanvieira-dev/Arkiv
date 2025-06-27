@@ -13,7 +13,7 @@ import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOri
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer, Check, ChevronsUpDown
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer, Check, ChevronsUpDown, EyeOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -262,6 +262,8 @@ export default function DocumentosPage() {
   const [bulkEditField, setBulkEditField] = React.useState('');
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
+  const [isAnonymizeDialogOpen, setIsAnonymizeDialogOpen] = React.useState(false);
+  const [excludeMagistrates, setExcludeMagistrates] = React.useState(true);
   const [isPrinting, setIsPrinting] = React.useState(false);
 
 
@@ -377,8 +379,7 @@ export default function DocumentosPage() {
             if (!partes || partes.length === 0) return 'N/A';
             const names = partes.map(p => {
               if (p.usarIniciais) {
-                const masterKey = `${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`;
-                const masterPart = masterPartesMap.get(masterKey);
+                const masterPart = masterPartesMap.get(`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`);
                 return masterPart?.iniciais ?? gerarIniciais(p.nome);
               }
               return p.nome;
@@ -1680,6 +1681,40 @@ export default function DocumentosPage() {
     setBulkEditValue('');
   };
 
+  const handleBulkAnonymize = () => {
+    logAction('BULK_ANONYMIZE_PARTS', {
+      count: selectedRowIds.length,
+      excludeMagistrates,
+      documentIds: selectedRowIds,
+    });
+
+    setDocumentos(prevDocs =>
+        prevDocs.map(doc => {
+            if (selectedRowIds.includes(doc.id) && doc.partes) {
+                const newPartes = doc.partes.map(parte => {
+                    // Check if we should skip this part
+                    if (excludeMagistrates && parte.tipoParte === 'Magistrado') {
+                        return parte; // Return unchanged
+                    }
+                    // Otherwise, set to use initials
+                    return { ...parte, usarIniciais: true };
+                });
+                return { ...doc, partes: newPartes };
+            }
+            return doc;
+        })
+    );
+
+    toast({
+        title: "Anonimização em Bloco Concluída",
+        description: `${selectedRowIds.length} documento(s) tiveram suas partes anonimizadas.`,
+    });
+
+    setSelectedRowIds([]);
+    setIsAnonymizeDialogOpen(false);
+  };
+
+
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
 
@@ -1754,6 +1789,10 @@ export default function DocumentosPage() {
                     <PenSquare className="mr-2 h-4 w-4" />
                     Alterar em Bloco ({selectedRowIds.length})
                   </Button>
+                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsAnonymizeDialogOpen(true)}>
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    Anonimizar Partes ({selectedRowIds.length})
+                </Button>
                 <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
                     <Printer className="mr-2 h-4 w-4" />
                     Imprimir Seleção ({selectedRowIds.length})
@@ -2770,6 +2809,32 @@ export default function DocumentosPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <AlertDialog open={isAnonymizeDialogOpen} onOpenChange={setIsAnonymizeDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Anonimização em Lote</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Você tem certeza que deseja anonimizar os nomes de todas as partes dos {selectedRowIds.length} documento(s) selecionado(s)? Esta ação definirá o uso de iniciais para as partes.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex items-center space-x-2 py-4">
+                    <Checkbox
+                        id="exclude-magistrates"
+                        checked={excludeMagistrates}
+                        onCheckedChange={(checked) => setExcludeMagistrates(!!checked)}
+                    />
+                    <Label htmlFor="exclude-magistrates" className="font-normal">
+                        Não anonimizar nomes de partes do tipo "Magistrado".
+                    </Label>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkAnonymize}>Sim, anonimizar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     </TooltipProvider>
   );
