@@ -1268,8 +1268,7 @@ export default function DocumentosPage() {
       'totalMidias', 'midias_json',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
-      'prazoArquivoCorrenteDisplay', 'prazoArquivoIntermediarioDisplay', 'destinacaoFinalDisplay',
-      'alteracaoDestinacaoFinal', 'anoEliminacaoPrevisto', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
+      'alteracaoDestinacaoFinal', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
       'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
       'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
@@ -1886,7 +1885,7 @@ export default function DocumentosPage() {
                         </DialogDescription>
                       </DialogHeader>
                       <ScrollArea className="max-h-[75vh] pr-6">
-                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4"]} className="w-full">
+                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4", "item-7"]} className="w-full">
                               <AccordionItem value="item-1">
                                   <AccordionTrigger className="font-semibold">Identificação Principal</AccordionTrigger>
                                   <AccordionContent>
@@ -1971,12 +1970,21 @@ export default function DocumentosPage() {
                                               <Input id="numeroAntigo" value={formState.numeroAntigo || ""} onChange={handleInputChange} placeholder="Nº antigo do processo" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2">
-                                            <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
-                                            <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
-                                          </div>
-                                          <div className="space-y-2">
                                               <Label htmlFor="dataAbrangente">Data Abrangente do Documento*</Label>
                                               <Input id="dataAbrangente" value={formState.dataAbrangente || ""} onChange={handleInputChange} placeholder="Ex: 01/2023 – 12/2024 ou 15/01/2023" disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
+                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="dataBaixa">Data da Baixa</Label>
+                                              <DateInputPicker 
+                                              value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
+                                              onChange={(date) => handleDateChange('dataBaixa')(date)} 
+                                              placeholder="dd/mm/aaaa"
+                                              disabled={isFormDisabled}
+                                              />
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="dataArquivamento">Data de Arquivamento*</Label>
@@ -1986,6 +1994,10 @@ export default function DocumentosPage() {
                                               placeholder="dd/mm/aaaa"
                                               disabled={isFormDisabled}
                                               />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="numeroDocumentoTransferencia">Nº Doc. de Transferência</Label>
+                                            <Input id="numeroDocumentoTransferencia" value={formState.numeroDocumentoTransferencia || ""} onChange={handleInputChange} placeholder="Nº da transferência de origem" disabled={isFormDisabled} />
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -2213,8 +2225,26 @@ export default function DocumentosPage() {
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
+                               <AccordionItem value="item-7">
+                                  <AccordionTrigger className="font-semibold">Classificação Judicial</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
+                                              <Input 
+                                              id="codigoClassificacaoJudicialId" 
+                                              value={formState.codigoClassificacaoJudicialId || ""} 
+                                              onChange={handleInputChange} 
+                                              placeholder="ID da Classe Judicial" 
+                                              disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
+                                              className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
+                                              />
+                                          </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
                               <AccordionItem value="item-5">
-                                  <AccordionTrigger className="font-semibold">Informações Adicionais (Sigilo, Judicial)</AccordionTrigger>
+                                  <AccordionTrigger className="font-semibold">Informações de Sigilo</AccordionTrigger>
                                   <AccordionContent>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
@@ -2239,22 +2269,11 @@ export default function DocumentosPage() {
                                               </SelectContent>
                                               </Select>
                                           </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="codigoClassificacaoJudicialId">Código de Classificação Judicial</Label>
-                                              <Input 
-                                              id="codigoClassificacaoJudicialId" 
-                                              value={formState.codigoClassificacaoJudicialId || ""} 
-                                              onChange={handleInputChange} 
-                                              placeholder="ID da Classe Judicial" 
-                                              disabled={formState.categoria !== "Processo Judicial" || isFormDisabled}
-                                              className={formState.categoria !== "Processo Judicial" ? "bg-muted/50 cursor-not-allowed" : ""}
-                                              />
-                                          </div>
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
                               <AccordionItem value="item-6">
-                                  <AccordionTrigger className="font-semibold">Localização e Baixa</AccordionTrigger>
+                                  <AccordionTrigger className="font-semibold">Localização</AccordionTrigger>
                                   <AccordionContent>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
@@ -2268,19 +2287,6 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="numeroListagemEliminacao">Nº Listagem Eliminação</Label>
                                               <Input id="numeroListagemEliminacao" value={formState.numeroListagemEliminacao || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" disabled={isFormDisabled} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="tipoBaixa">Tipo de Baixa</Label>
-                                              <Input id="tipoBaixa" value={formState.tipoBaixa || ""} onChange={handleInputChange} disabled={isFormDisabled} />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="dataBaixa">Data da Baixa</Label>
-                                              <DateInputPicker 
-                                              value={formState.dataBaixa ? parseISO(formState.dataBaixa) : undefined} 
-                                              onChange={(date) => handleDateChange('dataBaixa')(date)} 
-                                              placeholder="dd/mm/aaaa"
-                                              disabled={isFormDisabled}
-                                              />
                                           </div>
                                       </div>
                                   </AccordionContent>
