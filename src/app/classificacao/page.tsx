@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { Classificacao } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, Printer } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, Printer, FilterIcon, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -58,6 +58,7 @@ import { initialClassificacoes } from "@/lib/mock-data";
 import { parseCsvRow } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
@@ -117,6 +118,17 @@ const initialFormState: ClassificacaoFormState = {
   destinacaoFinal: "Eliminação",
   observacoes: "",
 };
+
+
+const initialFiltersState = {
+  codigo: "",
+  descricao: "",
+  tipoPlanoClassificacao: "",
+  status: "",
+  destinacaoFinal: "",
+  observacoes: "",
+};
+const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
 
 type ColumnConfigClassificacoes = {
@@ -282,6 +294,10 @@ export default function ClassificacaoPage() {
   const [bulkEditValue, setBulkEditValue] = React.useState<any>('');
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  
+  const [filters, setFilters] = React.useState(initialFiltersState);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+
 
   const bulkEditableFields = [
     { value: 'tipoPlanoClassificacao', label: 'Tipo de Plano', type: 'select', options: ['Administrativo', 'Judicial'] },
@@ -340,6 +356,20 @@ export default function ClassificacaoPage() {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value }));
   };
+  
+  const handleFilterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFilterSelectChange = (name: keyof typeof initialFiltersState) => (value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value === ALL_VALUES_SENTINEL ? "" : value }));
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFiltersState);
+  };
+
 
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -452,7 +482,7 @@ export default function ClassificacaoPage() {
   };
 
 
-  const getSortableValueClassificacoes = (item: Classificacao, columnId: string): any => {
+  const getSortableValueClassificacoes = React.useCallback((item: Classificacao, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG_CLASSIFICACOES.find(col => col.id === columnId);
     if (!column) return null;
 
@@ -464,12 +494,21 @@ export default function ClassificacaoPage() {
     if (column.id === 'status') return item.status;
 
     return item[column.accessorKey as keyof Classificacao];
-  };
+  }, [ALL_COLUMNS_CONFIG_CLASSIFICACOES]);
 
   React.useEffect(() => {
-    let sortedClassificacoes = [...classificacoes];
+    let itemsToDisplay = classificacoes.filter(item => {
+      if (filters.codigo && !item.codigo.toLowerCase().includes(filters.codigo.toLowerCase())) return false;
+      if (filters.descricao && !item.descricao.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
+      if (filters.tipoPlanoClassificacao && item.tipoPlanoClassificacao !== filters.tipoPlanoClassificacao) return false;
+      if (filters.status && item.status !== filters.status) return false;
+      if (filters.destinacaoFinal && item.destinacaoFinal !== filters.destinacaoFinal) return false;
+      if (filters.observacoes && !item.observacoes?.toLowerCase().includes(filters.observacoes.toLowerCase())) return false;
+      return true;
+    });
+
     if (sortingClassificacoes.length > 0) {
-      sortedClassificacoes.sort((a, b) => {
+      itemsToDisplay.sort((a, b) => {
         for (const sortConfig of sortingClassificacoes) {
           const valA = getSortableValueClassificacoes(a, sortConfig.id);
           const valB = getSortableValueClassificacoes(b, sortConfig.id);
@@ -491,8 +530,8 @@ export default function ClassificacaoPage() {
         return 0;
       });
     }
-    setDisplayedClassificacoes(sortedClassificacoes);
-  }, [sortingClassificacoes, classificacoes]);
+    setDisplayedClassificacoes(itemsToDisplay);
+  }, [classificacoes, filters, sortingClassificacoes, getSortableValueClassificacoes]);
 
 
   const handleSortClassificacoes = (columnId: string) => {
@@ -711,6 +750,11 @@ export default function ClassificacaoPage() {
 
   const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG_CLASSIFICACOES.filter(col => columnVisibilityClassificacoes[col.id as string]), [columnVisibilityClassificacoes]);
   const dataToPrint = React.useMemo(() => classificacoes.filter(c => selectedRowIds.includes(c.id)), [classificacoes, selectedRowIds]);
+  
+  const filtersAreActive = React.useMemo(() => {
+    return Object.values(filters).some(value => !!value);
+  }, [filters]);
+
 
   if (isPrinting) {
     return (
@@ -915,10 +959,87 @@ export default function ClassificacaoPage() {
                 </Dialog>
               </div>
             </PageHeader>
-
-            <Card className="mt-6">
+            
+            <Accordion type="single" collapsible className="w-full mb-6 mt-6" value={isFiltersOpen ? "filters" : ""} onValueChange={(value) => setIsFiltersOpen(value === "filters")}>
+              <AccordionItem value="filters" className="border rounded-lg">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <FilterIcon className="h-5 w-5 text-primary" />
+                    <CardTitle className="font-headline text-primary text-xl">Filtros de Classificação</CardTitle>
+                  </div>
+                  {isFiltersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardDescription className="px-6 pb-4 text-sm">
+                    Refine a lista de classificações aplicando um ou mais filtros abaixo.
+                  </CardDescription>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="filterCodigo">Código</Label>
+                      <Input id="filterCodigo" name="codigo" value={filters.codigo} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterDescricao">Assunto</Label>
+                      <Input id="filterDescricao" name="descricao" value={filters.descricao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterTipoPlano">Tipo de Plano</Label>
+                      <Select onValueChange={handleFilterSelectChange('tipoPlanoClassificacao')} value={filters.tipoPlanoClassificacao}>
+                        <SelectTrigger id="filterTipoPlano"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os tipos</SelectItem>
+                          <SelectItem value="Administrativo">Administrativo</SelectItem>
+                          <SelectItem value="Judicial">Judicial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStatus">Status</Label>
+                      <Select onValueChange={handleFilterSelectChange('status')} value={filters.status}>
+                        <SelectTrigger id="filterStatus"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todos os status</SelectItem>
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Inativo">Inativo</SelectItem>
+                          <SelectItem value="Pendente de Complemento">Pendente de Complemento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="filterDestinacao">Destinação Final</Label>
+                      <Select onValueChange={handleFilterSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                        <SelectTrigger id="filterDestinacao"><SelectValue placeholder="Todas as destinações" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VALUES_SENTINEL}>Todas as destinações</SelectItem>
+                          <SelectItem value="Eliminação">Eliminação</SelectItem>
+                          <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                          <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                          <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterObservacoes">Observações</Label>
+                      <Input id="filterObservacoes" name="observacoes" value={filters.observacoes} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2 px-6 pb-6">
+                    <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
+                  </CardFooter>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            
+            <Card className="mt-0">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-headline text-primary">Lista de Classificações</CardTitle>
+                <div>
+                  <CardTitle className="font-headline text-primary">Lista de Classificações</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    {filtersAreActive
+                      ? `Exibindo ${displayedClassificacoes.length} de ${classificacoes.length} classificações com base nos filtros aplicados.`
+                      : `Exibindo todas as ${classificacoes.length} classificações cadastradas.`}
+                  </CardDescription>
+                </div>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1012,7 +1133,7 @@ export default function ClassificacaoPage() {
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedClassificacoes.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">Nenhuma classificação encontrada.</p>
+                  <p className="text-center text-muted-foreground py-4">Nenhuma classificação encontrada para os filtros aplicados.</p>
                 )}
               </CardContent>
             </Card>
