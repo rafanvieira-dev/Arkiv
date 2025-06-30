@@ -74,7 +74,6 @@ const opcoesCondicaoTextualFaseCorrente = [
   "Até a informatização ou alienação",
   "Até a posse",
   "Até a próxima atualização",
-  "Até a publicação",
   "Até a quitação da dívida",
   "Até devolução",
   "Até devolução dos autos",
@@ -127,6 +126,8 @@ const initialFiltersState = {
   status: "",
   destinacaoFinal: "",
   observacoes: "",
+  prazoCorrente: "",
+  prazoIntermediario: "",
 };
 const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
@@ -494,7 +495,7 @@ export default function ClassificacaoPage() {
     if (column.id === 'status') return item.status;
 
     return item[column.accessorKey as keyof Classificacao];
-  }, [ALL_COLUMNS_CONFIG_CLASSIFICACOES]);
+  }, []);
 
   React.useEffect(() => {
     let itemsToDisplay = classificacoes.filter(item => {
@@ -504,6 +505,21 @@ export default function ClassificacaoPage() {
       if (filters.status && item.status !== filters.status) return false;
       if (filters.destinacaoFinal && item.destinacaoFinal !== filters.destinacaoFinal) return false;
       if (filters.observacoes && !item.observacoes?.toLowerCase().includes(filters.observacoes.toLowerCase())) return false;
+      
+      if (filters.prazoCorrente) {
+        const prazoCorrenteValue = item.tipoPrazoFaseCorrente === 'Anos'
+          ? String(item.prazoGuardaFaseCorrenteAnos ?? '')
+          : item.prazoGuardaFaseCorrenteCondicaoTextual ?? '';
+        if (!prazoCorrenteValue.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (filters.prazoIntermediario) {
+        const prazoIntermediarioValue = String(item.prazoGuardaFaseIntermediariaAnos ?? '');
+        if (!prazoIntermediarioValue.includes(filters.prazoIntermediario)) return false;
+      }
+      
       return true;
     });
 
@@ -1021,6 +1037,14 @@ export default function ClassificacaoPage() {
                     <div className="space-y-2">
                       <Label htmlFor="filterObservacoes">Observações</Label>
                       <Input id="filterObservacoes" name="observacoes" value={filters.observacoes} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPrazoCorrente">Prazo Corrente</Label>
+                      <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Anos ou condição textual" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPrazoIntermediario">Prazo Intermediário (Anos)</Label>
+                      <Input id="filterPrazoIntermediario" name="prazoIntermediario" value={filters.prazoIntermediario} onChange={handleFilterInputChange} placeholder="Apenas números" />
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2 px-6 pb-6">
