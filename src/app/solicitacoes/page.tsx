@@ -930,6 +930,7 @@ export default function SolicitacoesPage() {
                         value={formState.dataSolicitacao ? parseISO(formState.dataSolicitacao) : undefined}
                         onChange={(date) => handleDateChange('dataSolicitacao')(date)}
                         placeholder="dd/mm/aaaa"
+                        disabled={isEditing}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1418,6 +1419,7 @@ export default function SolicitacoesPage() {
     
 
     
+
 
 
 
