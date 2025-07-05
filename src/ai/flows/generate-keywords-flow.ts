@@ -16,7 +16,13 @@ export const GenerateKeywordsInputSchema = z.object({
 export type GenerateKeywordsInput = z.infer<typeof GenerateKeywordsInputSchema>;
 
 export const GenerateKeywordsOutputSchema = z.object({
-  keywords: z.array(z.string()).describe('An array of at least 3 relevant keywords for the document description, in Portuguese.'),
+  keywords: z
+    .array(z.string().describe('Uma única palavra-chave concisa em português.'))
+    .min(3)
+    .max(5)
+    .describe(
+      'Um array contendo de 3 a 5 palavras-chave relevantes extraídas da descrição do documento.'
+    ),
 });
 export type GenerateKeywordsOutput = z.infer<typeof GenerateKeywordsOutputSchema>;
 
@@ -28,12 +34,12 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  prompt: `Você é um especialista em arquivologia. Sua tarefa é analisar o texto a seguir e extrair palavras-chave relevantes em português.
+  prompt: `Analise a seguinte descrição de documento e extraia de 3 a 5 palavras-chave relevantes em português.
 
-Texto para análise:
-"{{{description}}}"
+Descrição:
+{{{description}}}
 
-Com base no texto, forneça uma lista de pelo menos 3 palavras-chave que o resumam. As palavras-chave devem ser concisas e em português.`,
+Retorne as palavras-chave como um array de strings dentro de um objeto JSON.`,
 });
 
 const generateKeywordsFlow = ai.defineFlow(
