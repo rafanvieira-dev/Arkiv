@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview Generates keywords for document indexing.
+ * @fileOverview A keyword generation AI agent.
  *
- * - generateKeywords - A function that generates keywords based on a description.
+ * - generateKeywords - A function that handles the keyword generation process.
  * - GenerateKeywordsInput - The input type for the generateKeywords function.
  * - GenerateKeywordsOutput - The return type for the generateKeywords function.
  */
@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-export const GenerateKeywordsInputSchema = z.object({
+const GenerateKeywordsInputSchema = z.object({
   descricaoDocumento: z.string().describe('A descrição detalhada do conteúdo do documento.'),
   tipoDocumento: z.string().optional().describe('A espécie ou tipo do documento (ex: "Ação Ordinária", "Contrato").'),
   assuntoClassificacao: z.string().optional().describe('O assunto principal derivado da classificação arquivística (ex: "Processos Judiciais Cíveis").'),
@@ -19,7 +19,7 @@ export const GenerateKeywordsInputSchema = z.object({
 });
 export type GenerateKeywordsInput = z.infer<typeof GenerateKeywordsInputSchema>;
 
-export const GenerateKeywordsOutputSchema = z.object({
+const GenerateKeywordsOutputSchema = z.object({
   keywords: z
     .array(z.string().describe('Uma única palavra-chave concisa e relevante em português.'))
     .describe(
@@ -86,7 +86,7 @@ const generateKeywordsFlow = ai.defineFlow(
         response.text
       );
       console.error("Full response object:", JSON.stringify(response));
-      throw new Error("A resposta da IA foi inválida ou vazia.");
+      throw new Error(`Erro de IA: ${response.text}`);
     }
     return output;
   }
