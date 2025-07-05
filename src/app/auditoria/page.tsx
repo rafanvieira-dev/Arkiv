@@ -29,6 +29,22 @@ const initialFilters = {
     endDate: undefined as Date | undefined,
 };
 
+interface MemoizedLogRowProps {
+    log: AuditLog;
+}
+
+const MemoizedLogRow = React.memo(function MemoizedLogRow({ log }: MemoizedLogRowProps) {
+    return (
+        <TableRow>
+            <TableCell className="whitespace-nowrap"><ClientSideDateFormatter isoDateString={log.timestamp} /></TableCell>
+            <TableCell>{log.userName} ({log.userId})</TableCell>
+            <TableCell><Badge variant="outline">{log.action}</Badge></TableCell>
+            <TableCell><pre className="text-xs whitespace-pre-wrap">{JSON.stringify(log.details, null, 2)}</pre></TableCell>
+        </TableRow>
+    );
+});
+
+
 export default function AuditoriaPage() {
     const [logs, setLogs] = React.useState<AuditLog[]>([]);
     const [filteredLogs, setFilteredLogs] = React.useState<AuditLog[]>([]);
@@ -157,12 +173,7 @@ export default function AuditoriaPage() {
                             </TableHeader>
                             <TableBody>
                                 {filteredLogs.map(log => (
-                                    <TableRow key={log.id}>
-                                        <TableCell className="whitespace-nowrap"><ClientSideDateFormatter isoDateString={log.timestamp} /></TableCell>
-                                        <TableCell>{log.userName} ({log.userId})</TableCell>
-                                        <TableCell><Badge variant="outline">{log.action}</Badge></TableCell>
-                                        <TableCell><pre className="text-xs whitespace-pre-wrap">{JSON.stringify(log.details, null, 2)}</pre></TableCell>
-                                    </TableRow>
+                                    <MemoizedLogRow key={log.id} log={log} />
                                 ))}
                                 {filteredLogs.length === 0 && (
                                     <TableRow>

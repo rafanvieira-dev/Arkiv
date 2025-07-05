@@ -88,23 +88,79 @@ type ColumnConfig = {
   cellFormatter?: (value: any, item: ClasseJudicial) => React.ReactNode;
 };
 
-const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
-  {
-    id: 'status',
-    header: 'Status',
-    accessorKey: 'inativo',
-    defaultVisible: true,
-    enableSorting: true,
-    cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
-  },
-  { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
-  { id: 'descricao', header: 'Nome da Classe', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
-  { id: 'prazoGuardaAnos', header: 'Prazo de Guarda', accessorKey: 'prazoGuardaAnos', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (value !== undefined ? `${value} anos` : "N/A") },
-  { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
-  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-];
-
 type SortConfig = { id: string; direction: 'asc' | 'desc' };
+
+interface MemoizedClasseJudicialRowProps {
+    item: ClasseJudicial;
+    isSelected: boolean;
+    onToggleSelected: (itemId: string) => void;
+    visibleColumns: ColumnConfig[];
+    getCellValue: (item: ClasseJudicial, column: ColumnConfig) => React.ReactNode;
+    onEditClick: (item: ClasseJudicial) => void;
+    onDeleteClick: (itemId: string) => void;
+    hasDeletePermission: boolean;
+}
+
+const MemoizedClasseJudicialRow = React.memo(function MemoizedClasseJudicialRow({
+    item, isSelected, onToggleSelected, visibleColumns, getCellValue, onEditClick, onDeleteClick, hasDeletePermission
+}: MemoizedClasseJudicialRowProps) {
+    return (
+        <TableRow data-state={isSelected ? "selected" : ""}>
+            <TableCell className="py-2 px-3">
+                <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSelected(item.id)}
+                    aria-label={`Selecionar classe judicial ${item.codigo}`}
+                />
+            </TableCell>
+            {visibleColumns.map((column) => (
+                <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
+                    {getCellValue(item, column)}
+                </TableCell>
+            ))}
+            <TableCell className="sticky right-0 bg-card z-10 py-2 px-3 text-right">
+                <div className="flex items-center justify-end">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial" onClick={() => onEditClick(item)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p>Editar Classe Judicial</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <AlertDialog>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!hasDeletePermission}>
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>{hasDeletePermission ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a classe judicial "{item.descricao}".
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDeleteClick(item.id)}>Sim, excluir</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+            </TableCell>
+        </TableRow>
+    );
+});
 
 
 export default function ClassesJudiciaisPage() {
@@ -122,9 +178,7 @@ export default function ClassesJudiciaisPage() {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   
-  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(
-    ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
-  );
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
   const [displayedItems, setDisplayedItems] = React.useState<ClasseJudicial[]>([]);
   
@@ -137,6 +191,28 @@ export default function ClassesJudiciaisPage() {
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+  
+  const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'inativo',
+      defaultVisible: true,
+      enableSorting: true,
+      cellFormatter: (value) => <Badge variant={value ? 'destructive' : 'secondary'}>{value ? 'Inativo' : 'Ativo'}</Badge>
+    },
+    { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
+    { id: 'descricao', header: 'Nome da Classe', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
+    { id: 'prazoGuardaAnos', header: 'Prazo de Guarda', accessorKey: 'prazoGuardaAnos', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (value !== undefined ? `${value} anos` : "N/A") },
+    { id: 'destinacaoFinal', header: 'Destinação Final', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
+    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+  ], []);
+
+  React.useEffect(() => {
+    setColumnVisibility(
+      ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
+    );
+  }, [ALL_COLUMNS_CONFIG]);
 
   const bulkEditableFields = [
     { value: 'prazoGuardaAnos', label: 'Prazo de Guarda (Anos)', type: 'number' },
@@ -191,7 +267,7 @@ export default function ClassesJudiciaisPage() {
     setEditingId(null);
   };
   
-  const handleOpenDialog = (item?: ClasseJudicial) => {
+  const handleOpenDialog = React.useCallback((item?: ClasseJudicial) => {
     if (item) {
         setIsEditing(true);
         setEditingId(item.id);
@@ -200,7 +276,7 @@ export default function ClassesJudiciaisPage() {
         resetForm();
     }
     setIsDialogOpen(true);
-  };
+  }, []);
 
   const handleSaveChanges = () => {
     const finalFormState: ClasseJudicial = {
@@ -218,11 +294,11 @@ export default function ClassesJudiciaisPage() {
     setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = React.useCallback((id: string) => {
     logAction('DELETE_CLASSE_JUDICIAL', { classeId: id });
     setClassesJudiciais(prev => prev.filter(c => c.id !== id));
     toast({ title: "Sucesso", description: "Classe Judicial excluída." });
-  };
+  }, [toast]);
   
   const handleBulkDelete = () => {
     logAction('BULK_DELETE_CLASSES_JUDICIAIS', {
@@ -380,13 +456,13 @@ export default function ClassesJudiciaisPage() {
     );
   };
   
-  const getCellValue = (item: ClasseJudicial, column: ColumnConfig) => {
+  const getCellValue = React.useCallback((item: ClasseJudicial, column: ColumnConfig) => {
     const value = item[column.accessorKey as keyof ClasseJudicial];
     if (column.cellFormatter) {
       return column.cellFormatter(value, item);
     }
     return value === undefined || value === null ? 'N/A' : String(value);
-  };
+  }, []);
 
   const handleCsvExport = (dataToExport: ClasseJudicial[]) => {
     if (dataToExport.length === 0) {
@@ -527,8 +603,17 @@ export default function ClassesJudiciaisPage() {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
 
-  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [columnVisibility]);
+  const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [ALL_COLUMNS_CONFIG, columnVisibility]);
   const dataToPrint = React.useMemo(() => classesJudiciais.filter(c => selectedRowIds.includes(c.id)), [classesJudiciais, selectedRowIds]);
+  const handleToggleSelected = React.useCallback((itemId: string) => {
+    setSelectedRowIds(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  }, []);
+  const visibleColumnsForMemo = React.useMemo(() => {
+    return ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]);
+  }, [ALL_COLUMNS_CONFIG, columnVisibility]);
+
 
   if (isPrinting) {
     return (
@@ -815,66 +900,17 @@ export default function ClassesJudiciaisPage() {
                     </TableHeader>
                     <TableBody>
                       {displayedItems.map((item) => (
-                        <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                          <TableCell className="py-2 px-3">
-                            <Checkbox
-                              checked={selectedRowIds.includes(item.id)}
-                              onCheckedChange={(value) => {
-                                setSelectedRowIds(prev =>
-                                  value ? [...prev, item.id] : prev.filter(id => id !== item.id)
-                                );
-                              }}
-                              aria-label={`Selecionar classe judicial ${item.codigo}`}
-                            />
-                          </TableCell>
-                          {ALL_COLUMNS_CONFIG.map((column) =>
-                            columnVisibility[column.id as string] ? (
-                              <TableCell key={`${item.id}-${column.id as string}`} className="py-2 px-3">
-                                {getCellValue(item, column)}
-                              </TableCell>
-                            ) : null
-                          )}
-                          <TableCell className="sticky right-0 bg-card z-10 py-2 px-3 text-right">
-                            <div className="flex items-center justify-end">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" aria-label="Editar Classe Judicial" onClick={() => handleOpenDialog(item)}>
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Editar Classe Judicial</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                <AlertDialog>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <AlertDialogTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" aria-label="Excluir Classe Judicial" disabled={!permissions.exclusaoDados}>
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{permissions.exclusaoDados ? "Excluir Classe Judicial" : "Permissão necessária"}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Esta ação não pode ser desfeita. Isso excluirá permanentemente a classe judicial "{item.descricao}".
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(item.id)}>Sim, excluir</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                              </div>
-                          </TableCell>
-                        </TableRow>
+                        <MemoizedClasseJudicialRow
+                            key={item.id}
+                            item={item}
+                            isSelected={selectedRowIds.includes(item.id)}
+                            onToggleSelected={handleToggleSelected}
+                            visibleColumns={visibleColumnsForMemo}
+                            getCellValue={getCellValue}
+                            onEditClick={handleOpenDialog}
+                            onDeleteClick={handleDelete}
+                            hasDeletePermission={permissions.exclusaoDados}
+                        />
                       ))}
                     </TableBody>
                   </Table>
