@@ -942,11 +942,12 @@ export default function DocumentosPage() {
         }));
     } catch (error) {
         console.error("Failed to generate keywords:", error);
+        const errorMessage = error instanceof Error ? error.message : "Não foi possível sugerir palavras-chave. Verifique os dados ou tente novamente.";
         setKeywordError("Falha ao gerar palavras-chave.");
         toast({
             variant: "destructive",
             title: "Erro de IA",
-            description: "Não foi possível sugerir palavras-chave. Verifique os dados ou tente novamente."
+            description: errorMessage,
         })
     } finally {
         setIsGeneratingKeywords(false);
@@ -3121,6 +3122,7 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
 

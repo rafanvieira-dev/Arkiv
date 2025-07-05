@@ -36,38 +36,27 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  system: `Você é um especialista em indexação de documentos de arquivo. Sua tarefa é analisar o contexto fornecido sobre um documento e gerar uma lista de palavras-chave relevantes.
+  system: `Você é uma API JSON. Sua única tarefa é analisar as informações de um documento e retornar um objeto JSON com uma única chave "keywords". O valor dessa chave deve ser um array de strings (palavras-chave em português) relevantes para indexação.
 
-**REGRAS IMPORTANTES:**
-1.  A sua resposta DEVE SER APENAS um objeto JSON.
-2.  Não inclua \`\`\`json, explicações, saudações ou qualquer outro texto fora do JSON.
-3.  O JSON deve ter uma única chave chamada "keywords".
-4.  O valor de "keywords" deve ser um array de strings (palavras-chave).
+**REGRAS ABSOLUTAS:**
+1.  Sua resposta deve ser APENAS o objeto JSON.
+2.  NÃO inclua markdown \`\`\`json.
+3.  NÃO inclua explicações ou texto adicional.
 
 **Exemplo de Saída Válida:**
 {
-  "keywords": ["acidente", "trem", "indenização", "responsabilidade civil", "decreto 2681"]
-}
-
-Analise as informações a seguir e gere o JSON de palavras-chave.`,
-  prompt: `**Descrição do Documento:**
-{{{descricaoDocumento}}}
-
+  "keywords": ["tribunal de recursos", "procuração", "decreto 2681", "processo civil"]
+}`,
+  prompt: `**Contexto do Documento:**
+- Descrição: {{{descricaoDocumento}}}
 {{#if tipoDocumento}}
-**Espécie/Tipo de Documento:**
-{{{tipoDocumento}}}
+- Tipo de Documento: {{{tipoDocumento}}}
 {{/if}}
-
 {{#if assuntoClassificacao}}
-**Assunto Principal:**
-{{{assuntoClassificacao}}}
+- Assunto: {{{assuntoClassificacao}}}
 {{/if}}
-
 {{#if nomesDasPartes}}
-**Partes Envolvidas:**
-{{#each nomesDasPartes}}
-- {{{this}}}
-{{/each}}
+- Partes: {{#each nomesDasPartes}}{{{this}}}{{/each}}
 {{/if}}
 `,
   config: {
@@ -76,6 +65,7 @@ Analise as informações a seguir e gere o JSON de palavras-chave.`,
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
     ],
   },
 });
@@ -87,9 +77,15 @@ const generateKeywordsFlow = ai.defineFlow(
     outputSchema: GenerateKeywordsOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const response = await prompt(input);
+    const output = response.output;
+
     if (!output || !output.keywords) {
-      console.error("AI response did not conform to the output schema or was empty. Response:", JSON.stringify(output));
+      console.error(
+        "AI response did not conform to the output schema or was empty. Raw text:", 
+        response.text
+      );
+      console.error("Full response object:", JSON.stringify(response));
       throw new Error("A resposta da IA foi inválida ou vazia.");
     }
     return output;
