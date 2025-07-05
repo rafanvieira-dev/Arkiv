@@ -33,7 +33,7 @@ export async function generateKeywords(input: GenerateKeywordsInput): Promise<Ge
 
 const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
   system: `Você é uma API JSON. Sua única tarefa é analisar as informações de um documento e retornar um objeto JSON com uma única chave "keywords". O valor dessa chave deve ser um array de strings (palavras-chave em português) relevantes para indexação.
@@ -55,7 +55,7 @@ const prompt = ai.definePrompt({
 {{#if assuntoClassificacao}}
 - Assunto: {{{assuntoClassificacao}}}
 {{/if}}
-{{#if nomesDasPartes}}
+{{#if nomesDasPartes.length}}
 - Partes: {{#each nomesDasPartes}}{{{this}}}{{/each}}
 {{/if}}
 `,
