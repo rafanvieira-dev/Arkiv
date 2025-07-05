@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  system: `Você é um especialista em indexação de documentos de arquivo. Sua tarefa é analisar o contexto fornecido sobre um documento e extrair ou derivar de 3 a 7 palavras-chave ou termos curtos que o representem de forma eficaz para buscas futuras. Considere todos os campos de entrada.
+  system: `Você é um especialista em indexação de documentos de arquivo. Sua tarefa é analisar o contexto fornecido sobre um documento e extrair ou derivar palavras-chave ou termos curtos que o representem de forma eficaz para buscas futuras. Considere todos os campos de entrada.
 
 Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidade com o esquema de saída especificado. Não inclua nenhum outro texto, saudações ou explicações em sua resposta. A resposta deve ser um JSON com uma única chave "keywords" contendo um array de strings.`,
   prompt: `Analise as seguintes informações do documento e gere as palavras-chave:
@@ -62,6 +62,14 @@ Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidad
 {{/if}}
 
 Gere as palavras-chave agora.`,
+  config: {
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  },
 });
 
 const generateKeywordsFlow = ai.defineFlow(
@@ -73,7 +81,7 @@ const generateKeywordsFlow = ai.defineFlow(
   async (input) => {
     const {output} = await prompt(input);
     if (!output || !output.keywords) {
-      console.error("AI response did not conform to the output schema or was empty.");
+      console.error("AI response did not conform to the output schema or was empty. Response:", JSON.stringify(output));
       throw new Error("A resposta da IA foi inválida ou vazia.");
     }
     return output;
