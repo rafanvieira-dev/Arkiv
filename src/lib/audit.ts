@@ -13,18 +13,27 @@ const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 export function logAction(action: string, details: Record<string, any> = {}) {
   try {
     const userJson = window.localStorage.getItem('currentUser');
-    if (!userJson) {
-      console.warn('Audit log skipped: No user is currently logged in.');
-      return;
+    
+    let userId = "ANONYMOUS";
+    let userName = "System/Public Action";
+
+    if (userJson) {
+      const currentUser: Usuario = JSON.parse(userJson);
+      userId = currentUser.id;
+      userName = currentUser.nomeCompleto;
     }
 
-    const currentUser: Usuario = JSON.parse(userJson);
-    
+    // For failed login attempts, we can be more specific
+    if (action === 'LOGIN_FAIL' && details.email) {
+        userName = `Login Attempt: ${details.email}`;
+        userId = "N/A";
+    }
+
     const newLogEntry: AuditLog = {
       id: `LOG_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
-      userId: currentUser.id,
-      userName: currentUser.nomeCompleto,
+      userId: userId,
+      userName: userName,
       action: action,
       details: details,
     };
