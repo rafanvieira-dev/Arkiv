@@ -253,6 +253,7 @@ export default function DocumentosPage() {
     isClassificationInactive?: boolean;
     necessidadeReclassificacao?: 'Sim' | 'Não';
   }>(initialFormState);
+  const [originalDocOnEdit, setOriginalDocOnEdit] = React.useState<Documento | null>(null);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
   
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
@@ -303,10 +304,12 @@ export default function DocumentosPage() {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
     setIsFormDisabled(false);
+    setOriginalDocOnEdit(null);
   }, []);
 
   const handleOpenDialog = React.useCallback((doc?: Documento) => {
     if (doc) {
+      setOriginalDocOnEdit(JSON.parse(JSON.stringify(doc))); // Store deep copy
       const existingClassification = classificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
       
       let assunto = "Não encontrado";
@@ -1178,7 +1181,51 @@ export default function DocumentosPage() {
     };
 
     const action = isCreating ? 'CREATE_DOCUMENT' : 'UPDATE_DOCUMENT';
-    logAction(action, { documentId: finalFormState.id });
+    const logDetails: Record<string, any> = { documentId: finalFormState.id };
+
+    if (action === 'CREATE_DOCUMENT') {
+        logDetails.summary = `Documento "${finalFormState.numeroDocumento || finalFormState.id}" criado.`;
+    }
+
+    if (action === 'UPDATE_DOCUMENT' && originalDocOnEdit) {
+        const changedFields: Record<string, { from: any; to: any }> = {};
+
+        const fieldsToCompare: Array<{key: keyof Documento, label: string}> = [
+            { key: 'status', label: 'Status' },
+            { key: 'classificacaoArquivisticaId', label: 'Classificação' },
+            { key: 'codigosCaixa', label: 'Caixa(s)' },
+            { key: 'descricaoDocumento', label: 'Descrição' },
+            { key: 'numeroDocumento', label: 'Nº do Documento' },
+            { key: 'destinacaoFinalDisplay', label: 'Destinação Final' },
+            { key: 'segredoJustica', label: 'Segredo de Justiça' },
+            { key: 'grauSigilo', label: 'Grau de Sigilo' }
+        ];
+
+        fieldsToCompare.forEach(({ key, label }) => {
+            const oldValue = originalDocOnEdit[key] ?? "";
+            const newValue = finalFormState[key] ?? "";
+
+            if (oldValue !== newValue) {
+                let fromValue = oldValue;
+                let toValue = newValue;
+
+                if (key === 'classificacaoArquivisticaId') {
+                    fromValue = classificacoes.find(c => c.id === oldValue)?.codigo || 'N/A';
+                    toValue = classificacoes.find(c => c.id === newValue)?.codigo || 'N/A';
+                }
+
+                changedFields[label] = { from: fromValue || 'Vazio', to: toValue || 'Vazio' };
+            }
+        });
+
+        if (Object.keys(changedFields).length > 0) {
+            logDetails.changedFields = changedFields;
+        } else {
+            logDetails.summary = "Nenhuma alteração detectada nos campos principais."
+        }
+    }
+
+    logAction(action, logDetails);
 
     const boxCodes = (finalFormState.codigosCaixa || "").split(',').map(c => c.trim()).filter(Boolean);
     if (boxCodes.length > 0) {
@@ -2098,6 +2145,34 @@ export default function DocumentosPage() {
   const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [ALL_COLUMNS_CONFIG, columnVisibility]);
   const dataToPrint = React.useMemo(() => documentos.filter(doc => selectedRowIds.includes(doc.id)), [documentos, selectedRowIds]);
 
+  const renderLogDetails = (log: AuditLog) => {
+    const { action, details } = log;
+    
+    if (!details) return <p className="text-muted-foreground italic text-xs mt-1">Nenhum detalhe disponível.</p>;
+    
+    if (action === 'UPDATE_DOCUMENT' && details.changedFields && Object.keys(details.changedFields).length > 0) {
+        return (
+            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-foreground bg-muted/50 p-2 rounded-md">
+                {Object.entries(details.changedFields).map(([key, value]) => (
+                    <li key={key}>
+                        <span className="font-semibold">{key}:</span>{' '}
+                        <code className="text-red-600 dark:text-red-400">"{String((value as any).from)}"</code>
+                        <span className="text-muted-foreground mx-1">→</span>
+                        <code className="text-green-600 dark:text-green-400">"{String((value as any).to)}"</code>
+                    </li>
+                ))}
+            </ul>
+        );
+    }
+    
+    // Fallback for other actions or when changedFields is not present
+    return (
+        <pre className="mt-1 p-2 bg-muted rounded-md text-xs whitespace-pre-wrap">
+            {JSON.stringify(details, null, 2)}
+        </pre>
+    );
+  };
+
 
   return (
     <TooltipProvider>
@@ -2696,10 +2771,8 @@ export default function DocumentosPage() {
                                             </p>
                                             <p className="text-muted-foreground">Realizado por: {log.userName} (ID: {log.userId})</p>
                                             <details className="mt-1">
-                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Ver Detalhes</summary>
-                                                <pre className="mt-1 p-2 bg-muted rounded-md text-xs whitespace-pre-wrap">
-                                                    {JSON.stringify(log.details, null, 2)}
-                                                </pre>
+                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground text-xs">Ver Detalhes</summary>
+                                                {renderLogDetails(log)}
                                             </details>
                                         </div>
                                         ))
