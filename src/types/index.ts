@@ -23,6 +23,12 @@ export interface MidiaDetalhe {
   caixaMidia?: string;
 }
 
+export interface ApensoDetalhe {
+  id: string;
+  numeroApenso: string;
+  caixaApenso?: string;
+}
+
 export interface TipoOrigem {
   id: string;
   nome: string;
@@ -48,7 +54,7 @@ export interface Documento {
   dataArquivamento?: string; // 1.10 - ISO Date string
   quantidadeVolumes?: number; // 1.11
   quantidadeApensos?: number; // 1.12
-  numerosApensos?: string; // 1.13 - Simplificado para string por agora
+  apensos?: ApensoDetalhe[]; // 1.13 - New structured field for apensos
   totalMidias?: number; // 1.14
   midias?: MidiaDetalhe[];
   

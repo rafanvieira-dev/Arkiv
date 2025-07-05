@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -102,7 +102,7 @@ const initialFormState: Partial<Documento> & {
   dataArquivamento: undefined,
   quantidadeVolumes: undefined,
   quantidadeApensos: undefined,
-  numerosApensos: "",
+  apensos: [],
   totalMidias: undefined,
   midias: [],
   digitalizado: "Não",
@@ -342,6 +342,7 @@ export default function DocumentosPage() {
         dataBaixa: doc.dataBaixa ? doc.dataBaixa : undefined,
         quantidadeVolumes: doc.quantidadeVolumes ?? undefined,
         quantidadeApensos: doc.quantidadeApensos ?? undefined,
+        apensos: doc.apensos || [],
         totalMidias: doc.totalMidias ?? undefined,
         midias: doc.midias || [],
         nomeClasseProcessualDisplay: nomeClasse,
@@ -431,7 +432,7 @@ export default function DocumentosPage() {
     { id: 'dataArquivamento', header: 'Data Arquivamento', accessorKey: 'dataArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'quantidadeVolumes', header: 'Qtd. Volumes', accessorKey: 'quantidadeVolumes', defaultVisible: true, enableSorting: true },
     { id: 'quantidadeApensos', header: 'Qtd. Apensos', accessorKey: 'quantidadeApensos', defaultVisible: true, enableSorting: true },
-    { id: 'numerosApensos', header: 'Nº Apensos', accessorKey: 'numerosApensos', defaultVisible: true, enableSorting: true },
+    { id: 'apensos', header: 'Nº Apensos', accessorKey: 'apensos', defaultVisible: true, enableSorting: true, cellFormatter: (apensos?: ApensoDetalhe[]) => apensos?.map(a => a.numeroApenso).join(', ') || '' },
     { id: 'totalMidias', header: 'Total Mídias', accessorKey: 'totalMidias', defaultVisible: true, enableSorting: true },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: true, enableSorting: true },
     { id: 'tipoBaixa', header: 'Tipo Baixa', accessorKey: 'tipoBaixa', defaultVisible: true, enableSorting: true },
@@ -731,8 +732,25 @@ export default function DocumentosPage() {
     } else {
       setFormState(prev => ({ ...prev, midias: currentMidias.slice(0, total) }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formState.totalMidias]);
+
+  React.useEffect(() => {
+    const total = formState.quantidadeApensos || 0;
+    const currentApensos = formState.apensos || [];
+
+    if (total === currentApensos.length) return;
+
+    if (total > currentApensos.length) {
+      const newApensosToAdd = Array.from({ length: total - currentApensos.length }, (_, i) => ({
+        id: `apenso_${Date.now()}_${currentApensos.length + i}`,
+        numeroApenso: '',
+        caixaApenso: '',
+      }));
+      setFormState(prev => ({ ...prev, apensos: [...currentApensos, ...newApensosToAdd] }));
+    } else {
+      setFormState(prev => ({ ...prev, apensos: currentApensos.slice(0, total) }));
+    }
+  }, [formState.quantidadeApensos]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -755,6 +773,16 @@ export default function DocumentosPage() {
             newMidias[index] = { ...newMidias[index], [field]: value };
         }
         return { ...prev, midias: newMidias };
+    });
+  };
+
+  const handleApensoChange = (index: number, field: keyof ApensoDetalhe, value: string) => {
+    setFormState(prev => {
+        const newApensos = [...(prev.apensos || [])];
+        if (newApensos[index]) {
+            newApensos[index] = { ...newApensos[index], [field]: value };
+        }
+        return { ...prev, apensos: newApensos };
     });
   };
 
@@ -1061,6 +1089,7 @@ export default function DocumentosPage() {
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental!,
       midias: formState.midias || [],
+      apensos: formState.apensos || [],
       palavrasChave: formState.palavrasChave || [],
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
@@ -1103,24 +1132,25 @@ export default function DocumentosPage() {
         }
     }
     
-    // NEW LOGIC FOR APENSOS
     const newApensoDocsToCreate: Documento[] = [];
-    if (finalFormState.numerosApensos) {
-      const apensoNumbers = finalFormState.numerosApensos.split(',').map(s => s.trim()).filter(Boolean);
-      finalFormState.quantidadeApensos = apensoNumbers.length; // Auto-update count
+    if (finalFormState.apensos && finalFormState.apensos.length > 0) {
+      finalFormState.quantidadeApensos = finalFormState.apensos.length;
 
-      apensoNumbers.forEach((apensoNumero, index) => {
+      finalFormState.apensos.forEach((apenso, index) => {
+        if (!apenso.numeroApenso) return;
+
         const newApensoDoc: Documento = {
           ...initialFormState,
           id: `DOC_Apenso_${Date.now()}_${index}`,
-          numeroDocumento: apensoNumero,
+          numeroDocumento: apenso.numeroApenso,
           status: 'Pendente de Conferência',
           dataCadastro: new Date().toISOString(),
-          processoOriginario: finalFormState.numeroDocumento, 
-          // User-requested fields for the new child doc
+          processoOriginario: '',
           quantidadeApensos: 1,
-          numerosApensos: finalFormState.numeroDocumento,
-          // Copy relevant context from parent
+          apensos: [{
+            id: `apenso_pai_${Date.now()}`,
+            numeroApenso: finalFormState.numeroDocumento || `PAI_${finalFormState.id}`,
+          }],
           orgao: finalFormState.orgao,
           origem: finalFormState.origem,
           classificacaoArquivisticaId: finalFormState.classificacaoArquivisticaId,
@@ -1129,7 +1159,7 @@ export default function DocumentosPage() {
           prazoArquivoIntermediarioDisplay: finalFormState.prazoArquivoIntermediarioDisplay,
           destinacaoFinalDisplay: finalFormState.destinacaoFinalDisplay,
           anoEliminacaoPrevisto: finalFormState.anoEliminacaoPrevisto,
-          codigosCaixa: finalFormState.codigosCaixa,
+          codigosCaixa: apenso.caixaApenso || finalFormState.codigosCaixa,
         };
         newApensoDocsToCreate.push(newApensoDoc);
       });
@@ -1451,7 +1481,7 @@ export default function DocumentosPage() {
       'id', 'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
       'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
       'partes', 'documentosRelacionadosIds', 'palavrasChave',
-      'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
+      'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'apensos', 
       'totalMidias', 'midias',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
@@ -1470,6 +1500,7 @@ export default function DocumentosPage() {
             ...doc,
             partes: JSON.stringify(doc.partes || []),
             midias: JSON.stringify(doc.midias || []),
+            apensos: JSON.stringify(doc.apensos || []),
             palavrasChave: doc.palavrasChave?.join(';') || '',
             dataArquivamento: formatDateForExport(doc.dataArquivamento),
             dataBaixa: formatDateForExport(doc.dataBaixa),
@@ -1511,7 +1542,7 @@ export default function DocumentosPage() {
         'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
         'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
         'partes', 'documentosRelacionadosIds', 'palavrasChave',
-        'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
+        'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'apensos', 
         'totalMidias', 'midias',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
@@ -1729,7 +1760,7 @@ export default function DocumentosPage() {
                     dataArquivamento,
                     quantidadeVolumes: newItemData.quantidadeVolumes ? parseInt(newItemData.quantidadeVolumes, 10) : undefined,
                     quantidadeApensos: newItemData.quantidadeApensos ? parseInt(newItemData.quantidadeApensos, 10) : undefined,
-                    numerosApensos: newItemData.numerosApensos,
+                    apensos: [],
                     totalMidias: newItemData.totalMidias ? parseInt(newItemData.totalMidias, 10) : midias.length,
                     midias: midias,
                     digitalizado: newItemData.digitalizado || 'Não',
@@ -2294,7 +2325,7 @@ export default function DocumentosPage() {
                                   </AccordionContent>
                               </AccordionItem>
                               <AccordionItem value="item-3">
-                                  <AccordionTrigger className="font-semibold">Detalhes Físicos, Mídias e Digitalização</AccordionTrigger>
+                                  <AccordionTrigger className="font-semibold">Detalhes Físicos, Apensos, Mídias e Digitalização</AccordionTrigger>
                                   <AccordionContent>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2">
@@ -2327,12 +2358,6 @@ export default function DocumentosPage() {
                                               <Label htmlFor="quantidadeApensos">Quantidade de Apensos</Label>
                                               <Input id="quantidadeApensos" type="number" value={formState.quantidadeApensos === undefined ? "" : formState.quantidadeApensos} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
                                           </div>
-                                          { (formState.quantidadeApensos !== undefined && formState.quantidadeApensos > 0) && (
-                                              <div className="space-y-2">
-                                              <Label htmlFor="numerosApensos">Número(s) dos Apensos</Label>
-                                              <Input id="numerosApensos" value={formState.numerosApensos || ""} onChange={handleInputChange} placeholder="Ex: AP001, AP002" disabled={isFormDisabled} />
-                                              </div>
-                                          )}
                                           <div className="space-y-2">
                                               <Label htmlFor="digitalizado">Digitalizado?</Label>
                                               <Select onValueChange={handleSelectChange('digitalizado')} value={formState.digitalizado} disabled={isFormDisabled}>
@@ -2347,42 +2372,62 @@ export default function DocumentosPage() {
                                               <Label htmlFor="totalMidias">Total de Mídias</Label>
                                               <Input id="totalMidias" type="number" value={formState.totalMidias === undefined ? "" : formState.totalMidias} onChange={handleNumericInputChange} placeholder="Ex: 1 (0 se não houver)" disabled={isFormDisabled} />
                                           </div>
+                                      </div>
 
-                                          {formState.midias && formState.midias.length > 0 && (
-                                              <div className="sm:col-span-2 xl:col-span-3 space-y-4 pt-4">
-                                                  {formState.midias.map((midia, index) => (
-                                                      <div key={midia.id} className="p-4 border rounded-md space-y-4 bg-muted/30">
-                                                          <h4 className="font-semibold text-sm text-primary">Detalhes da Mídia {index + 1}</h4>
-                                                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                                                              <div className="space-y-2">
-                                                                  <Label htmlFor={`tipoMidia-${index}`}>Tipo de Mídia</Label>
-                                                                  <Select value={midia.tipoMidia || ''} onValueChange={(value) => handleMidiaChange(index, 'tipoMidia', value)} disabled={isFormDisabled}>
-                                                                      <SelectTrigger id={`tipoMidia-${index}`}><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-                                                                      <SelectContent>
-                                                                          {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
-                                                                              <SelectItem key={m} value={m}>{m}</SelectItem>
-                                                                          ))}
-                                                                      </SelectContent>
-                                                                  </Select>
-                                                              </div>
-                                                              <div className="space-y-2">
-                                                                  <Label htmlFor={`numeroMidia-${index}`}>Número da Mídia</Label>
-                                                                  <Input id={`numeroMidia-${index}`} value={midia.numeroMidia || ""} onChange={(e) => handleMidiaChange(index, 'numeroMidia', e.target.value)} disabled={isFormDisabled} />
-                                                              </div>
-                                                              <div className="space-y-2">
-                                                                  <Label htmlFor={`paginaMidia-${index}`}>Página da Mídia</Label>
-                                                                  <Input id={`paginaMidia-${index}`} value={midia.paginaMidia || ""} onChange={(e) => handleMidiaChange(index, 'paginaMidia', e.target.value)} disabled={isFormDisabled} />
-                                                              </div>
-                                                              <div className="space-y-2">
-                                                                  <Label htmlFor={`caixaMidia-${index}`}>Caixa da Mídia</Label>
-                                                                  <Input id={`caixaMidia-${index}`} value={midia.caixaMidia || ""} onChange={(e) => handleMidiaChange(index, 'caixaMidia', e.target.value)} placeholder="Ex: CX-MIDIA-01" disabled={isFormDisabled} />
-                                                              </div>
+                                      {formState.apensos && formState.apensos.length > 0 && (
+                                          <div className="sm:col-span-2 xl:col-span-3 space-y-4 pt-4">
+                                              {formState.apensos.map((apenso, index) => (
+                                                  <div key={apenso.id} className="p-4 border rounded-md space-y-4 bg-muted/30">
+                                                      <h4 className="font-semibold text-sm text-primary">Detalhes do Apenso {index + 1}</h4>
+                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`numeroApenso-${index}`}>Número do Apenso</Label>
+                                                              <Input id={`numeroApenso-${index}`} value={apenso.numeroApenso || ""} onChange={(e) => handleApensoChange(index, 'numeroApenso', e.target.value)} disabled={isFormDisabled} />
+                                                          </div>
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`caixaApenso-${index}`}>Caixa do Apenso (Opcional)</Label>
+                                                              <Input id={`caixaApenso-${index}`} value={apenso.caixaApenso || ""} onChange={(e) => handleApensoChange(index, 'caixaApenso', e.target.value)} placeholder="Deixe em branco para usar a do pai" disabled={isFormDisabled} />
                                                           </div>
                                                       </div>
-                                                  ))}
-                                              </div>
-                                          )}
-                                      </div>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                      )}
+
+                                      {formState.midias && formState.midias.length > 0 && (
+                                          <div className="sm:col-span-2 xl:col-span-3 space-y-4 pt-4">
+                                              {formState.midias.map((midia, index) => (
+                                                  <div key={midia.id} className="p-4 border rounded-md space-y-4 bg-muted/30">
+                                                      <h4 className="font-semibold text-sm text-primary">Detalhes da Mídia {index + 1}</h4>
+                                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`tipoMidia-${index}`}>Tipo de Mídia</Label>
+                                                              <Select value={midia.tipoMidia || ''} onValueChange={(value) => handleMidiaChange(index, 'tipoMidia', value)} disabled={isFormDisabled}>
+                                                                  <SelectTrigger id={`tipoMidia-${index}`}><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                                                                  <SelectContent>
+                                                                      {tiposMidia.sort((a,b) => a.localeCompare(b)).map(m => (
+                                                                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                                      ))}
+                                                                  </SelectContent>
+                                                              </Select>
+                                                          </div>
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`numeroMidia-${index}`}>Número da Mídia</Label>
+                                                              <Input id={`numeroMidia-${index}`} value={midia.numeroMidia || ""} onChange={(e) => handleMidiaChange(index, 'numeroMidia', e.target.value)} disabled={isFormDisabled} />
+                                                          </div>
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`paginaMidia-${index}`}>Página da Mídia</Label>
+                                                              <Input id={`paginaMidia-${index}`} value={midia.paginaMidia || ""} onChange={(e) => handleMidiaChange(index, 'paginaMidia', e.target.value)} disabled={isFormDisabled} />
+                                                          </div>
+                                                          <div className="space-y-2">
+                                                              <Label htmlFor={`caixaMidia-${index}`}>Caixa da Mídia</Label>
+                                                              <Input id={`caixaMidia-${index}`} value={midia.caixaMidia || ""} onChange={(e) => handleMidiaChange(index, 'caixaMidia', e.target.value)} placeholder="Ex: CX-MIDIA-01" disabled={isFormDisabled} />
+                                                          </div>
+                                                      </div>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                      )}
                                   </AccordionContent>
                               </AccordionItem>
                               <AccordionItem value="item-4">

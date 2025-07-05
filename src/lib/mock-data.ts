@@ -1,6 +1,6 @@
 
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
@@ -57,7 +57,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2023-01-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 0,
     midias: [],
     digitalizado: "Não", 
@@ -99,7 +99,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2023-03-20").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 1,
-    numerosApensos: "AP001",
+    apensos: [{id: 'ap-d2-1', numeroApenso: 'AP001', caixaApenso: 'CX002'}],
     totalMidias: 1,
     midias: [{id: "m-d2-1", tipoMidia: 'DVD-R', numeroMidia: 'M001', paginaMidia: '1-10', caixaMidia: 'CX-MIDIA-01'}],
     digitalizado: "Sim", 
@@ -140,7 +140,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2022-11-05").toISOString(), 
     quantidadeVolumes: 2,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 2,
     midias: [
       {id: "m-d3-1", tipoMidia: "Pen Drive", numeroMidia: "M002", paginaMidia: "N/A", caixaMidia: "CX-MIDIA-02"},
@@ -184,7 +184,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2014-06-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 0,
     midias: [],
     digitalizado: "Não", 
@@ -225,7 +225,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2010-08-20").toISOString(), 
     quantidadeVolumes: 0,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 1,
     midias: [{id: 'm-d5-1', tipoMidia: 'Outro', numeroMidia: 'ARQ001', paginaMidia: '1-50'}],
     digitalizado: "Sim", 
@@ -266,7 +266,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2020-12-15").toISOString(), 
     quantidadeVolumes: 1,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 0,
     midias: [],
     digitalizado: "Não", 
@@ -306,7 +306,7 @@ export const placeholderDocumentos: Documento[] = [
     dataArquivamento: new Date("2018-03-20").toISOString(), 
     quantidadeVolumes: 0,
     quantidadeApensos: 0,
-    numerosApensos: "",
+    apensos: [],
     totalMidias: 0,
     midias: [],
     digitalizado: "Sim", 
