@@ -75,6 +75,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
+import { generateKeywords } from "@/ai/flows/generate-keywords-flow";
 
 
 const initialFormState: Partial<Documento> & { 
@@ -109,6 +110,7 @@ const initialFormState: Partial<Documento> & {
   dataBaixa: undefined,
   descricaoDocumento: "",
   partes: [],
+  palavrasChave: [],
   tipoPlanoClassificacao: 'Administrativo',
   codigoClassificacaoArquivisticaInput: "",
   assuntoClassificacaoDisplay: "",
@@ -257,6 +259,9 @@ export default function DocumentosPage() {
   const [parteFormState, setParteFormState] = React.useState<Partial<ParteDocumento>>(initialParteState);
   const [isEditingParte, setIsEditingParte] = React.useState(false);
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
+  
+  const [isGeneratingKeywords, setIsGeneratingKeywords] = React.useState(false);
+  const [keywordError, setKeywordError] = React.useState<string | null>(null);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
@@ -911,6 +916,54 @@ export default function DocumentosPage() {
         partes: prev.partes?.filter(p => p.id !== parteId)
     }));
   };
+  
+    const handleGenerateKeywords = async () => {
+    const description = formState.descricaoDocumento;
+    if (description && description.trim().length > 10) { 
+        setIsGeneratingKeywords(true);
+        setKeywordError(null);
+        try {
+        const result = await generateKeywords({ description });
+        setFormState(prev => ({
+            ...prev,
+            palavrasChave: [...new Set([...(prev.palavrasChave || []), ...result.keywords])]
+        }));
+        } catch (error) {
+        console.error("Failed to generate keywords:", error);
+        setKeywordError("Falha ao gerar palavras-chave.");
+        toast({
+            variant: "destructive",
+            title: "Erro de IA",
+            description: "Não foi possível sugerir palavras-chave. Verifique a descrição ou tente novamente."
+        })
+        } finally {
+        setIsGeneratingKeywords(false);
+        }
+    }
+    };
+
+    const handleRemoveKeyword = (indexToRemove: number) => {
+    setFormState(prev => ({
+        ...prev,
+        palavrasChave: prev.palavrasChave?.filter((_, index) => index !== indexToRemove)
+    }));
+    };
+
+    const handleKeywordInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const input = e.currentTarget;
+        const newKeyword = input.value.trim();
+        if (newKeyword && !formState.palavrasChave?.includes(newKeyword)) {
+        setFormState(prev => ({
+            ...prev,
+            palavrasChave: [...(prev.palavrasChave || []), newKeyword]
+        }));
+        }
+        input.value = "";
+    }
+    };
+
 
   const handleSaveChanges = () => {
     const formStateToSave = { ...formState };
@@ -996,6 +1049,7 @@ export default function DocumentosPage() {
       dataCadastro: formState.dataCadastro || new Date().toISOString(),
       generoDocumental: formState.generoDocumental!,
       midias: formState.midias || [],
+      palavrasChave: formState.palavrasChave || [],
       status: formState.status || 'Arquivado',
       orgao: formState.orgao || 'TRF2',
       tipoMeio: formState.tipoMeio || 'Não digital',
@@ -1339,7 +1393,7 @@ export default function DocumentosPage() {
     const headers = [
       'id', 'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
       'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
-      'partes', 'documentosRelacionadosIds', 
+      'partes', 'documentosRelacionadosIds', 'palavrasChave',
       'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
       'totalMidias', 'midias',
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
@@ -1359,6 +1413,7 @@ export default function DocumentosPage() {
             ...doc,
             partes: JSON.stringify(doc.partes || []),
             midias: JSON.stringify(doc.midias || []),
+            palavrasChave: doc.palavrasChave?.join(';') || '',
             dataArquivamento: formatDateForExport(doc.dataArquivamento),
             dataBaixa: formatDateForExport(doc.dataBaixa),
             tipoPlanoClassificacao: classification?.tipoPlanoClassificacao || '',
@@ -1398,7 +1453,7 @@ export default function DocumentosPage() {
     const templateHeaders = [
         'status', 'orgao', 'origem', 'tipoMeio', 'generoDocumental', 'categoria', 
         'tipoDocumento', 'numeroDocumento', 'processoOriginario', 'numeroAntigo', 'dataAbrangente', 'descricaoDocumento', 
-        'partes', 'documentosRelacionadosIds', 
+        'partes', 'documentosRelacionadosIds', 'palavrasChave',
         'dataArquivamento', 'quantidadeVolumes', 'quantidadeApensos', 'numerosApensos', 
         'totalMidias', 'midias',
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
@@ -1589,6 +1644,11 @@ export default function DocumentosPage() {
                         console.warn(`Could not parse 'partes' JSON for row ${index + 2}:`, newItemData.partes);
                     }
                 }
+                
+                let palavrasChave: string[] = [];
+                if(newItemData.palavrasChave) {
+                    palavrasChave = newItemData.palavrasChave.split(';').map((k:string) => k.trim()).filter(Boolean);
+                }
 
                 const newDoc: Documento = {
                     id: `DOC_IMP_${Date.now()}_${index}`,
@@ -1607,6 +1667,7 @@ export default function DocumentosPage() {
                     dataAbrangente: newItemData.dataAbrangente,
                     descricaoDocumento: newItemData.descricaoDocumento,
                     partes: partes,
+                    palavrasChave: palavrasChave,
                     documentosRelacionadosIds: newItemData.documentosRelacionadosIds,
                     dataArquivamento,
                     quantidadeVolumes: newItemData.quantidadeVolumes ? parseInt(newItemData.quantidadeVolumes, 10) : undefined,
@@ -2087,12 +2148,42 @@ export default function DocumentosPage() {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4">
                                           <div className="space-y-2 sm:col-span-2">
                                               <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                                              <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
+                                              <Textarea id="descricaoDocumento" value={formState.descricaoDocumento || ""} onChange={handleInputChange} onBlur={handleGenerateKeywords} placeholder="Detalhes sobre o conteúdo do documento" disabled={isFormDisabled} />
                                           </div>
                                           <div className="space-y-2 sm:col-span-2">
                                               <Label htmlFor="observacoesGerais">Observações Gerais</Label>
                                               <Textarea id="observacoesGerais" value={formState.observacoesGerais || ""} onChange={handleInputChange} placeholder="Outras informações relevantes sobre o documento" disabled={isFormDisabled} />
                                           </div>
+                                          <div className="space-y-2 sm:col-span-2">
+                                            <Label htmlFor="palavrasChave">Palavras-Chave (sugeridas pela IA)</Label>
+                                            <div className="flex flex-wrap items-center gap-2 rounded-md border p-2 min-h-[40px]">
+                                                {isGeneratingKeywords && (
+                                                <Badge variant="outline" className="animate-pulse">Gerando...</Badge>
+                                                )}
+                                                {formState.palavrasChave?.map((keyword, index) => (
+                                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                                    {keyword}
+                                                    <button
+                                                    type="button"
+                                                    className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                                                    onClick={() => handleRemoveKeyword(index)}
+                                                    disabled={isFormDisabled}
+                                                    >
+                                                    <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                                ))}
+                                                <Input
+                                                id="keyword-input"
+                                                placeholder="Adicionar tag..."
+                                                onKeyDown={handleKeywordInput}
+                                                disabled={isFormDisabled || isGeneratingKeywords}
+                                                className="h-auto flex-1 border-none bg-transparent p-0 shadow-none focus-visible:ring-0 min-w-[100px]"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">Pressione Enter ou Tab para adicionar uma nova palavra-chave.</p>
+                                            {keywordError && <p className="text-sm text-destructive">{keywordError}</p>}
+                                        </div>
                                           <div className="space-y-2 sm:col-span-2">
                                               <div className="flex justify-between items-center mb-2">
                                                   <Label>Partes Envolvidas</Label>
@@ -3019,6 +3110,7 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
 
