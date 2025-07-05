@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates keywords for document indexing.
@@ -21,10 +22,8 @@ export type GenerateKeywordsInput = z.infer<typeof GenerateKeywordsInputSchema>;
 export const GenerateKeywordsOutputSchema = z.object({
   keywords: z
     .array(z.string().describe('Uma única palavra-chave concisa e relevante em português.'))
-    .min(3)
-    .max(7)
     .describe(
-      'Um array contendo de 3 a 7 palavras-chave ou termos curtos relevantes em português, extraídos e derivados do contexto fornecido.'
+      'Um array contendo palavras-chave ou termos curtos relevantes em português, extraídos e derivados do contexto fornecido.'
     ),
 });
 export type GenerateKeywordsOutput = z.infer<typeof GenerateKeywordsOutputSchema>;
@@ -45,16 +44,22 @@ Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidad
 **Descrição do Documento:**
 {{{descricaoDocumento}}}
 
+{{#if tipoDocumento}}
 **Espécie/Tipo de Documento:**
 {{{tipoDocumento}}}
+{{/if}}
 
+{{#if assuntoClassificacao}}
 **Assunto Principal:**
 {{{assuntoClassificacao}}}
+{{/if}}
 
+{{#if nomesDasPartes}}
 **Partes Envolvidas:**
 {{#each nomesDasPartes}}
 - {{{this}}}
 {{/each}}
+{{/if}}
 
 Gere as palavras-chave agora.`,
 });
