@@ -28,10 +28,12 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  prompt: `Você é um arquivista e indexador especialista. Com base na descrição do documento fornecida, gere pelo menos 3 palavras-chave relevantes que resumam os tópicos principais. As palavras-chave devem estar em português. Retorne apenas as palavras-chave no formato especificado.
+  prompt: `Você é um especialista em arquivologia. Sua tarefa é analisar o texto a seguir e extrair palavras-chave relevantes em português.
 
-Descrição do Documento:
-{{{description}}}`,
+Texto para análise:
+"{{{description}}}"
+
+Com base no texto, forneça uma lista de pelo menos 3 palavras-chave que o resumam. As palavras-chave devem ser concisas e em português.`,
 });
 
 const generateKeywordsFlow = ai.defineFlow(
@@ -42,6 +44,10 @@ const generateKeywordsFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      console.error("AI response did not conform to the output schema.");
+      throw new Error("AI response was invalid.");
+    }
+    return output;
   }
 );
