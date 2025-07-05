@@ -61,6 +61,7 @@ const initialFilters = {
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
   caixaMidia: "",
+  palavrasChave: "",
   segredoJustica: false,
   digitalizado: false,
   necessidadeReclassificacao: "",
@@ -142,6 +143,17 @@ export default function BuscaAvancadaPage() {
     { id: 'numeroDocumentoTransferencia', header: 'Nº Doc. Transferência', accessorKey: 'numeroDocumentoTransferencia', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'destructive' : 'outline'}>{value}</Badge> },
     { id: 'digitalizado', header: 'Digitalizado', accessorKey: 'digitalizado', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <Badge variant={value === 'Sim' ? 'secondary' : 'outline'}>{value}</Badge> },
+    { 
+      id: 'palavrasChave', 
+      header: 'Palavras-Chave', 
+      accessorKey: 'palavrasChave', 
+      defaultVisible: false, 
+      enableSorting: false, 
+      cellFormatter: (keywords?: string[]) => {
+          if (!keywords || keywords.length === 0) return 'N/A';
+          return keywords.map(k => <Badge key={k} variant="outline" className="mr-1 mb-1">{k}</Badge>);
+      }
+    },
     { id: 'partes', header: 'Partes Envolvidas', accessorKey: 'partes', defaultVisible: true, enableSorting: false, cellFormatter: (partes?: ParteDocumento[]) => {
         if (!partes || partes.length === 0) return 'N/A';
         const names = partes.map(p => {
@@ -223,6 +235,7 @@ export default function BuscaAvancadaPage() {
         if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao?.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
         if (filters.numeroDocumentoTransferencia && !doc.numeroDocumentoTransferencia?.toLowerCase().includes(filters.numeroDocumentoTransferencia.toLowerCase())) return false;
         if (filters.caixaMidia && !doc.midias?.some(m => m.caixaMidia?.toLowerCase().includes(filters.caixaMidia.toLowerCase()))) return false;
+        if (filters.palavrasChave && (!doc.palavrasChave || !doc.palavrasChave.some(k => k.toLowerCase().includes(filters.palavrasChave.toLowerCase())))) return false;
 
         if (filters.classificacao && doc.classificacaoArquivisticaId !== filters.classificacao) return false;
         if (filters.status && doc.status !== filters.status) return false;
@@ -407,6 +420,10 @@ export default function BuscaAvancadaPage() {
           <div className="space-y-2">
             <Label htmlFor="partes">Partes Envolvidas</Label>
             <Input id="partes" placeholder="Ex: João da Silva" value={filters.partes} onChange={handleInputChange} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="palavrasChave">Palavras-Chave</Label>
+            <Input id="palavrasChave" placeholder="Contém..." value={filters.palavrasChave} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="classificacao">Classificação Arquivística</Label>

@@ -76,6 +76,7 @@ export interface Documento {
   numeroListagemEliminacao?: string; // New field for elimination list number
   numeroDocumentoTransferencia?: string;
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)
+  palavrasChave?: string[];
 }
 
 export interface Classificacao {
