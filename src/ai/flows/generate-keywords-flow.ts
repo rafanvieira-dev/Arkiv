@@ -21,7 +21,7 @@ export const GenerateKeywordsOutputSchema = z.object({
     .min(3)
     .max(5)
     .describe(
-      'Um array contendo de 3 a 5 palavras-chave relevantes extraídas da descrição do documento.'
+      'Um array contendo de 3 a 5 palavras-chave relevantes em português, extraídas da descrição do documento.'
     ),
 });
 export type GenerateKeywordsOutput = z.infer<typeof GenerateKeywordsOutputSchema>;
@@ -34,12 +34,13 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  prompt: `Analise a seguinte descrição de documento e extraia de 3 a 5 palavras-chave relevantes em português.
-
-Descrição:
+  system: `Você é um especialista em indexação de documentos. Sua tarefa é analisar a descrição de um documento e extrair de 3 a 5 palavras-chave relevantes em português.
+Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidade com o esquema de saída especificado. Não inclua nenhum outro texto, saudações ou explicações em sua resposta.
+Sua resposta deve ser um JSON com uma única chave "keywords" contendo um array de strings.`,
+  prompt: `Descrição do Documento:
 {{{description}}}
 
-Retorne as palavras-chave como um array de strings dentro de um objeto JSON.`,
+Gere as palavras-chave agora.`,
 });
 
 const generateKeywordsFlow = ai.defineFlow(
@@ -50,9 +51,9 @@ const generateKeywordsFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    if (!output) {
-      console.error("AI response did not conform to the output schema.");
-      throw new Error("AI response was invalid.");
+    if (!output || !output.keywords) {
+      console.error("AI response did not conform to the output schema or was empty.");
+      throw new Error("A resposta da IA foi inválida ou vazia.");
     }
     return output;
   }
