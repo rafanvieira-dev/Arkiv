@@ -1103,6 +1103,38 @@ export default function DocumentosPage() {
         }
     }
     
+    // NEW LOGIC FOR APENSOS
+    const newApensoDocsToCreate: Documento[] = [];
+    if (finalFormState.numerosApensos) {
+      const apensoNumbers = finalFormState.numerosApensos.split(',').map(s => s.trim()).filter(Boolean);
+      finalFormState.quantidadeApensos = apensoNumbers.length; // Auto-update count
+
+      apensoNumbers.forEach((apensoNumero, index) => {
+        const newApensoDoc: Documento = {
+          ...initialFormState,
+          id: `DOC_Apenso_${Date.now()}_${index}`,
+          numeroDocumento: apensoNumero,
+          status: 'Pendente de Conferência',
+          dataCadastro: new Date().toISOString(),
+          processoOriginario: finalFormState.numeroDocumento, 
+          // User-requested fields for the new child doc
+          quantidadeApensos: 1,
+          numerosApensos: finalFormState.numeroDocumento,
+          // Copy relevant context from parent
+          orgao: finalFormState.orgao,
+          origem: finalFormState.origem,
+          classificacaoArquivisticaId: finalFormState.classificacaoArquivisticaId,
+          dataArquivamento: finalFormState.dataArquivamento,
+          prazoArquivoCorrenteDisplay: finalFormState.prazoArquivoCorrenteDisplay,
+          prazoArquivoIntermediarioDisplay: finalFormState.prazoArquivoIntermediarioDisplay,
+          destinacaoFinalDisplay: finalFormState.destinacaoFinalDisplay,
+          anoEliminacaoPrevisto: finalFormState.anoEliminacaoPrevisto,
+          codigosCaixa: finalFormState.codigosCaixa,
+        };
+        newApensoDocsToCreate.push(newApensoDoc);
+      });
+    }
+
     setDocumentos(prevDocs => {
       const originalDoc = prevDocs.find(d => d.id === finalFormState.id);
       const originalRelatedIds = new Set(originalDoc?.documentosRelacionadosIds?.split(',').filter(Boolean).map(s => s.trim()) || []);
@@ -1141,9 +1173,22 @@ export default function DocumentosPage() {
             docsToUpdate[relatedDocIndex] = relatedDoc;
         }
       });
-
+      
+      if (newApensoDocsToCreate.length > 0) {
+        docsToUpdate.push(...newApensoDocsToCreate);
+      }
+      
       return docsToUpdate;
     });
+
+    if (newApensoDocsToCreate.length > 0) {
+      toast({
+        title: "Apensos Criados",
+        description: `${newApensoDocsToCreate.length} novo(s) documento(s) foram criados para os apensos e estão pendentes de conferência.`,
+        duration: 7000,
+      });
+    }
+
     setSelectedRowIds([]); 
     setIsDialogOpen(false);
   };
@@ -3129,3 +3174,6 @@ export default function DocumentosPage() {
 
 
 
+
+
+    
