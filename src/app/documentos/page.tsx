@@ -278,6 +278,8 @@ export default function DocumentosPage() {
 
   const [isRelatedDocDialogOpen, setIsRelatedDocDialogOpen] = React.useState(false);
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
+  const [isCreateRelatedDocDialogOpen, setIsCreateRelatedDocDialogOpen] = React.useState(false);
+  const [newRelatedDocData, setNewRelatedDocData] = React.useState({ numeroDocumento: '', dataAbrangente: '' });
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
@@ -945,10 +947,10 @@ export default function DocumentosPage() {
     }));
   };
   
-    const handleGenerateKeywords = async () => {
+  const handleGenerateKeywords = async () => {
     const description = formState.descricaoDocumento;
     if (!description || description.trim().length < 10) { 
-        return; // Don't run if description is too short
+        return;
     }
 
     setIsGeneratingKeywords(true);
@@ -963,7 +965,6 @@ export default function DocumentosPage() {
 
     try {
         const result = await generateKeywords(inputForAI);
-        // Using a Set to avoid duplicates if user triggers generation multiple times
         setFormState(prev => ({
             ...prev,
             palavrasChave: [...new Set([...(prev.palavrasChave || []), ...result.keywords])]
@@ -1003,6 +1004,51 @@ export default function DocumentosPage() {
         input.value = "";
     }
     };
+
+
+  const handleCreateAndLinkRelatedDoc = () => {
+    if (!newRelatedDocData.numeroDocumento.trim()) {
+      toast({ variant: "destructive", title: "Erro", description: "O Número do Documento é obrigatório." });
+      return;
+    }
+  
+    const docExists = documentos.some(d => d.numeroDocumento === newRelatedDocData.numeroDocumento.trim());
+    if (docExists) {
+      toast({ variant: "destructive", title: "Erro", description: "Já existe um documento com este número." });
+      return;
+    }
+  
+    const newDoc: Documento = {
+      ...initialFormState,
+      id: `DOC${Date.now()}`,
+      status: 'Pendente de Conferência',
+      numeroDocumento: newRelatedDocData.numeroDocumento.trim(),
+      dataAbrangente: newRelatedDocData.dataAbrangente.trim(),
+      documentosRelacionadosIds: documentIdToDisplay !== "(Automático após salvar)" ? documentIdToDisplay : "",
+      dataCadastro: new Date().toISOString(),
+      origem: formState.origem || 'A definir',
+      tipoDocumento: 'A definir',
+      dataArquivamento: new Date().toISOString(),
+      segredoJustica: 'Não',
+      grauSigilo: 'Ostensivo',
+      alteracaoDestinacaoFinal: 'Não Alterar',
+      digitalizado: 'Não',
+    };
+  
+    setDocumentos(prev => [...prev, newDoc]);
+  
+    setFormState(prev => ({
+      ...prev,
+      documentosRelacionadosIds: [
+        ...(prev.documentosRelacionadosIds?.split(',').filter(Boolean) || []),
+        newDoc.id
+      ].join(',')
+    }));
+  
+    toast({ title: "Sucesso", description: `Documento "${newDoc.numeroDocumento}" criado e vinculado.` });
+    setNewRelatedDocData({ numeroDocumento: '', dataAbrangente: '' });
+    setIsCreateRelatedDocDialogOpen(false);
+  };
 
 
   const handleSaveChanges = () => {
@@ -1060,7 +1106,6 @@ export default function DocumentosPage() {
       return;
     }
     
-    // Update Master Parts List
     const newMasterPartesToCreate: ParteDetalhe[] = [];
     const masterPartesMap = new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p]));
     formStateToSave.partes?.forEach(docParte => {
@@ -1072,7 +1117,7 @@ export default function DocumentosPage() {
                 cpfCnpj: docParte.cpfCnpj,
                 iniciais: gerarIniciais(docParte.nome)
             });
-            masterPartesMap.set(key, newMasterPartesToCreate[newMasterPartesToCreate.length - 1]); // Avoid re-adding
+            masterPartesMap.set(key, newMasterPartesToCreate[newMasterPartesToCreate.length - 1]);
         }
     });
 
@@ -1147,12 +1192,11 @@ export default function DocumentosPage() {
 
         const existingDoc = documentos.find(d => d.numeroDocumento === apenso.numeroApenso);
         if (existingDoc) {
-          console.warn(`Documento com número ${apenso.numeroApenso} já existe. Não será criado novamente.`);
           toast({
             title: "Apenso já existente",
             description: `O documento com número "${apenso.numeroApenso}" já existe no acervo e não será criado novamente. Ele foi apenas vinculado.`,
           });
-          return; // Skip creation of new document
+          return;
         }
 
         const newApensoDoc: Documento = {
@@ -1978,11 +2022,9 @@ export default function DocumentosPage() {
         prevDocs.map(doc => {
             if (selectedRowIds.includes(doc.id) && doc.partes) {
                 const newPartes = doc.partes.map(parte => {
-                    // Check if we should skip this part
                     if (excludeMagistrates && parte.tipoParte === 'Magistrado') {
-                        return parte; // Return unchanged
+                        return parte;
                     }
-                    // Otherwise, set to use initials
                     return { ...parte, usarIniciais: true };
                 });
                 return { ...doc, partes: newPartes };
@@ -2980,7 +3022,7 @@ export default function DocumentosPage() {
                 <DialogHeader>
                     <DialogTitle>Selecionar Documento Relacionado</DialogTitle>
                     <DialogDescription>
-                        Busque e selecione um documento existente para relacionar.
+                        Busque e selecione um documento existente ou crie um novo para relacionar.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -3032,7 +3074,44 @@ export default function DocumentosPage() {
                     </ScrollArea>
                 </div>
                 <DialogFooter>
+                    <Button variant="secondary" onClick={() => { setIsRelatedDocDialogOpen(false); setIsCreateRelatedDocDialogOpen(true); }}>
+                        Criar Novo Documento Relacionado
+                    </Button>
                     <Button variant="outline" onClick={() => setIsRelatedDocDialogOpen(false)}>Fechar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCreateRelatedDocDialogOpen} onOpenChange={setIsCreateRelatedDocDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Criar Novo Documento Relacionado</DialogTitle>
+                    <DialogDescription>
+                        Insira as informações básicas. O restante poderá ser preenchido depois.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="new-related-numero">Número do Documento*</Label>
+                        <Input
+                            id="new-related-numero"
+                            value={newRelatedDocData.numeroDocumento}
+                            onChange={(e) => setNewRelatedDocData(prev => ({ ...prev, numeroDocumento: e.target.value }))}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-related-data">Data Abrangente</Label>
+                        <Input
+                            id="new-related-data"
+                            value={newRelatedDocData.dataAbrangente}
+                            onChange={(e) => setNewRelatedDocData(prev => ({ ...prev, dataAbrangente: e.target.value }))}
+                            placeholder="Ex: 01/2024 ou 15/01/2024"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCreateRelatedDocDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleCreateAndLinkRelatedDoc}>Criar e Vincular</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -3240,4 +3319,5 @@ export default function DocumentosPage() {
 
 
     
+
 
