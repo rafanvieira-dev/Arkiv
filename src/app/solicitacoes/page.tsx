@@ -385,7 +385,14 @@ export default function SolicitacoesPage() {
   };
 
   const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
-    const isoDate = date?.toISOString();
+    let finalDate = date;
+    if (finalDate) {
+      const now = new Date();
+      finalDate.setHours(now.getHours());
+      finalDate.setMinutes(now.getMinutes());
+      finalDate.setSeconds(now.getSeconds());
+    }
+    const isoDate = finalDate?.toISOString();
     setFormState(prev => ({ ...prev, [id]: isoDate }));
   };
 
@@ -1411,5 +1418,6 @@ export default function SolicitacoesPage() {
     
 
     
+
 
 

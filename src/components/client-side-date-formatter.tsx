@@ -17,7 +17,7 @@ export function ClientSideDateFormatter({ isoDateString, placeholderText = "..."
     if (isoDateString && isValid(parseISO(isoDateString))) {
       try {
         // This formatting happens only on the client after hydration
-        setFormattedDate(format(parseISO(isoDateString), 'dd/MM/yyyy', { locale: ptBR }));
+        setFormattedDate(format(parseISO(isoDateString), 'dd/MM/yyyy HH:mm', { locale: ptBR }));
       } catch (e) {
         console.error("Error formatting date:", e);
         setFormattedDate("Erro data"); // Fallback for error during formatting

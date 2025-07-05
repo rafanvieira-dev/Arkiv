@@ -166,7 +166,14 @@ export default function PublicSolicitacaoPage() {
   };
   
   const handleDateChange = (id: keyof Solicitacao) => (date?: Date) => {
-    const isoDate = date?.toISOString();
+    let finalDate = date;
+    if (finalDate) {
+      const now = new Date();
+      finalDate.setHours(now.getHours());
+      finalDate.setMinutes(now.getMinutes());
+      finalDate.setSeconds(now.getSeconds());
+    }
+    const isoDate = finalDate?.toISOString();
     setFormState(prev => ({ ...prev, [id]: isoDate }));
   };
 
@@ -203,7 +210,7 @@ export default function PublicSolicitacaoPage() {
         const updatedSolicitacoes = [...allSolicitacoes, newSolicitacao];
         window.localStorage.setItem(SOLICITACOES_STORAGE_KEY, JSON.stringify(updatedSolicitacoes));
         setAllSolicitacoes(updatedSolicitacoes);
-        toast({ title: "Sucesso", description: `Sua solicitação (${numeroSolicitacao}) foi enviada e está pendente de atendimento.` });
+        toast({ title: "Sucesso!", description: `Sua solicitação (${numeroSolicitacao}) foi enviada e está pendente de atendimento.` });
         resetForm();
     } catch (error) {
         console.error("Failed to save to localStorage:", error);
@@ -358,3 +365,4 @@ export default function PublicSolicitacaoPage() {
     
 
     
+
