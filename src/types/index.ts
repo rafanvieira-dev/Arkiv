@@ -137,16 +137,19 @@ export interface Caixa {
   codigoCaixa: string;
   descricao?: string;
   proveniencia?: string;
-  tipo: string; 
+  tipo: string;
   status: 'Aberta' | 'Fechada';
-  localizacao?: string;
+  predio?: string;
+  sala?: string;
+  estante?: string;
+  prateleira?: string;
   situacao: 'Completa' | 'Incompleta';
   condicao: 'Ocupada' | 'Vazia';
   documentoIds?: string[];
   observacoes?: string;
-  anosArquivamento?: string; // Atribuído
-  prazosGuarda?: string;     // Atribuído
-  anosEliminacao?: string;   // Atribuído
+  anosArquivamento?: string;
+  prazosGuarda?: string;
+  anosEliminacao?: string;
 }
 
 export interface Usuario {

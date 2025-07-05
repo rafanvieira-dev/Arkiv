@@ -77,7 +77,10 @@ const initialFormStateCaixa: CaixaFormState = {
   proveniencia: "",
   tipo: "",
   status: "Aberta",
-  localizacao: "",
+  predio: "",
+  sala: "",
+  estante: "",
+  prateleira: "",
   situacao: "Incompleta",
   condicao: "Ocupada",
   anosArquivamento: "",
@@ -94,7 +97,10 @@ const initialFiltersState = {
   proveniencia: "",
   tipo: "",
   status: "",
-  localizacao: "",
+  predio: "",
+  sala: "",
+  estante: "",
+  prateleira: "",
   situacao: "",
   condicao: "",
 };
@@ -150,7 +156,10 @@ export default function CaixasPage() {
     { value: 'proveniencia', label: 'Proveniência', type: 'text' },
     { value: 'tipo', label: 'Tipo', type: 'select', options: tiposCaixa.sort((a,b) => a.localeCompare(b)) },
     { value: 'status', label: 'Status', type: 'select', options: ['Aberta', 'Fechada'] },
-    { value: 'localizacao', label: 'Localização', type: 'text' },
+    { value: 'predio', label: 'Prédio', type: 'text' },
+    { value: 'sala', label: 'Sala', type: 'text' },
+    { value: 'estante', label: 'Estante', type: 'text' },
+    { value: 'prateleira', label: 'Prateleira', type: 'text' },
     { value: 'situacao', label: 'Situação', type: 'select', options: ['Completa', 'Incompleta'] },
     { value: 'condicao', label: 'Condição', type: 'select', options: ['Ocupada', 'Vazia'] },
     { value: 'anosArquivamento', label: 'Ano(s) de Arquivamento (Atribuído)', type: 'text' },
@@ -182,12 +191,23 @@ export default function CaixasPage() {
     { id: 'tipo', header: 'Tipo', accessorKey: 'tipo', defaultVisible: true, enableSorting: true },
     { id: 'proveniencia', header: 'Proveniência', accessorKey: 'proveniencia', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     { id: 'descricao', header: 'Descrição', accessorKey: 'descricao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-    { id: 'anosArquivamentoAtribuido', header: 'Ano(s) Arq. (Atribuído)', accessorKey: 'anosArquivamento', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    {
+        id: 'localizacao',
+        header: 'Localização',
+        accessorKey: 'predio', // Dummy accessor
+        defaultVisible: true,
+        enableSorting: false, 
+        cellFormatter: (_, caixa) => {
+          const parts = [caixa.predio, caixa.sala, caixa.estante, caixa.prateleira].filter(Boolean);
+          return parts.length > 0 ? parts.join(' / ') : "N/A";
+        }
+    },
+    { id: 'anosArquivamentoAtribuido', header: 'Ano(s) Arq. (Atribuído)', accessorKey: 'anosArquivamento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
       id: 'anosArquivamentoCalculado',
       header: 'Ano(s) Arq. (Calc.)',
       accessorKey: 'documentoIds', // Dummy accessor
-      defaultVisible: true,
+      defaultVisible: false,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -196,12 +216,12 @@ export default function CaixasPage() {
         return years.join(', ') || "N/A";
       }
     },
-    { id: 'prazosGuardaAtribuido', header: 'Prazo(s) Guarda (Atribuído)', accessorKey: 'prazosGuarda', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'prazosGuardaAtribuido', header: 'Prazo(s) Guarda (Atribuído)', accessorKey: 'prazosGuarda', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
       id: 'prazosGuardaCalculado',
       header: 'Prazo(s) Guarda (Calc.)',
       accessorKey: 'documentoIds', // Dummy
-      defaultVisible: true,
+      defaultVisible: false,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -210,12 +230,12 @@ export default function CaixasPage() {
         return prazos.join(', ') || "N/A";
       }
     },
-    { id: 'anosEliminacaoAtribuido', header: 'Ano(s) Elim. (Atribuído)', accessorKey: 'anosEliminacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'anosEliminacaoAtribuido', header: 'Ano(s) Elim. (Atribuído)', accessorKey: 'anosEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
     {
       id: 'anosEliminacaoCalculado',
       header: 'Ano(s) Elim. (Calc.)',
       accessorKey: 'documentoIds', // Dummy
-      defaultVisible: true,
+      defaultVisible: false,
       enableSorting: false,
       cellFormatter: (value, caixa) => {
         const associatedDocs = documentos.filter(d => d.codigosCaixa?.split(',').map(c => c.trim()).includes(caixa.codigoCaixa));
@@ -225,7 +245,10 @@ export default function CaixasPage() {
       }
     },
     { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
-    { id: 'localizacao', header: 'Localização', accessorKey: 'localizacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'predio', header: 'Prédio', accessorKey: 'predio', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'sala', header: 'Sala', accessorKey: 'sala', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'estante', header: 'Estante', accessorKey: 'estante', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
+    { id: 'prateleira', header: 'Prateleira', accessorKey: 'prateleira', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   ], [documentos]);
 
   React.useEffect(() => {
@@ -312,7 +335,10 @@ export default function CaixasPage() {
       proveniencia: formStateCaixa.proveniencia,
       tipo: formStateCaixa.tipo || "",
       status: formStateCaixa.status || 'Aberta',
-      localizacao: formStateCaixa.localizacao,
+      predio: formStateCaixa.predio,
+      sala: formStateCaixa.sala,
+      estante: formStateCaixa.estante,
+      prateleira: formStateCaixa.prateleira,
       situacao: formStateCaixa.situacao || 'Incompleta',
       condicao: formStateCaixa.condicao || 'Ocupada',
       anosArquivamento: formStateCaixa.anosArquivamento,
@@ -409,7 +435,10 @@ export default function CaixasPage() {
         if (filters.proveniencia && !caixa.proveniencia?.toLowerCase().includes(filters.proveniencia.toLowerCase())) return false;
         if (filters.tipo && caixa.tipo !== filters.tipo) return false;
         if (filters.status && caixa.status !== filters.status) return false;
-        if (filters.localizacao && !caixa.localizacao?.toLowerCase().includes(filters.localizacao.toLowerCase())) return false;
+        if (filters.predio && !caixa.predio?.toLowerCase().includes(filters.predio.toLowerCase())) return false;
+        if (filters.sala && !caixa.sala?.toLowerCase().includes(filters.sala.toLowerCase())) return false;
+        if (filters.estante && !caixa.estante?.toLowerCase().includes(filters.estante.toLowerCase())) return false;
+        if (filters.prateleira && !caixa.prateleira?.toLowerCase().includes(filters.prateleira.toLowerCase())) return false;
         if (filters.situacao && caixa.situacao !== filters.situacao) return false;
         if (filters.condicao && caixa.condicao !== filters.condicao) return false;
         return true;
@@ -515,7 +544,7 @@ export default function CaixasPage() {
         toast({variant: "destructive", description: "Nenhuma caixa selecionada para exportar."});
         return;
     }
-    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes', 'anosArquivamentoCalculado', 'prazosGuardaCalculado', 'anosEliminacaoCalculado'];
+    const headers = ['id', 'codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'predio', 'sala', 'estante', 'prateleira', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes', 'anosArquivamentoCalculado', 'prazosGuardaCalculado', 'anosEliminacaoCalculado'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(caixa => {
@@ -527,7 +556,10 @@ export default function CaixasPage() {
           proveniencia: caixa.proveniencia || '',
           tipo: caixa.tipo,
           status: caixa.status,
-          localizacao: caixa.localizacao || '',
+          predio: caixa.predio || '',
+          sala: caixa.sala || '',
+          estante: caixa.estante || '',
+          prateleira: caixa.prateleira || '',
           situacao: caixa.situacao,
           condicao: caixa.condicao,
           anosArquivamento: caixa.anosArquivamento || '',
@@ -564,7 +596,7 @@ export default function CaixasPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'localizacao', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes'];
+    const headers = ['codigoCaixa', 'descricao', 'proveniencia', 'tipo', 'status', 'predio', 'sala', 'estante', 'prateleira', 'situacao', 'condicao', 'anosArquivamento', 'prazosGuarda', 'anosEliminacao', 'observacoes'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -617,7 +649,10 @@ export default function CaixasPage() {
                     proveniencia: newCaixaData.proveniencia,
                     tipo: newCaixaData.tipo,
                     status: (newCaixaData.status as Caixa['status']) || 'Aberta',
-                    localizacao: newCaixaData.localizacao,
+                    predio: newCaixaData.predio,
+                    sala: newCaixaData.sala,
+                    estante: newCaixaData.estante,
+                    prateleira: newCaixaData.prateleira,
                     situacao: (newCaixaData.situacao as Caixa['situacao']) || 'Incompleta',
                     condicao: (newCaixaData.condicao as Caixa['condicao']) || 'Ocupada',
                     anosArquivamento: newCaixaData.anosArquivamento || '',
@@ -820,8 +855,20 @@ export default function CaixasPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="localizacao">Localização</Label>
-                          <Input id="localizacao" placeholder="Ex: Estante 1, Prateleira A" value={formStateCaixa.localizacao || ""} onChange={handleFormInputChange} />
+                          <Label htmlFor="predio">Prédio</Label>
+                          <Input id="predio" value={formStateCaixa.predio || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="sala">Sala</Label>
+                          <Input id="sala" value={formStateCaixa.sala || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="estante">Estante</Label>
+                          <Input id="estante" value={formStateCaixa.estante || ""} onChange={handleFormInputChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prateleira">Prateleira</Label>
+                          <Input id="prateleira" value={formStateCaixa.prateleira || ""} onChange={handleFormInputChange} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="status">Status</Label>
@@ -899,8 +946,20 @@ export default function CaixasPage() {
                       <Input id="filterProveniencia" name="proveniencia" value={filters.proveniencia} onChange={handleFilterInputChange} placeholder="Contém..." />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="filterLocalizacao">Localização</Label>
-                      <Input id="filterLocalizacao" name="localizacao" value={filters.localizacao} onChange={handleFilterInputChange} placeholder="Contém..." />
+                      <Label htmlFor="filterPredio">Prédio</Label>
+                      <Input id="filterPredio" name="predio" value={filters.predio} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterSala">Sala</Label>
+                      <Input id="filterSala" name="sala" value={filters.sala} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterEstante">Estante</Label>
+                      <Input id="filterEstante" name="estante" value={filters.estante} onChange={handleFilterInputChange} placeholder="Contém..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterPrateleira">Prateleira</Label>
+                      <Input id="filterPrateleira" name="prateleira" value={filters.prateleira} onChange={handleFilterInputChange} placeholder="Contém..." />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="filterTipo">Tipo</Label>

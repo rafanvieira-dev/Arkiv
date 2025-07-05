@@ -5,9 +5,9 @@ import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
 export const initialCaixas: Caixa[] = [
-  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", localizacao: "Estante 1, Prateleira A", situacao: "Completa", condicao: "Ocupada", documentoIds: ["DOC001", "DOC003"] },
-  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", localizacao: "Estante 2, Prateleira C", situacao: "Incompleta", condicao: "Ocupada", documentoIds: ["DOC002"] },
-  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "Pasta", status: "Aberta", localizacao: "Arquivo Corrente", situacao: "Completa", condicao: "Vazia" },
+  { id: "CX001", codigoCaixa: "CX-A-001", descricao: "Caixa de processos judiciais antigos", tipo: "JUD", status: "Fechada", predio: "Sede", sala: "Arquivo Central", estante: "1", prateleira: "A", situacao: "Completa", condicao: "Ocupada", documentoIds: ["DOC001", "DOC003"] },
+  { id: "CX002", codigoCaixa: "CX-B-015", descricao: "Documentos administrativos SIGA", tipo: "ADM/SIGA", status: "Aberta", predio: "Sede", sala: "Arquivo Central", estante: "2", prateleira: "C", situacao: "Incompleta", condicao: "Ocupada", documentoIds: ["DOC002"] },
+  { id: "CX003", codigoCaixa: "PST-X-007", descricao: "Pastas de documentos diversos", tipo: "Pasta", status: "Aberta", predio: "Sede", sala: "Arquivo Corrente", estante: "5", prateleira: "B", situacao: "Completa", condicao: "Vazia" },
 ];
 
 export const placeholderClassificacoesSimulado: Classificacao[] = [
