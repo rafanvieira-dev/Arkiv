@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 export const GenerateKeywordsInputSchema = z.object({
   description: z.string().describe('The document description to extract keywords from.'),
