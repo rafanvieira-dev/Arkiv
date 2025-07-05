@@ -75,7 +75,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
 import { useUserSession } from "@/hooks/use-user-session";
-import { generateKeywords } from "@/ai/flows/generate-keywords-flow";
+import { generateKeywords, type GenerateKeywordsInput } from "@/ai/flows/generate-keywords-flow";
 
 
 const initialFormState: Partial<Documento> & { 
@@ -919,26 +919,37 @@ export default function DocumentosPage() {
   
     const handleGenerateKeywords = async () => {
     const description = formState.descricaoDocumento;
-    if (description && description.trim().length > 10) { 
-        setIsGeneratingKeywords(true);
-        setKeywordError(null);
-        try {
-        const result = await generateKeywords({ description });
+    if (!description || description.trim().length < 10) { 
+        return; // Don't run if description is too short
+    }
+
+    setIsGeneratingKeywords(true);
+    setKeywordError(null);
+
+    const inputForAI: GenerateKeywordsInput = {
+      descricaoDocumento: description,
+      tipoDocumento: formState.tipoDocumento,
+      assuntoClassificacao: formState.assuntoClassificacaoDisplay,
+      nomesDasPartes: formState.partes?.map(p => p.nome),
+    };
+
+    try {
+        const result = await generateKeywords(inputForAI);
+        // Using a Set to avoid duplicates if user triggers generation multiple times
         setFormState(prev => ({
             ...prev,
             palavrasChave: [...new Set([...(prev.palavrasChave || []), ...result.keywords])]
         }));
-        } catch (error) {
+    } catch (error) {
         console.error("Failed to generate keywords:", error);
         setKeywordError("Falha ao gerar palavras-chave.");
         toast({
             variant: "destructive",
             title: "Erro de IA",
-            description: "Não foi possível sugerir palavras-chave. Verifique a descrição ou tente novamente."
+            description: "Não foi possível sugerir palavras-chave. Verifique os dados ou tente novamente."
         })
-        } finally {
+    } finally {
         setIsGeneratingKeywords(false);
-        }
     }
     };
 
@@ -3110,6 +3121,7 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
 
 
 
