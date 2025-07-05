@@ -36,12 +36,21 @@ const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
-  system: `Você é um especialista em indexação de documentos de arquivo. Sua tarefa é analisar o contexto fornecido sobre um documento e extrair ou derivar palavras-chave ou termos curtos que o representem de forma eficaz para buscas futuras. Considere todos os campos de entrada.
+  system: `Você é um especialista em indexação de documentos de arquivo. Sua tarefa é analisar o contexto fornecido sobre um documento e gerar uma lista de palavras-chave relevantes.
 
-Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidade com o esquema de saída especificado. Não inclua nenhum outro texto, saudações ou explicações em sua resposta. A resposta deve ser um JSON com uma única chave "keywords" contendo um array de strings.`,
-  prompt: `Analise as seguintes informações do documento e gere as palavras-chave:
+**REGRAS IMPORTANTES:**
+1.  A sua resposta DEVE SER APENAS um objeto JSON.
+2.  Não inclua \`\`\`json, explicações, saudações ou qualquer outro texto fora do JSON.
+3.  O JSON deve ter uma única chave chamada "keywords".
+4.  O valor de "keywords" deve ser um array de strings (palavras-chave).
 
-**Descrição do Documento:**
+**Exemplo de Saída Válida:**
+{
+  "keywords": ["acidente", "trem", "indenização", "responsabilidade civil", "decreto 2681"]
+}
+
+Analise as informações a seguir e gere o JSON de palavras-chave.`,
+  prompt: `**Descrição do Documento:**
 {{{descricaoDocumento}}}
 
 {{#if tipoDocumento}}
@@ -60,14 +69,13 @@ Você DEVE responder APENAS com um objeto JSON válido que esteja em conformidad
 - {{{this}}}
 {{/each}}
 {{/if}}
-
-Gere as palavras-chave agora.`,
+`,
   config: {
     safetySettings: [
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
     ],
   },
 });
