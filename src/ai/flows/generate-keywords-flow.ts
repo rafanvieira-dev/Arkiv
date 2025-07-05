@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A keyword generation AI agent.
@@ -34,6 +33,7 @@ export async function generateKeywords(input: GenerateKeywordsInput): Promise<Ge
 
 const prompt = ai.definePrompt({
   name: 'generateKeywordsPrompt',
+  model: 'googleai/gemini-pro',
   input: {schema: GenerateKeywordsInputSchema},
   output: {schema: GenerateKeywordsOutputSchema},
   system: `Você é uma API JSON. Sua única tarefa é analisar as informações de um documento e retornar um objeto JSON com uma única chave "keywords". O valor dessa chave deve ser um array de strings (palavras-chave em português) relevantes para indexação.
