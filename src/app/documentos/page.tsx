@@ -1135,9 +1135,25 @@ export default function DocumentosPage() {
     const newApensoDocsToCreate: Documento[] = [];
     if (finalFormState.apensos && finalFormState.apensos.length > 0) {
       finalFormState.quantidadeApensos = finalFormState.apensos.length;
+      const docNumbersInThisTransaction = new Set<string>();
 
       finalFormState.apensos.forEach((apenso, index) => {
-        if (!apenso.numeroApenso) return;
+        if (!apenso.numeroApenso || docNumbersInThisTransaction.has(apenso.numeroApenso)) {
+          if (docNumbersInThisTransaction.has(apenso.numeroApenso)) {
+              console.warn(`Número de apenso duplicado nesta transação: ${apenso.numeroApenso}`);
+          }
+          return;
+        }
+
+        const existingDoc = documentos.find(d => d.numeroDocumento === apenso.numeroApenso);
+        if (existingDoc) {
+          console.warn(`Documento com número ${apenso.numeroApenso} já existe. Não será criado novamente.`);
+          toast({
+            title: "Apenso já existente",
+            description: `O documento com número "${apenso.numeroApenso}" já existe no acervo e não será criado novamente. Ele foi apenas vinculado.`,
+          });
+          return; // Skip creation of new document
+        }
 
         const newApensoDoc: Documento = {
           ...initialFormState,
@@ -1150,6 +1166,7 @@ export default function DocumentosPage() {
           apensos: [{
             id: `apenso_pai_${Date.now()}`,
             numeroApenso: finalFormState.numeroDocumento || `PAI_${finalFormState.id}`,
+            caixaApenso: finalFormState.codigosCaixa,
           }],
           orgao: finalFormState.orgao,
           origem: finalFormState.origem,
@@ -1162,6 +1179,7 @@ export default function DocumentosPage() {
           codigosCaixa: apenso.caixaApenso || finalFormState.codigosCaixa,
         };
         newApensoDocsToCreate.push(newApensoDoc);
+        docNumbersInThisTransaction.add(apenso.numeroApenso);
       });
     }
 
@@ -3222,3 +3240,4 @@ export default function DocumentosPage() {
 
 
     
+
