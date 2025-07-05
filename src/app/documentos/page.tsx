@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe, AuditLog } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
-  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer, Check, ChevronsUpDown, EyeOff
+  CheckSquare, Square, X, Upload, Download, FileSpreadsheet, PenSquare, Printer, Check, ChevronsUpDown, EyeOff, History
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,7 +70,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes, initialClassesJudiciais } from "@/lib/mock-data";
+import { AUDIT_LOG_STORAGE_KEY, placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes, initialClassesJudiciais } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { cn, parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { logAction } from "@/lib/audit";
@@ -280,6 +280,7 @@ export default function DocumentosPage() {
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
   const [isCreateRelatedDocDialogOpen, setIsCreateRelatedDocDialogOpen] = React.useState(false);
   const [newRelatedDocData, setNewRelatedDocData] = React.useState({ numeroDocumento: '', dataAbrangente: '', descricao: '' });
+  const [documentHistory, setDocumentHistory] = React.useState<AuditLog[]>([]);
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
@@ -353,8 +354,35 @@ export default function DocumentosPage() {
       });
       setDocumentIdToDisplay(doc.id);
       setIsFormDisabled(doc.status === 'Eliminado');
+
+      try {
+        const allLogsRaw = window.localStorage.getItem(AUDIT_LOG_STORAGE_KEY);
+        if (allLogsRaw) {
+          const allLogs: AuditLog[] = JSON.parse(allLogsRaw);
+          const filteredLogs = allLogs
+            .filter(log => {
+              if (!log.details) return false;
+              const docId = doc.id;
+              return (
+                log.details.documentId === docId ||
+                log.details.docId === docId ||
+                (Array.isArray(log.details.documentoIds) && log.details.documentoIds.includes(docId)) ||
+                (Array.isArray(log.details.docIds) && log.details.docIds.includes(docId))
+              );
+            })
+            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          setDocumentHistory(filteredLogs);
+        } else {
+          setDocumentHistory([]);
+        }
+      } catch (e) {
+        console.error("Failed to load document history", e);
+        setDocumentHistory([]);
+      }
+
     } else {
       resetForm(); 
+      setDocumentHistory([]);
     }
     setIsDialogOpen(true);
   }, [classificacoes, resetForm, classesJudiciais]);
@@ -2174,7 +2202,7 @@ export default function DocumentosPage() {
                         </DialogDescription>
                       </DialogHeader>
                       <ScrollArea className="max-h-[75vh] pr-6">
-                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4", "item-7"]} className="w-full">
+                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4"]} className="w-full">
                               <AccordionItem value="item-1">
                                   <AccordionTrigger className="font-semibold">Identificação Principal</AccordionTrigger>
                                   <AccordionContent>
@@ -2651,6 +2679,38 @@ export default function DocumentosPage() {
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
+                               <AccordionItem value="item-8">
+                                <AccordionTrigger className="font-semibold">
+                                    <div className="flex items-center gap-2">
+                                        <History className="h-5 w-5 text-primary" />
+                                        <span>Histórico do Documento</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="space-y-4 pt-4 max-h-60 overflow-y-auto pr-2">
+                                    {documentHistory.length > 0 ? (
+                                        documentHistory.map((log) => (
+                                        <div key={log.id} className="text-xs border-l-2 border-primary/20 pl-4 py-1">
+                                            <p className="font-semibold">
+                                            <ClientSideDateFormatter isoDateString={log.timestamp} /> - {log.action}
+                                            </p>
+                                            <p className="text-muted-foreground">Realizado por: {log.userName} (ID: {log.userId})</p>
+                                            <details className="mt-1">
+                                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Ver Detalhes</summary>
+                                                <pre className="mt-1 p-2 bg-muted rounded-md text-xs whitespace-pre-wrap">
+                                                    {JSON.stringify(log.details, null, 2)}
+                                                </pre>
+                                            </details>
+                                        </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-center text-muted-foreground py-4">
+                                        Nenhum histórico de ações encontrado para este documento.
+                                        </p>
+                                    )}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
                           </Accordion>
                       </ScrollArea>
                       <DialogFooter className="pt-4">
@@ -3332,3 +3392,6 @@ export default function DocumentosPage() {
 
 
 
+
+
+    
