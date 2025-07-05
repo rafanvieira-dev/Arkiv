@@ -279,7 +279,7 @@ export default function DocumentosPage() {
   const [isRelatedDocDialogOpen, setIsRelatedDocDialogOpen] = React.useState(false);
   const [relatedDocSearchTerm, setRelatedDocSearchTerm] = React.useState('');
   const [isCreateRelatedDocDialogOpen, setIsCreateRelatedDocDialogOpen] = React.useState(false);
-  const [newRelatedDocData, setNewRelatedDocData] = React.useState({ numeroDocumento: '', dataAbrangente: '' });
+  const [newRelatedDocData, setNewRelatedDocData] = React.useState({ numeroDocumento: '', dataAbrangente: '', descricao: '' });
 
   const [tiposDocumento, setTiposDocumento] = React.useState<string[]>([]);
   const [generosDocumentais, setGenerosDocumentais] = React.useState<string[]>([]);
@@ -1024,6 +1024,7 @@ export default function DocumentosPage() {
       status: 'Pendente de Conferência',
       numeroDocumento: newRelatedDocData.numeroDocumento.trim(),
       dataAbrangente: newRelatedDocData.dataAbrangente.trim(),
+      descricaoDocumento: newRelatedDocData.descricao.trim(),
       documentosRelacionadosIds: documentIdToDisplay !== "(Automático após salvar)" ? documentIdToDisplay : "",
       dataCadastro: new Date().toISOString(),
       origem: formState.origem || 'A definir',
@@ -1046,7 +1047,7 @@ export default function DocumentosPage() {
     }));
   
     toast({ title: "Sucesso", description: `Documento "${newDoc.numeroDocumento}" criado e vinculado.` });
-    setNewRelatedDocData({ numeroDocumento: '', dataAbrangente: '' });
+    setNewRelatedDocData({ numeroDocumento: '', dataAbrangente: '', descricao: '' });
     setIsCreateRelatedDocDialogOpen(false);
   };
 
@@ -3108,6 +3109,15 @@ export default function DocumentosPage() {
                             placeholder="Ex: 01/2024 ou 15/01/2024"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-related-descricao">Descrição</Label>
+                        <Textarea
+                            id="new-related-descricao"
+                            value={newRelatedDocData.descricao}
+                            onChange={(e) => setNewRelatedDocData(prev => ({ ...prev, descricao: e.target.value }))}
+                            placeholder="Descrição breve do documento"
+                        />
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCreateRelatedDocDialogOpen(false)}>Cancelar</Button>
@@ -3319,5 +3329,6 @@ export default function DocumentosPage() {
 
 
     
+
 
 
