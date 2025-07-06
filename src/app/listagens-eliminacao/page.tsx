@@ -1334,6 +1334,14 @@ export default function ListagensEliminacaoPage() {
                             <div className="flex items-center justify-end">
                               <Tooltip>
                                 <TooltipTrigger asChild>
+                                    <Link href={`/listagens-eliminacao/print/led/${item.id}`} target="_blank" className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Gerar LED">
+                                        <Printer className="h-4 w-4" />
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Gerar LED</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
                                   <Link href={`/documentos?listagemDocIds=${encodeURIComponent(item.documentoIds.join(','))}&numeroListagem=${encodeURIComponent(item.numeroListagem)}`} passHref>
                                     <Button variant="ghost" size="icon" aria-label="Ver Documentos da Listagem" disabled={!item.documentoIds || item.documentoIds.length === 0}>
                                         <FileSearch className="h-4 w-4" />
@@ -1476,5 +1484,6 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
 
 
