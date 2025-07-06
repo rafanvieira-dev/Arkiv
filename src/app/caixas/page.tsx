@@ -52,7 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
@@ -1164,7 +1164,6 @@ export default function CaixasPage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedCaixas.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">Nenhuma caixa encontrada.</p>

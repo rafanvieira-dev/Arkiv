@@ -17,7 +17,7 @@ import type { Documento, Classificacao, TipoOrigem, ParteDocumento, ParteDetalhe
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, isAfter, isBefore } from "date-fns";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   DropdownMenu,
@@ -685,7 +685,6 @@ export default function BuscaAvancadaPage() {
                         ))}
                         </TableBody>
                     </Table>
-                    <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">Nenhum resultado encontrado para os critérios informados.</p>

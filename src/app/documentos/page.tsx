@@ -61,7 +61,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { DateInputPicker } from "@/components/date-input-picker";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Accordion,
   AccordionContent,
@@ -3219,7 +3219,6 @@ export default function DocumentosPage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedDocumentos.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">
@@ -3556,20 +3555,3 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-    
-
