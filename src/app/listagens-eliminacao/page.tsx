@@ -969,7 +969,7 @@ export default function ListagensEliminacaoPage() {
                 Alterar em Bloco ({selectedRowIds.length})
             </Button>
              <Button asChild variant="outline" disabled={selectedRowIds.length !== 1}>
-              <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} target="_blank" rel="noopener noreferrer">
+              <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'}>
                   <Printer className="mr-2 h-4 w-4" /> Gerar LED
               </Link>
             </Button>
@@ -1437,7 +1437,6 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+    
 
-
-
-
+    

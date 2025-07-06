@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -76,7 +77,7 @@ export default function LedPrintPage() {
         try {
             const storedListagens = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
             const allListagens: ListagemEliminacao[] = storedListagens ? JSON.parse(storedListagens) : [];
-            const currentListagem = allListagens.find(s => s.id === id);
+            const currentListagem = allListagens.find(l => l.id === id);
 
             if (!currentListagem) {
                 toast({ variant: "destructive", title: "Erro", description: "Listagem não encontrada." });
