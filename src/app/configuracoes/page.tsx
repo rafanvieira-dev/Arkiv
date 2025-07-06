@@ -30,13 +30,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes } from "@/lib/mock-data";
+import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes, initialAprovacoesConta } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import type { TipoOrigem, ParteDetalhe } from "@/types";
+import type { TipoOrigem, ParteDetalhe, AprovacaoConta } from "@/types";
 import { parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { useUserSession } from "@/hooks/use-user-session";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DateInputPicker } from "@/components/date-input-picker";
+import { parseISO } from "date-fns";
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -46,6 +49,7 @@ const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
 const PARTES_STORAGE_KEY = 'arquivocentral_partes';
+const APROVACOES_CONTA_STORAGE_KEY = 'arquivocentral_aprovacoes_conta';
 
 type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoCaixa';
 
@@ -61,6 +65,7 @@ export default function ConfiguracoesPage() {
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [partes, setPartes] = React.useState<ParteDetalhe[]>([]);
+  const [aprovacoesConta, setAprovacoesConta] = React.useState<AprovacaoConta[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -75,12 +80,16 @@ export default function ConfiguracoesPage() {
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
   const [parteFormState, setParteFormState] = React.useState<Partial<ParteDetalhe>>({ nome: "", cpfCnpj: "" });
   const [isEditingParte, setIsEditingParte] = React.useState(false);
+  
+  const [isAprovacaoDialogOpen, setIsAprovacaoDialogOpen] = React.useState(false);
+  const [aprovacaoFormState, setAprovacaoFormState] = React.useState<Partial<AprovacaoConta>>({ anoExercicio: new Date().getFullYear() });
+  const [isEditingAprovacao, setIsEditingAprovacao] = React.useState(false);
 
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const activeImportContext = React.useRef<{
     setter: React.Dispatch<React.SetStateAction<any>>;
-    type: 'simple' | 'origem' | 'parte';
+    type: 'simple' | 'origem' | 'parte' | 'aprovacao';
     listName: string;
   } | null>(null);
 
@@ -108,6 +117,8 @@ export default function ConfiguracoesPage() {
       const storedPartes = window.localStorage.getItem(PARTES_STORAGE_KEY);
       setPartes(storedPartes ? JSON.parse(storedPartes) : initialPartes);
 
+      const storedAprovacoes = window.localStorage.getItem(APROVACOES_CONTA_STORAGE_KEY);
+      setAprovacoesConta(storedAprovacoes ? JSON.parse(storedAprovacoes) : initialAprovacoesConta);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
@@ -118,6 +129,7 @@ export default function ConfiguracoesPage() {
       setTiposOrigem(initialTiposOrigem);
       setTiposCaixa(initialTiposCaixa);
       setPartes(initialPartes);
+      setAprovacoesConta(initialAprovacoesConta);
     }
     setIsDataLoaded(true);
   }, []);
@@ -132,11 +144,12 @@ export default function ConfiguracoesPage() {
         window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
         window.localStorage.setItem(TIPOS_CAIXA_STORAGE_KEY, JSON.stringify(tiposCaixa));
         window.localStorage.setItem(PARTES_STORAGE_KEY, JSON.stringify(partes));
+        window.localStorage.setItem(APROVACOES_CONTA_STORAGE_KEY, JSON.stringify(aprovacoesConta));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, partes, isDataLoaded]);
+  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, partes, aprovacoesConta, isDataLoaded]);
 
   const resetForm = () => {
     setDialogConfig(null);
@@ -212,6 +225,12 @@ export default function ConfiguracoesPage() {
     setIsEditingParte(false);
     setIsParteDialogOpen(false);
   };
+  
+  const resetAprovacaoForm = () => {
+    setAprovacaoFormState({ anoExercicio: new Date().getFullYear() });
+    setIsEditingAprovacao(false);
+    setIsAprovacaoDialogOpen(false);
+  };
 
   const handleOpenOrigemDialog = (origem?: TipoOrigem) => {
     if (origem) {
@@ -233,6 +252,17 @@ export default function ConfiguracoesPage() {
       setParteFormState({ nome: "", cpfCnpj: "" });
     }
     setIsParteDialogOpen(true);
+  };
+
+  const handleOpenAprovacaoDialog = (aprovacao?: AprovacaoConta) => {
+    if (aprovacao) {
+      setIsEditingAprovacao(true);
+      setAprovacaoFormState(aprovacao);
+    } else {
+      setIsEditingAprovacao(false);
+      setAprovacaoFormState({ anoExercicio: new Date().getFullYear() });
+    }
+    setIsAprovacaoDialogOpen(true);
   };
 
   const handleSaveOrigem = () => {
@@ -303,6 +333,39 @@ export default function ConfiguracoesPage() {
     }
     resetParteForm();
   };
+  
+  const handleSaveAprovacao = () => {
+    if (!aprovacaoFormState.anoExercicio) {
+      toast({ variant: "destructive", title: "Erro", description: "O ano de exercício é obrigatório." });
+      return;
+    }
+    
+    const isDuplicate = aprovacoesConta.some(
+      (a) => a.anoExercicio === aprovacaoFormState.anoExercicio && a.id !== aprovacaoFormState.id
+    );
+
+    if (isDuplicate) {
+      toast({ variant: "destructive", title: "Erro", description: `Já existe um registro para o ano de exercício ${aprovacaoFormState.anoExercicio}.` });
+      return;
+    }
+
+    if (isEditingAprovacao) {
+      setAprovacoesConta(prev => prev.map(a => a.id === aprovacaoFormState.id ? { ...a, ...aprovacaoFormState } as AprovacaoConta : a));
+      toast({ title: "Sucesso", description: "Aprovação de contas atualizada." });
+    } else {
+      const newAprovacao: AprovacaoConta = {
+        id: `ac${Date.now()}`,
+        anoExercicio: aprovacaoFormState.anoExercicio!,
+        dataAprovacaoTcu: aprovacaoFormState.dataAprovacaoTcu,
+        dataPublicacaoDou: aprovacaoFormState.dataPublicacaoDou,
+        secaoDou: aprovacaoFormState.secaoDou,
+        paginaDou: aprovacaoFormState.paginaDou,
+      };
+      setAprovacoesConta(prev => [...prev, newAprovacao]);
+      toast({ title: "Sucesso", description: "Nova aprovação de contas adicionada." });
+    }
+    resetAprovacaoForm();
+  };
 
   const handleDeleteOrigem = (idToDelete: string) => {
     setTiposOrigem(prev => prev.filter(item => item.id !== idToDelete));
@@ -314,7 +377,12 @@ export default function ConfiguracoesPage() {
     toast({ title: "Sucesso", description: "Parte removida." });
   };
   
-  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem' | 'parte', listName: string) => {
+  const handleDeleteAprovacao = (idToDelete: string) => {
+    setAprovacoesConta(prev => prev.filter(item => item.id !== idToDelete));
+    toast({ title: "Sucesso", description: "Registro de aprovação de contas removido." });
+  };
+  
+  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem' | 'parte' | 'aprovacao', listName: string) => {
     activeImportContext.current = { setter, type, listName };
     fileInputRef.current?.click();
   };
@@ -375,7 +443,31 @@ export default function ConfiguracoesPage() {
             return [...prev, ...uniqueNewItems].sort((a, b) => a.nome.localeCompare(b.nome));
           });
           toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
+        } else if (type === 'aprovacao') {
+            const requiredHeaders = ['anoExercicio'];
+            if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. A coluna 'anoExercicio' é necessária.");
+            const newItems: AprovacaoConta[] = [];
+             rows.forEach((row, index) => {
+                const values = parseCsvRow(row);
+                const newItemData: { [key: string]: any } = {};
+                headers.forEach((h, i) => newItemData[h] = values[i] || "");
+                newItems.push({ 
+                    id: `ac_imp_${Date.now()}_${index}`, 
+                    anoExercicio: parseInt(newItemData.anoExercicio, 10), 
+                    dataAprovacaoTcu: newItemData.dataAprovacaoTcu || undefined, 
+                    dataPublicacaoDou: newItemData.dataPublicacaoDou || undefined,
+                    secaoDou: newItemData.secaoDou || undefined,
+                    paginaDou: newItemData.paginaDou || undefined
+                });
+            });
+            (setter as React.Dispatch<React.SetStateAction<AprovacaoConta[]>>)(prev => {
+                const existingYears = new Set(prev.map(i => i.anoExercicio));
+                const uniqueNewItems = newItems.filter(item => item.anoExercicio && !isNaN(item.anoExercicio) && !existingYears.has(item.anoExercicio));
+                return [...prev, ...uniqueNewItems].sort((a,b) => a.anoExercicio - b.anoExercicio);
+            });
+            toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
         }
+
       } catch (error: any) {
         toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
       } finally {
@@ -712,7 +804,92 @@ export default function ConfiguracoesPage() {
                 )}
             </CardContent>
         </Card>
-
+        <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div>
+                    <CardTitle className="font-headline text-primary">Aprovações de Contas (TCU)</CardTitle>
+                    <CardDescription>Gerencie os registros de aprovação de contas para usar nos relatórios.</CardDescription>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
+                      <Button size="sm" variant="outline" onClick={() => handleImportClick(setAprovacoesConta, 'aprovacao', 'Aprovações de Conta')}>
+                          <Upload className="mr-2 h-4 w-4" /> Importar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(aprovacoesConta, 'aprovacoes_conta_export.csv', ['anoExercicio', 'dataAprovacaoTcu', 'dataPublicacaoDou', 'secaoDou', 'paginaDou'])}>
+                          <Download className="mr-2 h-4 w-4" /> Exportar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_aprovacoes_conta.csv', ['anoExercicio', 'dataAprovacaoTcu', 'dataPublicacaoDou', 'secaoDou', 'paginaDou'])}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" /> Modelo
+                      </Button>
+                      <Button size="sm" onClick={() => handleOpenAprovacaoDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Novo Registro
+                      </Button>
+                  </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-72">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Ano Exercício</TableHead>
+                                <TableHead>Data Aprov. TCU</TableHead>
+                                <TableHead>Data Pub. DOU</TableHead>
+                                <TableHead>Seção/Página</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {aprovacoesConta.sort((a,b) => b.anoExercicio - a.anoExercicio).map(aprovacao => (
+                                <TableRow key={aprovacao.id}>
+                                    <TableCell className="font-medium">{aprovacao.anoExercicio}</TableCell>
+                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataAprovacaoTcu} placeholderText="-" /></TableCell>
+                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataPublicacaoDou} placeholderText="-" /></TableCell>
+                                    <TableCell>{aprovacao.secaoDou && aprovacao.paginaDou ? `Seção ${aprovacao.secaoDou}, pág. ${aprovacao.paginaDou}` : '-'}</TableCell>
+                                    <TableCell className="text-right">
+                                         <Tooltip>
+                                            <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenAprovacaoDialog(aprovacao)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Editar</p></TooltipContent>
+                                        </Tooltip>
+                                        <AlertDialog>
+                                            <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" disabled={!permissions.usuarios}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                </AlertDialogTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
+                                            </Tooltip>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                Esta ação excluirá permanentemente o registro de aprovação de contas do ano {aprovacao.anoExercicio}.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteAprovacao(aprovacao.id)}>Sim, excluir</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+                {aprovacoesConta.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground py-4">Nenhum registro de aprovação de contas cadastrado.</p>
+                )}
+            </CardContent>
+        </Card>
       </div>
 
        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -810,7 +987,51 @@ export default function ConfiguracoesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
+        
+        <Dialog open={isAprovacaoDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) resetAprovacaoForm();
+          else setIsAprovacaoDialogOpen(isOpen);
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{isEditingAprovacao ? "Editar Aprovação de Contas" : "Nova Aprovação de Contas"}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="aprov-ano">Ano de Exercício*</Label>
+                <Input
+                  id="aprov-ano"
+                  type="number"
+                  value={aprovacaoFormState.anoExercicio || ""}
+                  onChange={(e) => setAprovacaoFormState(p => ({...p, anoExercicio: parseInt(e.target.value, 10) || undefined }))}
+                  placeholder="AAAA"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="aprov-data-tcu">Data de Aprovação (TCU)</Label>
+                <DateInputPicker value={aprovacaoFormState.dataAprovacaoTcu ? parseISO(aprovacaoFormState.dataAprovacaoTcu) : undefined} onChange={(date) => setAprovacaoFormState(p => ({ ...p, dataAprovacaoTcu: date?.toISOString() }))} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="aprov-data-dou">Data de Publicação (DOU)</Label>
+                <DateInputPicker value={aprovacaoFormState.dataPublicacaoDou ? parseISO(aprovacaoFormState.dataPublicacaoDou) : undefined} onChange={(date) => setAprovacaoFormState(p => ({ ...p, dataPublicacaoDou: date?.toISOString() }))} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="aprov-secao">Seção (DOU)</Label>
+                <Input id="aprov-secao" value={aprovacaoFormState.secaoDou || ""} onChange={(e) => setAprovacaoFormState(p => ({...p, secaoDou: e.target.value}))} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="aprov-pagina">Página (DOU)</Label>
+                <Input id="aprov-pagina" value={aprovacaoFormState.paginaDou || ""} onChange={(e) => setAprovacaoFormState(p => ({...p, paginaDou: e.target.value}))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button onClick={handleSaveAprovacao}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
     </TooltipProvider>
   );

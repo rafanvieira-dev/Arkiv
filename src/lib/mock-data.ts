@@ -1,6 +1,6 @@
 
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe, AprovacaoConta } from "@/types";
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
@@ -504,4 +504,12 @@ export const initialPartes: ParteDetalhe[] = [
   { id: 'P002', nome: 'Maria Santos', cpfCnpj: '123.456.789-00', iniciais: 'MS' },
   { id: 'P003', nome: 'João da Silva', iniciais: 'JS' },
   { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41', iniciais: 'FN' },
+];
+
+export const APROVACOES_CONTA_STORAGE_KEY = 'arquivocentral_aprovacoes_conta';
+
+export const initialAprovacoesConta: AprovacaoConta[] = [
+  { id: 'AC001', anoExercicio: 2020, dataAprovacaoTcu: new Date('2021-05-10').toISOString(), dataPublicacaoDou: new Date('2021-05-20').toISOString(), secaoDou: '1', paginaDou: '50' },
+  { id: 'AC002', anoExercicio: 2021, dataAprovacaoTcu: new Date('2022-06-15').toISOString(), dataPublicacaoDou: new Date('2022-06-25').toISOString(), secaoDou: '1', paginaDou: '42' },
+  { id: 'AC003', anoExercicio: 2022, dataAprovacaoTcu: new Date('2023-07-20').toISOString(), dataPublicacaoDou: new Date('2023-07-30').toISOString(), secaoDou: '2', paginaDou: '15' },
 ];

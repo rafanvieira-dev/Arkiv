@@ -230,3 +230,12 @@ export interface AuditLog {
   action: string; // e.g., "CREATE_DOCUMENT", "UPDATE_USER"
   details: Record<string, any>; // e.g., { documentId: 'DOC123', fieldsChanged: ['status'] }
 }
+
+export interface AprovacaoConta {
+  id: string;
+  anoExercicio: number;
+  dataAprovacaoTcu?: string; // ISO Date
+  dataPublicacaoDou?: string; // ISO Date
+  secaoDou?: string;
+  paginaDou?: string;
+}

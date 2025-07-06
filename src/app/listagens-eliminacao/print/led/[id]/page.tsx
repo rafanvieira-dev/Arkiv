@@ -3,15 +3,18 @@
 
 import * as React from "react";
 import { useParams } from "next/navigation";
-import type { ListagemEliminacao, Documento, Classificacao, Usuario } from "@/types";
+import type { ListagemEliminacao, Documento, Classificacao, Usuario, AprovacaoConta } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 
-// Constants for storage keys
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const APROVACOES_CONTA_STORAGE_KEY = 'arquivocentral_aprovacoes_conta';
 
 interface LedReportRow {
   codigoClassificacao: string;
@@ -63,6 +66,10 @@ export default function LedPrintPage() {
     const [datasLimiteGerais, setDatasLimiteGerais] = React.useState("");
     const [isLoading, setIsLoading] = React.useState(true);
     const [user, setUser] = React.useState<{ nomeCompleto: string; setor?: string }>({ nomeCompleto: 'Usuário não identificado', setor: 'N/A' });
+    
+    const [anosContasInput, setAnosContasInput] = React.useState("");
+    const [selectedAprovacoes, setSelectedAprovacoes] = React.useState<AprovacaoConta[]>([]);
+    const [allAprovacoes, setAllAprovacoes] = React.useState<AprovacaoConta[]>([]);
 
     React.useEffect(() => {
         if (!id) return;
@@ -85,6 +92,9 @@ export default function LedPrintPage() {
             const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : [];
             const classificacaoMap = new Map(allClassificacoes.map(c => [c.id, c]));
 
+            const storedAprovacoes = window.localStorage.getItem(APROVACOES_CONTA_STORAGE_KEY);
+            setAllAprovacoes(storedAprovacoes ? JSON.parse(storedAprovacoes) : []);
+            
             const docsInListagem = allDocumentos.filter(d => currentListagem.documentoIds.includes(d.id));
 
             const groupedByClassificacao: { [key: string]: { docs: Documento[] } } = {};
@@ -138,10 +148,15 @@ export default function LedPrintPage() {
     }, [id, toast]);
     
     React.useEffect(() => {
-        if (!isLoading && listagem) {
-            setTimeout(() => window.print(), 1000);
+        if (!anosContasInput.trim()) {
+            setSelectedAprovacoes([]);
+            return;
         }
-    }, [isLoading, listagem]);
+        const yearsToFind = anosContasInput.split(',').map(y => parseInt(y.trim())).filter(y => !isNaN(y));
+        const found = allAprovacoes.filter(a => yearsToFind.includes(a.anoExercicio));
+        setSelectedAprovacoes(found);
+    }, [anosContasInput, allAprovacoes]);
+    
 
     if (isLoading) {
         return <div className="p-8 text-center font-sans">Carregando relatório...</div>;
@@ -152,86 +167,114 @@ export default function LedPrintPage() {
     }
 
     return (
-        <div className="bg-white text-black p-12 font-sans text-xs">
-            <Button variant="outline" className="print:hidden fixed top-4 right-4 z-50" onClick={() => window.print()}>
+        <div className="bg-gray-100 min-h-screen">
+          <div className="non-printable p-4 bg-background border-b shadow-sm sticky top-0 z-10 flex flex-col md:flex-row md:items-center gap-4">
+            <h2 className="text-lg font-semibold flex-grow">Gerar LED: {listagem.numeroListagem}</h2>
+            <div className="flex-shrink-0 w-full md:w-auto">
+              <Label htmlFor="anos-contas">Anos para Comprovação de Contas</Label>
+              <Input
+                id="anos-contas"
+                placeholder="Ex: 2020, 2021, 2022"
+                value={anosContasInput}
+                onChange={(e) => setAnosContasInput(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Separe os anos por vírgula.</p>
+            </div>
+            <Button onClick={() => window.print()} className="w-full md:w-auto">
                 <Printer className="mr-2 h-4 w-4" />
                 Imprimir / Salvar PDF
             </Button>
-            
-            <header className="text-center mb-6">
-                <p className="font-bold">PODER JUDICIÁRIO</p>
-                <p className="font-bold">JUSTIÇA FEDERAL</p>
-                <p className="font-bold">TRIBUNAL REGIONAL FEDERAL DA 2ª REGIÃO</p>
-                <h1 className="text-sm font-bold mt-4">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS - LED TRF2 Nº {listagem.numeroListagem}</h1>
-            </header>
+          </div>
 
-            <main>
-                <div className="border-2 border-black mb-4">
-                    <h2 className="text-center font-bold bg-gray-200 border-b-2 border-black p-1 text-xs">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS Nº {listagem.numeroListagem}</h2>
-                    <div className="p-2 space-y-1">
-                        <p><strong>ÓRGÃO/ENTIDADE:</strong> Tribunal Regional Federal da 2ª Região - TRF2</p>
-                        <p><strong>UNIDADE/SETOR:</strong> {user.setor}</p>
+          <div className="p-4 md:p-8">
+            <div className="bg-white text-black p-12 font-sans text-xs shadow-lg mx-auto max-w-4xl print:shadow-none print:p-0">
+                <header className="text-center mb-6">
+                    <p className="font-bold">PODER JUDICIÁRIO</p>
+                    <p className="font-bold">JUSTIÇA FEDERAL</p>
+                    <p className="font-bold">TRIBUNAL REGIONAL FEDERAL DA 2ª REGIÃO</p>
+                    <h1 className="text-sm font-bold mt-4">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS - LED TRF2 Nº {listagem.numeroListagem}</h1>
+                </header>
+
+                <main>
+                    <div className="border-2 border-black mb-4">
+                        <h2 className="text-center font-bold bg-gray-200 border-b-2 border-black p-1 text-xs">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS Nº {listagem.numeroListagem}</h2>
+                        <div className="p-2 space-y-1">
+                            <p><strong>ÓRGÃO/ENTIDADE:</strong> Tribunal Regional Federal da 2ª Região - TRF2</p>
+                            <p><strong>UNIDADE/SETOR:</strong> {user.setor}</p>
+                        </div>
                     </div>
-                </div>
 
-                <table className="w-full border-collapse border-2 border-black text-xs">
-                    <thead>
-                        <tr className="bg-gray-200">
-                            <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Código Classif.</th>
-                            <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Descritor do Código</th>
-                            <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Datas-Limite</th>
-                            <th className="border-2 border-black p-1 font-bold text-center" colSpan={2}>Unidade de Arquivamento</th>
-                            <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Observações e/ou Justificativas</th>
-                        </tr>
-                        <tr className="bg-gray-200">
-                            <th className="border-2 border-black p-1 font-bold text-center">Quantificação</th>
-                            <th className="border-2 border-black p-1 font-bold text-center">Especificação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {reportData.map((row, index) => (
-                            <tr key={index}>
-                                <td className="border border-black p-1 text-center">{row.codigoClassificacao}</td>
-                                <td className="border border-black p-1">{row.descritor}</td>
-                                <td className="border border-black p-1 text-center">{row.datasLimite}</td>
-                                <td className="border border-black p-1 text-center">{row.quantificacao}</td>
-                                <td className="border border-black p-1">{row.especificacao}</td>
-                                <td className="border border-black p-1">{row.observacoes}</td>
+                    <table className="w-full border-collapse border-2 border-black text-xs">
+                        <thead>
+                            <tr className="bg-gray-200">
+                                <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Código Classif.</th>
+                                <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Descritor do Código</th>
+                                <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Datas-Limite</th>
+                                <th className="border-2 border-black p-1 font-bold text-center" colSpan={2}>Unidade de Arquivamento</th>
+                                <th className="border-2 border-black p-1 font-bold text-center" rowSpan={2}>Observações e/ou Justificativas</th>
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr className="font-bold bg-gray-200">
-                            <td className="border-2 border-black p-1" colSpan={3}>Mensuração total:</td>
-                            <td className="border-2 border-black p-1 text-center">{totalQuantificacao}</td>
-                            <td className="border-2 border-black p-1" colSpan={2}></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                            <tr className="bg-gray-200">
+                                <th className="border-2 border-black p-1 font-bold text-center">Quantificação</th>
+                                <th className="border-2 border-black p-1 font-bold text-center">Especificação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {reportData.map((row, index) => (
+                                <tr key={index}>
+                                    <td className="border border-black p-1 text-center">{row.codigoClassificacao}</td>
+                                    <td className="border border-black p-1">{row.descritor}</td>
+                                    <td className="border border-black p-1 text-center">{row.datasLimite}</td>
+                                    <td className="border border-black p-1 text-center">{row.quantificacao}</td>
+                                    <td className="border border-black p-1">{row.especificacao}</td>
+                                    <td className="border border-black p-1">{row.observacoes}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="font-bold bg-gray-200">
+                                <td className="border-2 border-black p-1" colSpan={3}>Mensuração total:</td>
+                                <td className="border-2 border-black p-1 text-center">{totalQuantificacao}</td>
+                                <td className="border-2 border-black p-1" colSpan={2}></td>
+                            </tr>
+                        </tfoot>
+                    </table>
 
-                <div className="border-2 border-black mt-4 p-2">
-                    <p><strong>Datas-Limite Gerais:</strong> {datasLimiteGerais}</p>
-                </div>
-                
-                <div className="border-2 border-black mt-4 p-2">
-                    <p><strong>Comprovação de aprovação das contas:</strong> (Informações a serem inseridas caso necessário)</p>
-                </div>
-
-                <div className="mt-8 text-center text-xs">
-                    <p>Local e data: ____________________, ____ de ________________ de ________.</p>
-                </div>
-
-                <footer className="mt-16 grid grid-cols-2 gap-12 text-center text-xs">
-                    <div>
-                        <p className="border-t border-black w-64 mx-auto pt-1">Responsável pelo Arquivo</p>
-                        <p>{user.nomeCompleto}</p>
+                    <div className="border-2 border-black mt-4 p-2">
+                        <p><strong>Datas-Limite Gerais:</strong> {datasLimiteGerais}</p>
                     </div>
-                    <div>
-                        <p className="border-t border-black w-64 mx-auto pt-1">Presidente da CPAD</p>
-                        <p>(Nome do Presidente)</p>
+                    
+                    <div className="border-2 border-black mt-4 p-2 min-h-[60px]">
+                        <p className="font-bold">Comprovação de aprovação das contas:</p>
+                         {selectedAprovacoes.length > 0 ? (
+                            <ul className="list-disc pl-5 mt-1 text-xs">
+                                {selectedAprovacoes.map(aprov => (
+                                    <li key={aprov.id}>
+                                        Exercício de {aprov.anoExercicio}: Aprovado pelo TCU em {aprov.dataAprovacaoTcu ? <ClientSideDateFormatter isoDateString={aprov.dataAprovacaoTcu} /> : 'N/A'}, publicado no D.O.U em {aprov.dataPublicacaoDou ? <ClientSideDateFormatter isoDateString={aprov.dataPublicacaoDou} /> : 'N/A'}, Seção {aprov.secaoDou || 'N/A'}, pág. {aprov.paginaDou || 'N/A'}.
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-xs italic mt-1">(Nenhum ano selecionado para comprovação ou dados não encontrados no sistema)</p>
+                        )}
                     </div>
-                </footer>
-            </main>
+
+                    <div className="mt-8 text-center text-xs">
+                        <p>Local e data: ____________________, ____ de ________________ de ________.</p>
+                    </div>
+
+                    <footer className="mt-16 grid grid-cols-2 gap-12 text-center text-xs">
+                        <div>
+                            <p className="border-t border-black w-64 mx-auto pt-1">Responsável pelo Arquivo</p>
+                            <p>{user.nomeCompleto}</p>
+                        </div>
+                        <div>
+                            <p className="border-t border-black w-64 mx-auto pt-1">Presidente da CPAD</p>
+                            <p>(Nome do Presidente)</p>
+                        </div>
+                    </footer>
+                </main>
+            </div>
+          </div>
         </div>
     );
 }
