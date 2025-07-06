@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -7,7 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ListagemEliminacao, Documento } from "@/types";
+import type { ListagemEliminacao, Documento, ParteDocumento } from "@/types";
 import { PlusCircle, Edit, Trash2, FileSearch, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, ListFilter, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
@@ -75,7 +76,8 @@ type SimulatedDocumentForDialog = Pick<
   'status' |
   'anoEliminacaoPrevisto' |
   'destinacaoFinalDisplay' |
-  'alteracaoDestinacaoFinal'
+  'alteracaoDestinacaoFinal' |
+  'partes'
 >;
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
@@ -280,7 +282,17 @@ export default function ListagensEliminacaoPage() {
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-    { id: 'partes', header: 'Partes', accessorKey: 'partes', enableSorting: true },
+    { 
+      id: 'partes', 
+      header: 'Partes', 
+      accessorKey: 'partes', 
+      enableSorting: false,
+      cellFormatter: (partes?: ParteDocumento[]) => {
+          if (!partes || partes.length === 0) return 'N/A';
+          const names = partes.map(p => p.nome).join(', ');
+          return <span className="block max-w-xs truncate" title={names}>{names}</span>;
+      }
+    },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },
     {
       id: 'codigoClassificacao',
@@ -1464,4 +1476,5 @@ export default function ListagensEliminacaoPage() {
     </TooltipProvider>
   );
 }
+
 
