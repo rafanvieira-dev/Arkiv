@@ -968,15 +968,14 @@ export default function ListagensEliminacaoPage() {
   };
 
 
-  const numDisplayed = displayedListagens.length;
-  const numSelected = selectedRowIds.length;
-  
   const mainHeaderCheckboxState = React.useMemo(() => {
+    const numDisplayed = displayedListagens.length;
+    const numSelected = selectedRowIds.length;
     if (numDisplayed === 0) return false;
     if (numSelected === numDisplayed) return true;
     if (numSelected > 0) return 'indeterminate';
     return false;
-  }, [numDisplayed, numSelected]);
+  }, [displayedListagens, selectedRowIds]);
   
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
