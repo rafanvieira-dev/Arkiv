@@ -966,3 +966,4 @@ export const initialPartes: ParteDetalhe[] = [
 
 
 
+
