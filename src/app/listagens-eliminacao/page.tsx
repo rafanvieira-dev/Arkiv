@@ -300,17 +300,6 @@ export default function ListagensEliminacaoPage() {
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
     { id: 'descricaoDocumento', header: 'Descrição', accessorKey: 'descricaoDocumento', enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
-    { 
-      id: 'partes', 
-      header: 'Partes', 
-      accessorKey: 'partes', 
-      enableSorting: false,
-      cellFormatter: (partes?: ParteDocumento[]) => {
-          if (!partes || partes.length === 0) return 'N/A';
-          const names = partes.map(p => p.nome).join(', ');
-          return <span className="block max-w-xs truncate" title={names}>{names}</span>;
-      }
-    },
     { id: 'dataAbrangente', header: 'Data Abrangente', accessorKey: 'dataAbrangente', enableSorting: true },
     {
       id: 'codigoClassificacao',
@@ -999,11 +988,12 @@ export default function ListagensEliminacaoPage() {
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
             </Button>
-             <Button asChild variant="outline" disabled={selectedRowIds.length !== 1}>
-              <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} onClick={(e) => {if(selectedRowIds.length !==1) e.preventDefault()}}>
+             <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} passHref
+                className={buttonVariants({ variant: 'outline', disabled: selectedRowIds.length !== 1 })}
+                onClick={(e) => {if(selectedRowIds.length !==1) e.preventDefault()}}
+             >
                   <Printer className="mr-2 h-4 w-4" /> Gerar LED
               </Link>
-            </Button>
             <Button variant="outline" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar CSV
@@ -1489,3 +1479,6 @@ export default function ListagensEliminacaoPage() {
 
     
 
+
+
+    
