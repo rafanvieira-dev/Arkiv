@@ -333,6 +333,66 @@ export const placeholderDocumentos: Documento[] = [
     numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2018-03-01T14:00:00Z").toISOString(), 
   },
+  ...Array.from({ length: 50 }, (_, i) => {
+      const id = i + 9;
+      const year = 2024 - (id % 20);
+      const month = (id % 12) + 1;
+      const day = (id % 28) + 1;
+      const classifications = [
+          { id: "CLA001", prazoGuardaFaseIntermediariaAnos: 15, destinacaoFinal: "Guarda Permanente" as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
+          { id: "CLA004", prazoGuardaFaseIntermediariaAnos: 10, destinacaoFinal: "Eliminação" as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 5 },
+          { id: "CLA003", prazoGuardaFaseIntermediariaAnos: 0, destinacaoFinal: "Guarda Permanente" as const, tipoPrazoFaseCorrente: "Anos" as const, prazoGuardaFaseCorrenteAnos: 1 },
+      ];
+      const classificacao = classifications[id % 3];
+      const dataArquivamento = new Date(year, month - 1, day).toISOString();
+      const anoEliminacaoPrevisto = classificacao.destinacaoFinal === 'Eliminação' ? (year + (classificacao.prazoGuardaFaseIntermediariaAnos ?? 0) + 1).toString() : "";
+      
+      const statuses: Documento['status'][] = ['Arquivado', 'Emprestado', 'Aguardando prazo para eliminação'];
+      const status = id % 7 === 0 ? statuses[1] : id % 11 === 0 ? statuses[2] : statuses[0];
+
+      return {
+          id: `DOC${id.toString().padStart(3, '0')}`,
+          status: status,
+          orgao: (['TRF2', 'SJRJ', 'SJES'] as const)[id % 3],
+          origem: ['Vara Federal - VF', 'Gabinete do Desembargador Y', 'Secretaria de Administração'][id % 3],
+          tipoMeio: (['Não digital', 'Digital', 'Híbrido'] as const)[id % 3],
+          generoDocumental: "Textual",
+          categoria: (['Processo Judicial', 'Processo Administrativo', 'Documento'] as const)[id % 3],
+          tipoDocumento: ['Ação Ordinária', 'Comunicação Interna', 'Execução Fiscal', 'Petição'][id % 4],
+          numeroDocumento: `PRC-${year}-${id.toString().padStart(5, '0')}`,
+          processoOriginario: `${Math.floor(Math.random() * 1000000)}-${Math.floor(Math.random() * 90)}.${year}.4.02.5101`,
+          numeroAntigo: "",
+          dataAbrangente: `${String(month).padStart(2, '0')}/${year}`,
+          descricaoDocumento: `Documento de exemplo gerado para teste - ID ${id}`,
+          partes: [{ id: `p${id}`, nome: `Parte Exemplo ${id}`, tipoParte: 'Autor' }],
+          documentosRelacionadosIds: "",
+          dataArquivamento: dataArquivamento,
+          quantidadeVolumes: 1,
+          quantidadeApensos: 0,
+          apensos: [],
+          totalMidias: 0,
+          midias: [],
+          digitalizado: (id % 2 === 0 ? "Sim" : "Não") as 'Sim' | 'Não',
+          tipoBaixa: "",
+          dataBaixa: undefined,
+          classificacaoArquivisticaId: classificacao.id,
+          prazoArquivoCorrenteDisplay: `${classificacao.prazoGuardaFaseCorrenteAnos} Anos`,
+          prazoArquivoIntermediarioDisplay: `${classificacao.prazoGuardaFaseIntermediariaAnos} Anos`,
+          destinacaoFinalDisplay: classificacao.destinacaoFinal,
+          alteracaoDestinacaoFinal: "Não Alterar" as const,
+          anoEliminacaoPrevisto: anoEliminacaoPrevisto,
+          necessidadeReclassificacao: "Não" as const,
+          segredoJustica: "Não" as const,
+          grauSigilo: "Ostensivo" as const,
+          codigosCaixa: `CX-MOCK-${Math.floor(id / 10)}`,
+          codigoAtoM: `ATOM${id.toString().padStart(3, '0')}`,
+          observacoesGerais: "",
+          codigoClassificacaoJudicialId: "",
+          numeroListagemEliminacao: "",
+          numeroDocumentoTransferencia: "",
+          dataCadastro: new Date().toISOString(),
+      } as Documento;
+  })
 ];
 
 export const placeholderSolicitacoesInitial: Solicitacao[] = [
@@ -511,4 +571,5 @@ export const initialPartes: ParteDetalhe[] = [
   { id: 'P003', nome: 'João da Silva', iniciais: 'JS' },
   { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41', iniciais: 'FN' },
 ];
+
 
