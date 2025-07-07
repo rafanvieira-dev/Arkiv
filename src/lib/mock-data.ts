@@ -1,6 +1,7 @@
 
 
 import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
+import { getYear, parseISO, isValid } from 'date-fns';
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
 
@@ -571,5 +572,6 @@ export const initialPartes: ParteDetalhe[] = [
   { id: 'P003', nome: 'João da Silva', iniciais: 'JS' },
   { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41', iniciais: 'FN' },
 ];
+
 
 
