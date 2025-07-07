@@ -264,7 +264,7 @@ export default function PublicSolicitacaoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+    <div className="min-h-screen bg-muted flex flex-col items-center p-4">
       <div className="w-full max-w-5xl">
         <PageHeader title="Nova Solicitação Pública" description="Preencha o formulário para solicitar documentos do acervo.">
           <Link href="/login" passHref>
@@ -410,3 +410,6 @@ export default function PublicSolicitacaoPage() {
 
 
 
+
+
+    

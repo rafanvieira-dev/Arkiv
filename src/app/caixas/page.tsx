@@ -52,7 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { initialCaixas, initialTiposCaixa } from "@/lib/mock-data";
@@ -141,7 +141,6 @@ export default function CaixasPage() {
 
   const [columnVisibilityCaixas, setColumnVisibilityCaixas] = React.useState<Record<string, boolean>>({});
   const [sortingCaixas, setSortingCaixas] = React.useState<SortConfig[]>([]);
-  const [displayedCaixas, setDisplayedCaixas] = React.useState<Caixa[]>([]);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
@@ -286,6 +285,45 @@ export default function CaixasPage() {
     }
   }, [caixas, isDataLoaded]);
 
+  const displayedCaixas = React.useMemo(() => {
+    let itemsToDisplay = caixas.filter(caixa => {
+        if (filters.codigoCaixa && !caixa.codigoCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
+        if (filters.descricao && !caixa.descricao?.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
+        if (filters.proveniencia && !caixa.proveniencia?.toLowerCase().includes(filters.proveniencia.toLowerCase())) return false;
+        if (filters.tipo && caixa.tipo !== filters.tipo) return false;
+        if (filters.status && caixa.status !== filters.status) return false;
+        if (filters.predio && !caixa.predio?.toLowerCase().includes(filters.predio.toLowerCase())) return false;
+        if (filters.sala && !caixa.sala?.toLowerCase().includes(filters.sala.toLowerCase())) return false;
+        if (filters.estante && !caixa.estante?.toLowerCase().includes(filters.estante.toLowerCase())) return false;
+        if (filters.prateleira && !caixa.prateleira?.toLowerCase().includes(filters.prateleira.toLowerCase())) return false;
+        if (filters.situacao && caixa.situacao !== filters.situacao) return false;
+        if (filters.condicao && caixa.condicao !== filters.condicao) return false;
+        return true;
+    });
+
+    if (sortingCaixas.length > 0) {
+      itemsToDisplay.sort((a, b) => {
+        for (const sortConfig of sortingCaixas) {
+          const valA = getSortableValueCaixas(a, sortConfig.id);
+          const valB = getSortableValueCaixas(b, sortConfig.id);
+
+          let comparisonResult = 0;
+          if (valA === null || valA === undefined) comparisonResult = 1;
+          else if (valB === null || valB === undefined) comparisonResult = -1;
+          else {
+            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+          }
+    
+          if (comparisonResult !== 0) {
+            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
+          }
+        }
+        return 0;
+      });
+    }
+    return itemsToDisplay;
+  }, [caixas, filters, sortingCaixas]);
+
 
   const resetFormAndDialogState = () => {
     setFormStateCaixa(initialFormStateCaixa);
@@ -427,45 +465,6 @@ export default function CaixasPage() {
     const value = caixa[column.accessorKey as keyof Caixa];
     return value;
   }, [ALL_COLUMNS_CONFIG_CAIXAS]);
-
-  React.useEffect(() => {
-    let itemsToDisplay = caixas.filter(caixa => {
-        if (filters.codigoCaixa && !caixa.codigoCaixa.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
-        if (filters.descricao && !caixa.descricao?.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
-        if (filters.proveniencia && !caixa.proveniencia?.toLowerCase().includes(filters.proveniencia.toLowerCase())) return false;
-        if (filters.tipo && caixa.tipo !== filters.tipo) return false;
-        if (filters.status && caixa.status !== filters.status) return false;
-        if (filters.predio && !caixa.predio?.toLowerCase().includes(filters.predio.toLowerCase())) return false;
-        if (filters.sala && !caixa.sala?.toLowerCase().includes(filters.sala.toLowerCase())) return false;
-        if (filters.estante && !caixa.estante?.toLowerCase().includes(filters.estante.toLowerCase())) return false;
-        if (filters.prateleira && !caixa.prateleira?.toLowerCase().includes(filters.prateleira.toLowerCase())) return false;
-        if (filters.situacao && caixa.situacao !== filters.situacao) return false;
-        if (filters.condicao && caixa.condicao !== filters.condicao) return false;
-        return true;
-    });
-
-    if (sortingCaixas.length > 0) {
-      itemsToDisplay.sort((a, b) => {
-        for (const sortConfig of sortingCaixas) {
-          const valA = getSortableValueCaixas(a, sortConfig.id);
-          const valB = getSortableValueCaixas(b, sortConfig.id);
-
-          let comparisonResult = 0;
-          if (valA === null || valA === undefined) comparisonResult = 1;
-          else if (valB === null || valB === undefined) comparisonResult = -1;
-          else {
-            comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
-          }
-    
-          if (comparisonResult !== 0) {
-            return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
-          }
-        }
-        return 0;
-      });
-    }
-    setDisplayedCaixas(itemsToDisplay);
-  }, [caixas, filters, sortingCaixas, getSortableValueCaixas]);
 
 
   const handleSortCaixas = (columnId: string) => {
@@ -690,16 +689,23 @@ export default function CaixasPage() {
   const clearFilters = () => {
     setFilters(initialFiltersState);
   };
-
-  const numDisplayed = displayedCaixas.length;
-  const numSelected = selectedRowIds.length;
   
   const headerCheckboxState = React.useMemo(() => {
-    if (numDisplayed === 0) return false;
-    if (numSelected === numDisplayed) return true;
-    if (numSelected > 0) return 'indeterminate';
+    const totalDisplayed = displayedCaixas.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
     return false;
-  }, [numDisplayed, numSelected]);
+  }, [displayedCaixas.length, selectedRowIds.length]);
+
+  const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      setSelectedRowIds(displayedCaixas.map(c => c.id));
+    } else {
+      setSelectedRowIds([]);
+    }
+  }, [displayedCaixas]);
 
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
@@ -1068,16 +1074,10 @@ export default function CaixasPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
-                        <TableHead className="py-2 px-3 w-12">
+                        <TableHead className="sticky left-0 bg-card z-10 py-2 px-3 w-12">
                           <Checkbox
                             checked={headerCheckboxState}
-                            onCheckedChange={(value) => {
-                              if (value === true) {
-                                setSelectedRowIds(displayedCaixas.map(c => c.id));
-                              } else {
-                                setSelectedRowIds([]);
-                              }
-                            }}
+                            onCheckedChange={handleSelectAllRows}
                             aria-label="Selecionar todas as linhas"
                           />
                         </TableHead>
@@ -1105,7 +1105,7 @@ export default function CaixasPage() {
                     <TableBody>
                       {displayedCaixas.map((item) => (
                         <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) ? "selected" : ""}>
-                          <TableCell className="py-2 px-3">
+                          <TableCell className="sticky left-0 bg-card z-10 py-2 px-3">
                             <Checkbox
                               checked={selectedRowIds.includes(item.id)}
                               onCheckedChange={(value) => {
@@ -1167,6 +1167,7 @@ export default function CaixasPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedCaixas.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">Nenhuma caixa encontrada.</p>
@@ -1258,3 +1259,5 @@ export default function CaixasPage() {
     </TooltipProvider>
   );
 }
+
+    

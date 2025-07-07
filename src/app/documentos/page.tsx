@@ -238,7 +238,6 @@ export default function DocumentosPage() {
   const isFilteredByReport = !!docIdsFromReportParam;
 
   const [documentos, setDocumentos] = React.useState<Documento[]>([]);
-  const [processedDocumentos, setProcessedDocumentos] = React.useState<Documento[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -604,8 +603,8 @@ export default function DocumentosPage() {
     }
   }, [documentos, classificacoes, listagens, solicitacoes, isDataLoaded, tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, caixas, masterPartes]);
 
-  React.useEffect(() => {
-    if (!isDataLoaded) return;
+  const processedDocumentos = React.useMemo(() => {
+    if (!isDataLoaded) return [];
 
     const activeLoanMap = new Map<string, Solicitacao['tipo']>();
     solicitacoes.forEach(sol => {
@@ -614,14 +613,19 @@ export default function DocumentosPage() {
       }
     });
 
-    const processed = documentos.map(originalDoc => {
+    const listagemMap = new Map<string, Pick<ListagemEliminacao, 'dataProducaoTermoEliminacao' | 'dataPublicacaoEdital'>>();
+    listagens.forEach(l => {
+      listagemMap.set(l.numeroListagem, { dataProducaoTermoEliminacao: l.dataProducaoTermoEliminacao, dataPublicacaoEdital: l.dataPublicacaoEdital });
+    });
+
+    return documentos.map(originalDoc => {
       let doc = { ...originalDoc };
       let currentDocStatus = doc.status;
       let isEliminated = false;
 
       if (doc.numeroListagemEliminacao) {
-        const listagem = listagens.find(l => l.numeroListagem === doc.numeroListagemEliminacao);
-        if (listagem?.documentoIds?.includes(doc.id)) {
+        const listagem = listagemMap.get(doc.numeroListagemEliminacao);
+        if (listagem) {
           if (listagem.dataProducaoTermoEliminacao) {
             currentDocStatus = "Eliminado";
             isEliminated = true;
@@ -644,8 +648,6 @@ export default function DocumentosPage() {
 
       return doc;
     });
-
-    setProcessedDocumentos(processed);
   }, [documentos, solicitacoes, listagens, isDataLoaded]);
 
 
@@ -2176,7 +2178,6 @@ export default function DocumentosPage() {
     );
   };
 
-
   return (
     <TooltipProvider>
       <div className={isPrinting ? 'printable-area' : 'container mx-auto py-2'}>
@@ -3042,7 +3043,7 @@ export default function DocumentosPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
-                        <TableHead className="py-2 px-3 w-12">
+                        <TableHead className="sticky left-0 bg-card z-10 py-2 px-3 w-12">
                           <Checkbox
                             checked={headerCheckboxState}
                             onCheckedChange={handleSelectAllRows}
@@ -3073,7 +3074,7 @@ export default function DocumentosPage() {
                     <TableBody>
                       {displayedDocumentos.map((doc) => (
                         <TableRow key={doc.id} data-state={selectedRowIds.includes(doc.id) ? "selected" : ""}>
-                          <TableCell className="py-2 px-3">
+                          <TableCell className="sticky left-0 bg-card z-10 py-2 px-3">
                             <Checkbox
                               checked={selectedRowIds.includes(doc.id)}
                               onCheckedChange={(value) => {
@@ -3444,3 +3445,5 @@ export default function DocumentosPage() {
     </TooltipProvider>
   );
 }
+
+    

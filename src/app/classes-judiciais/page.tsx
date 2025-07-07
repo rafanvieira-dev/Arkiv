@@ -107,7 +107,7 @@ const MemoizedClasseJudicialRow = React.memo(function MemoizedClasseJudicialRow(
 }: MemoizedClasseJudicialRowProps) {
     return (
         <TableRow data-state={isSelected ? "selected" : ""}>
-            <TableCell className="py-2 px-3">
+            <TableCell className="sticky left-0 bg-card z-10 py-2 px-3">
                 <Checkbox
                     checked={isSelected}
                     onCheckedChange={() => onToggleSelected(item.id)}
@@ -181,7 +181,6 @@ export default function ClassesJudiciaisPage() {
   
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
   const [sorting, setSorting] = React.useState<SortConfig[]>([]);
-  const [displayedItems, setDisplayedItems] = React.useState<ClasseJudicial[]>([]);
   
   const [isBulkEditOpen, setIsBulkEditOpen] = React.useState(false);
   const [bulkEditField, setBulkEditField] = React.useState('');
@@ -372,7 +371,7 @@ export default function ClassesJudiciaisPage() {
     return value;
   };
   
-  React.useEffect(() => {
+  const displayedItems = React.useMemo(() => {
     let itemsToDisplay = classesJudiciais.filter(item => {
         if (filters.codigo && !item.codigo.toLowerCase().includes(filters.codigo.toLowerCase())) return false;
         if (filters.descricao && !item.descricao.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
@@ -406,7 +405,7 @@ export default function ClassesJudiciaisPage() {
         return 0;
       });
     }
-    setDisplayedItems(itemsToDisplay);
+    return itemsToDisplay;
   }, [sorting, classesJudiciais, filters]);
   
   const handleSort = (columnId: string) => {
@@ -596,17 +595,24 @@ export default function ClassesJudiciaisPage() {
   const clearFilters = () => {
     setFilters(initialFiltersState);
   };
-
-  const numDisplayed = displayedItems.length;
-  const numSelected = selectedRowIds.length;
   
   const headerCheckboxState = React.useMemo(() => {
-    if (numDisplayed === 0) return false;
-    if (numSelected === numDisplayed) return true;
-    if (numSelected > 0) return 'indeterminate';
+    const totalDisplayed = displayedItems.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
     return false;
-  }, [numDisplayed, numSelected]);
-  
+  }, [displayedItems.length, selectedRowIds.length]);
+
+  const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      setSelectedRowIds(displayedItems.map(item => item.id));
+    } else {
+      setSelectedRowIds([]);
+    }
+  }, [displayedItems]);
+
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
@@ -868,16 +874,10 @@ export default function ClassesJudiciaisPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
-                        <TableHead className="w-12 py-2 px-3">
+                        <TableHead className="sticky left-0 bg-card z-10 w-12 py-2 px-3">
                           <Checkbox
                             checked={headerCheckboxState}
-                            onCheckedChange={(value) => {
-                              if (value === true) {
-                                setSelectedRowIds(displayedItems.map(item => item.id));
-                              } else {
-                                setSelectedRowIds([]);
-                              }
-                            }}
+                            onCheckedChange={handleSelectAllRows}
                             aria-label="Selecionar todas as linhas"
                           />
                         </TableHead>
@@ -1013,3 +1013,5 @@ export default function ClassesJudiciaisPage() {
     </TooltipProvider>
   );
 }
+
+    

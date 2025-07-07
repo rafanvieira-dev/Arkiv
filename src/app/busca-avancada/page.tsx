@@ -17,7 +17,7 @@ import type { Documento, Classificacao, TipoOrigem, ParteDocumento, ParteDetalhe
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, isAfter, isBefore } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   DropdownMenu,
@@ -642,7 +642,7 @@ export default function BuscaAvancadaPage() {
                     <Table className="min-w-full whitespace-nowrap">
                         <TableHeader className="sticky top-0 z-10 bg-card">
                         <TableRow>
-                            <TableHead className="w-12 py-2 px-3">
+                            <TableHead className="sticky left-0 z-10 bg-card w-12 py-2 px-3">
                                 <Checkbox
                                     checked={headerCheckboxState}
                                     onCheckedChange={handleSelectAllRows}
@@ -672,7 +672,7 @@ export default function BuscaAvancadaPage() {
                         <TableBody>
                         {displayedResults.map((doc) => (
                             <TableRow key={doc.id} data-state={selectedRowIds.includes(doc.id) ? "selected" : ""}>
-                                <TableCell className="py-2 px-3">
+                                <TableCell className="sticky left-0 z-10 bg-card py-2 px-3">
                                     <Checkbox
                                         checked={selectedRowIds.includes(doc.id)}
                                         onCheckedChange={(value) => {
@@ -694,6 +694,7 @@ export default function BuscaAvancadaPage() {
                         ))}
                         </TableBody>
                     </Table>
+                    <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">Nenhum resultado encontrado para os critérios informados.</p>
@@ -707,5 +708,7 @@ export default function BuscaAvancadaPage() {
     </TooltipProvider>
   );
 }
+
+    
 
     

@@ -216,7 +216,7 @@ const MemoizedClassificacaoRow = React.memo(function MemoizedClassificacaoRow({
 }: MemoizedClassificacaoRowProps) {
   return (
     <TableRow key={item.id} data-state={isSelected ? "selected" : ""}>
-      <TableCell className="py-2 px-3">
+      <TableCell className="sticky left-0 bg-card z-10 py-2 px-3">
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onToggleSelected(item.id)}
@@ -277,7 +277,6 @@ export default function ClassificacaoPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ClassificacaoFormState>(initialFormState);
   const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
-  const [displayedClassificacoes, setDisplayedClassificacoes] = React.useState<Classificacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
 
@@ -497,7 +496,7 @@ export default function ClassificacaoPage() {
     return item[column.accessorKey as keyof Classificacao];
   }, []);
 
-  React.useEffect(() => {
+  const displayedClassificacoes = React.useMemo(() => {
     let itemsToDisplay = classificacoes.filter(item => {
       if (filters.codigo && !item.codigo.toLowerCase().includes(filters.codigo.toLowerCase())) return false;
       if (filters.descricao && !item.descricao.toLowerCase().includes(filters.descricao.toLowerCase())) return false;
@@ -546,7 +545,7 @@ export default function ClassificacaoPage() {
         return 0;
       });
     }
-    setDisplayedClassificacoes(itemsToDisplay);
+    return itemsToDisplay;
   }, [classificacoes, filters, sortingClassificacoes, getSortableValueClassificacoes]);
 
 
@@ -744,16 +743,23 @@ export default function ClassificacaoPage() {
     };
     reader.readAsText(file);
   };
-
-  const numDisplayed = displayedClassificacoes.length;
-  const numSelected = selectedRowIds.length;
   
   const headerCheckboxState = React.useMemo(() => {
-    if (numDisplayed === 0) return false;
-    if (numSelected === numDisplayed) return true;
-    if (numSelected > 0) return 'indeterminate';
+    const totalDisplayed = displayedClassificacoes.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
     return false;
-  }, [numDisplayed, numSelected]);
+  }, [displayedClassificacoes.length, selectedRowIds.length]);
+
+  const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      setSelectedRowIds(displayedClassificacoes.map(c => c.id));
+    } else {
+      setSelectedRowIds([]);
+    }
+  }, [displayedClassificacoes]);
 
   const handleToggleSelectedRow = React.useCallback((itemId: string) => {
     setSelectedRowIds(prev =>
@@ -1108,16 +1114,10 @@ export default function ClassificacaoPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
-                        <TableHead className="py-2 px-3 w-12">
+                        <TableHead className="sticky left-0 bg-card z-10 py-2 px-3 w-12">
                           <Checkbox
                             checked={headerCheckboxState}
-                            onCheckedChange={(value) => {
-                              if (value === true) {
-                                setSelectedRowIds(displayedClassificacoes.map(c => c.id));
-                              } else {
-                                setSelectedRowIds([]);
-                              }
-                            }}
+                            onCheckedChange={handleSelectAllRows}
                             aria-label="Selecionar todas as linhas"
                           />
                         </TableHead>
@@ -1249,3 +1249,5 @@ export default function ClassificacaoPage() {
     </TooltipProvider>
   );
 }
+
+    
