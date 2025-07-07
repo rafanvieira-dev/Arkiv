@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -198,7 +197,7 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
 ];
 
 type DialogDocumentColumn = {
-  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | 'partes';
+  id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status';
   header: string | React.ReactNode;
   accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string;
   enableSorting: boolean;
@@ -276,9 +275,17 @@ export default function ListagensEliminacaoPage() {
           checked={headerCheckboxState}
           onCheckedChange={(value) => {
              const eligibleDocIds = eligibleDocsForSelection.map(d => d.id);
-            setSelectedDialogDocIds(value === true ? eligibleDocIds : []);
+            if (value === true) {
+                // Add only eligible docs to the selection
+                setSelectedDialogDocIds(prev => [...new Set([...prev, ...eligibleDocIds])]);
+            } else {
+                // Remove only eligible docs from the selection
+                const eligibleIdsSet = new Set(eligibleDocIds);
+                setSelectedDialogDocIds(prev => prev.filter(id => !eligibleIdsSet.has(id)));
+            }
           }}
           aria-label="Selecionar todos os documentos elegíveis"
+          disabled={eligibleDocsForSelection.length === 0}
         />
       ),
       accessorKey: 'selection',
@@ -988,11 +995,10 @@ export default function ListagensEliminacaoPage() {
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
             </Button>
-             <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} passHref
-                className={buttonVariants({ variant: 'outline', disabled: selectedRowIds.length !== 1 })}
-                onClick={(e) => {if(selectedRowIds.length !==1) e.preventDefault()}}
-             >
-                  <Printer className="mr-2 h-4 w-4" /> Gerar LED
+             <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} passHref>
+                  <Button variant="outline" disabled={selectedRowIds.length !== 1}>
+                      <Printer className="mr-2 h-4 w-4" /> Gerar LED
+                  </Button>
               </Link>
             <Button variant="outline" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -1480,5 +1486,7 @@ export default function ListagensEliminacaoPage() {
     
 
 
+
+    
 
     
