@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -599,6 +600,13 @@ export default function ClassesJudiciaisPage() {
   const numDisplayed = displayedItems.length;
   const numSelected = selectedRowIds.length;
   
+  const headerCheckboxState = React.useMemo(() => {
+    if (numDisplayed === 0) return false;
+    if (numSelected === numDisplayed) return true;
+    if (numSelected > 0) return 'indeterminate';
+    return false;
+  }, [numDisplayed, numSelected]);
+  
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
@@ -862,11 +870,7 @@ export default function ClassesJudiciaisPage() {
                       <TableRow>
                         <TableHead className="w-12 py-2 px-3">
                           <Checkbox
-                            checked={
-                              numDisplayed > 0 && numSelected === numDisplayed
-                                ? true
-                                : numSelected > 0 ? 'indeterminate' : false
-                            }
+                            checked={headerCheckboxState}
                             onCheckedChange={(value) => {
                               if (value === true) {
                                 setSelectedRowIds(displayedItems.map(item => item.id));

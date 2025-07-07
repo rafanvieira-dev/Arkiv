@@ -747,6 +747,13 @@ export default function ClassificacaoPage() {
 
   const numDisplayed = displayedClassificacoes.length;
   const numSelected = selectedRowIds.length;
+  
+  const headerCheckboxState = React.useMemo(() => {
+    if (numDisplayed === 0) return false;
+    if (numSelected === numDisplayed) return true;
+    if (numSelected > 0) return 'indeterminate';
+    return false;
+  }, [numDisplayed, numSelected]);
 
   const handleToggleSelectedRow = React.useCallback((itemId: string) => {
     setSelectedRowIds(prev =>
@@ -1103,11 +1110,7 @@ export default function ClassificacaoPage() {
                       <TableRow>
                         <TableHead className="py-2 px-3 w-12">
                           <Checkbox
-                            checked={
-                              numDisplayed > 0 && numSelected === numDisplayed
-                                ? true
-                                : numSelected > 0 ? 'indeterminate' : false
-                            }
+                            checked={headerCheckboxState}
                             onCheckedChange={(value) => {
                               if (value === true) {
                                 setSelectedRowIds(displayedClassificacoes.map(c => c.id));

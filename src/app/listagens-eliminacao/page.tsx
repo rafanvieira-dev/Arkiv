@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -218,7 +219,7 @@ export default function ListagensEliminacaoPage() {
   const [formState, setFormState] = React.useState<Partial<ListagemEliminacao>>(initialFormState);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingListagemId, setEditingListagemId] = React.useState<string | null>(null);
-  const [sorting, setSorting] = React.useState<DialogTableSortConfig[]>([]);
+  const [sorting, setSorting] = React.useState<SortConfig[]>([]);
 
   const [columnVisibilityListagens, setColumnVisibilityListagens] = React.useState<Record<string, boolean>>(
     ALL_COLUMNS_CONFIG_LISTAGENS.reduce((acc, col) => ({ ...acc, [col.id as string]: col.defaultVisible }), {})
@@ -974,6 +975,13 @@ export default function ListagensEliminacaoPage() {
   const numDisplayed = displayedListagens.length;
   const numSelected = selectedRowIds.length;
   
+  const mainHeaderCheckboxState = React.useMemo(() => {
+    if (numDisplayed === 0) return false;
+    if (numSelected === numDisplayed) return true;
+    if (numSelected > 0) return 'indeterminate';
+    return false;
+  }, [numDisplayed, numSelected]);
+  
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
@@ -1288,7 +1296,7 @@ export default function ListagensEliminacaoPage() {
                 <TableRow>
                   <TableHead className="w-12 py-2 px-3">
                     <Checkbox
-                      checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
+                      checked={mainHeaderCheckboxState}
                       onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedListagens.map(item => item.id) : [])}
                       aria-label="Selecionar todas as linhas"
                     />
@@ -1480,3 +1488,4 @@ export default function ListagensEliminacaoPage() {
     
 
     
+
