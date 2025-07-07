@@ -88,7 +88,6 @@ const PARTES_STORAGE_KEY = 'arquivocentral_partes';
 export default function BuscaAvancadaPage() {
   const [filters, setFilters] = React.useState(initialFilters);
   const [filteredResults, setFilteredResults] = React.useState<Documento[]>([]);
-  const [displayedResults, setDisplayedResults] = React.useState<Documento[]>([]);
   const [searched, setSearched] = React.useState(false);
   
   const [allDocuments, setAllDocuments] = React.useState<Documento[]>([]);
@@ -101,17 +100,7 @@ export default function BuscaAvancadaPage() {
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const masterPartesMap = React.useMemo(() => new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p])), [masterPartes]);
-
-  const headerCheckboxState = React.useMemo(() => {
-    const totalDisplayed = displayedResults.length;
-    if (totalDisplayed === 0) return false;
-    const totalSelected = selectedRowIds.length;
-    if (totalSelected === totalDisplayed) return true;
-    if (totalSelected > 0) return 'indeterminate';
-    return false;
-  }, [displayedResults.length, selectedRowIds.length]);
-
-
+  
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
     { 
       id: 'numeroDocumento', 
@@ -224,7 +213,6 @@ export default function BuscaAvancadaPage() {
   const handleClear = () => {
     setFilters(initialFilters);
     setFilteredResults([]);
-    setDisplayedResults([]);
     setSearched(false);
   };
 
@@ -275,88 +263,102 @@ export default function BuscaAvancadaPage() {
     setSearched(true);
   };
   
-    const getSortableValue = React.useCallback((doc: Documento, columnId: string): any => {
-        const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
-        if (!column) return null;
-        if (column.accessorKey === 'classificacaoArquivisticaId') {
-            const classif = allClassificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
-            return classif ? `${classif.codigo} - ${classif.descricao}` : doc.classificacaoArquivisticaId || '';
-        }
-        const value = doc[column.accessorKey as keyof Documento];
-        if (column.accessorKey === 'dataArquivamento' && value && typeof value === 'string') {
-            const parsedDate = Date.parse(value);
-            return !isNaN(parsedDate) ? new Date(parsedDate) : null;
-        }
-        return value;
-    }, [ALL_COLUMNS_CONFIG, allClassificacoes]);
+  const getSortableValue = React.useCallback((doc: Documento, columnId: string): any => {
+      const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
+      if (!column) return null;
+      if (column.accessorKey === 'classificacaoArquivisticaId') {
+          const classif = allClassificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
+          return classif ? `${classif.codigo} - ${classif.descricao}` : doc.classificacaoArquivisticaId || '';
+      }
+      const value = doc[column.accessorKey as keyof Documento];
+      if (column.accessorKey === 'dataArquivamento' && value && typeof value === 'string') {
+          const parsedDate = Date.parse(value);
+          return !isNaN(parsedDate) ? new Date(parsedDate) : null;
+      }
+      return value;
+  }, [ALL_COLUMNS_CONFIG, allClassificacoes]);
 
-    React.useEffect(() => {
-        let sortedResults = [...filteredResults];
-        if (sorting.length > 0) {
-            sortedResults.sort((a, b) => {
-                for (const sortConfig of sorting) {
-                    const valA = getSortableValue(a, sortConfig.id);
-                    const valB = getSortableValue(b, sortConfig.id);
+  const displayedResults = React.useMemo(() => {
+    let sortedResults = [...filteredResults];
+    if (sorting.length > 0) {
+        sortedResults.sort((a, b) => {
+            for (const sortConfig of sorting) {
+                const valA = getSortableValue(a, sortConfig.id);
+                const valB = getSortableValue(b, sortConfig.id);
 
-                    let comparisonResult = 0;
-                    if (valA === null || valA === undefined) comparisonResult = 1;
-                    else if (valB === null || valB === undefined) comparisonResult = -1;
-                    else if (valA instanceof Date && valB instanceof Date) comparisonResult = valA.getTime() - valB.getTime();
-                    else comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+                let comparisonResult = 0;
+                if (valA === null || valA === undefined) comparisonResult = 1;
+                else if (valB === null || valB === undefined) comparisonResult = -1;
+                else if (valA instanceof Date && valB instanceof Date) comparisonResult = valA.getTime() - valB.getTime();
+                else comparisonResult = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
 
-                    if (comparisonResult !== 0) {
-                        return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
-                    }
+                if (comparisonResult !== 0) {
+                    return sortConfig.direction === 'asc' ? comparisonResult : -comparisonResult;
                 }
-                return 0;
-            });
-        }
-        setDisplayedResults(sortedResults);
-    }, [filteredResults, sorting, getSortableValue]);
-
-    const handleSort = (columnId: string) => {
-        const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
-        if (!columnConfig || !columnConfig.enableSorting) return;
-
-        setSorting(prevSorting => {
-            const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
-            let newSorting = [...prevSorting];
-            if (existingSortIndex !== -1) {
-                if (newSorting[existingSortIndex].direction === 'asc') newSorting[existingSortIndex].direction = 'desc';
-                else newSorting.splice(existingSortIndex, 1);
-            } else {
-                newSorting = [{ id: columnId, direction: 'asc' }];
             }
-            return newSorting;
+            return 0;
         });
-    };
+    }
+    return sortedResults;
+  }, [filteredResults, sorting, getSortableValue]);
 
-    const renderSortIcon = (columnId: string) => {
-        const sortConfig = sorting.find(s => s.id === columnId);
-        if (!sortConfig) return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
-        if (sortConfig.direction === 'asc') return <ArrowUp className="ml-2 h-4 w-4" />;
-        return <ArrowDown className="ml-2 h-4 w-4" />;
-    };
+  const handleSort = (columnId: string) => {
+      const columnConfig = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
+      if (!columnConfig || !columnConfig.enableSorting) return;
 
-    const toggleColumnVisibility = (columnId: string) => {
-        setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
-    };
+      setSorting(prevSorting => {
+          const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
+          let newSorting = [...prevSorting];
+          if (existingSortIndex !== -1) {
+              if (newSorting[existingSortIndex].direction === 'asc') newSorting[existingSortIndex].direction = 'desc';
+              else newSorting.splice(existingSortIndex, 1);
+          } else {
+              newSorting = [{ id: columnId, direction: 'asc' }];
+          }
+          return newSorting;
+      });
+  };
 
-    const handleSelectAllColumns = () => {
-        setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {}));
-    };
+  const renderSortIcon = (columnId: string) => {
+      const sortConfig = sorting.find(s => s.id === columnId);
+      if (!sortConfig) return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+      if (sortConfig.direction === 'asc') return <ArrowUp className="ml-2 h-4 w-4" />;
+      return <ArrowDown className="ml-2 h-4 w-4" />;
+  };
 
-    const handleDeselectAllColumns = () => {
-        setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {}));
-    };
+  const toggleColumnVisibility = (columnId: string) => {
+      setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
 
-    const getCellValue = (doc: Documento, column: ColumnConfig) => {
-        const value = doc[column.accessorKey as keyof Documento];
-        if (column.cellFormatter) {
-            return column.cellFormatter(value, doc);
-        }
-        return value === undefined || value === null ? 'N/A' : String(value);
-    };
+  const handleSelectAllColumns = () => {
+      setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: true }), {}));
+  };
+
+  const handleDeselectAllColumns = () => {
+      setColumnVisibility(ALL_COLUMNS_CONFIG.reduce((acc, col) => ({ ...acc, [col.id as string]: false }), {}));
+  };
+
+  const getCellValue = (doc: Documento, column: ColumnConfig) => {
+      const value = doc[column.accessorKey as keyof Documento];
+      if (column.cellFormatter) {
+          return column.cellFormatter(value, doc);
+      }
+      return value === undefined || value === null ? 'N/A' : String(value);
+  };
+  
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedResults.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedResults.length, selectedRowIds.length]);
+  
+  const handleSelectAllRows = React.useCallback((value: boolean | 'indeterminate') => {
+      setSelectedRowIds(value === true ? displayedResults.map(item => item.id) : [])
+  }, [displayedResults]);
+
 
   return (
     <TooltipProvider>
@@ -643,7 +645,7 @@ export default function BuscaAvancadaPage() {
                             <TableHead className="w-12 py-2 px-3">
                                 <Checkbox
                                     checked={headerCheckboxState}
-                                    onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedResults.map(item => item.id) : [])}
+                                    onCheckedChange={handleSelectAllRows}
                                     aria-label="Selecionar todas as linhas"
                                 />
                             </TableHead>

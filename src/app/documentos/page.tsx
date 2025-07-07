@@ -264,7 +264,6 @@ export default function DocumentosPage() {
   const [keywordError, setKeywordError] = React.useState<string | null>(null);
 
   const [filters, setFilters] = React.useState(initialFiltersState);
-  const [displayedDocumentos, setDisplayedDocumentos] = React.useState<Documento[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
@@ -1430,7 +1429,7 @@ export default function DocumentosPage() {
     return value;
   }, [ALL_COLUMNS_CONFIG]);
   
-  const applyFiltersAndSorting = React.useCallback(() => {
+  const displayedDocumentos = React.useMemo(() => {
     const currentListagemDocIdsParam = searchParams.get('listagemDocIds');
     const docIdsFromListagem = currentListagemDocIdsParam ? currentListagemDocIdsParam.split(',').filter(id => id.trim() !== '') : [];
 
@@ -1536,15 +1535,8 @@ export default function DocumentosPage() {
         return 0;
       });
     }
-    setDisplayedDocumentos(newFilteredDocumentos);
+    return newFilteredDocumentos;
   }, [filters, sorting, codigoCaixaFromUrl, searchParams, processedDocumentos, classificacoes, getSortableValue]);
-
-  React.useEffect(() => {
-    if (isDataLoaded) { 
-      applyFiltersAndSorting();
-    }
-  }, [applyFiltersAndSorting, isDataLoaded]);
-
 
   const clearFilters = () => {
     setFilters(initialFiltersState);
@@ -2116,15 +2108,14 @@ export default function DocumentosPage() {
     setIsAnonymizeDialogOpen(false);
   };
 
-  const numDisp = displayedDocumentos.length;
-  const numSel = selectedRowIds.length;
-  
   const headerCheckboxState = React.useMemo(() => {
+    const numDisp = displayedDocumentos.length;
+    const numSel = selectedRowIds.length;
     if (numDisp === 0) return false;
     if (numSel === numDisp) return true;
     if (numSel > 0) return 'indeterminate';
     return false;
-  }, [numDisp, numSel]);
+  }, [displayedDocumentos.length, selectedRowIds.length]);
 
   const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
     if (checked === true) {
@@ -2139,15 +2130,15 @@ export default function DocumentosPage() {
 
   if (isFilteredByReport && reportContext) {
     pageTitle = reportContext;
-    pageDescription = `Exibindo ${numDisp} documento(s) filtrado(s) a partir do Relatório de Previsão de Eliminação.`;
+    pageDescription = `Exibindo ${displayedDocumentos.length} documento(s) filtrado(s) a partir do Relatório de Previsão de Eliminação.`;
   } else if (isFilteredByListagem) {
     pageTitle = numeroListagemFromQuery
       ? `Documentos da Listagem de Eliminação nº ${numeroListagemFromQuery}`
       : "Documentos da Listagem de Eliminação";
-    pageDescription = `Exibindo ${numDisp} documento(s) incluído(s) na listagem de eliminação selecionada.`;
+    pageDescription = `Exibindo ${displayedDocumentos.length} documento(s) incluído(s) na listagem de eliminação selecionada.`;
   } else if (codigoCaixaFromUrl) {
     pageTitle = `Documentos na Caixa: ${codigoCaixaFromUrl}`;
-    pageDescription = `Exibindo ${numDisp} documento(s) pertencente(s) à caixa ${codigoCaixaFromUrl}.`;
+    pageDescription = `Exibindo ${displayedDocumentos.length} documento(s) pertencente(s) à caixa ${codigoCaixaFromUrl}.`;
   }
 
   const filtersAreActive = React.useMemo(() => {
@@ -2996,7 +2987,6 @@ export default function DocumentosPage() {
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2 px-6 pb-6">
                     <Button variant="outline" onClick={clearFilters}><RotateCcw className="mr-2 h-4 w-4" /> Limpar Filtros</Button>
-                    <Button onClick={applyFiltersAndSorting}><Search className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
                   </CardFooter>
                 </AccordionContent>
               </AccordionItem>
