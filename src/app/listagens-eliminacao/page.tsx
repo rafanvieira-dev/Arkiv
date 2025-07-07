@@ -248,40 +248,53 @@ export default function ListagensEliminacaoPage() {
     { value: 'observacoes', label: 'Observações', type: 'text' },
   ];
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
+  
+  const eligibleDocsForSelection = React.useMemo(() => 
+    documentsForDialog.filter(doc => doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação"),
+    [documentsForDialog]
+  );
+  
+  const headerCheckboxState = React.useMemo(() => {
+    const totalEligible = eligibleDocsForSelection.length;
+    if (totalEligible === 0) return false;
+
+    const selectedEligibleCount = eligibleDocsForSelection.filter(doc => 
+        selectedDialogDocIds.includes(doc.id)
+    ).length;
+    
+    if (selectedEligibleCount === totalEligible) return true;
+    if (selectedEligibleCount > 0) return 'indeterminate';
+    return false;
+  }, [eligibleDocsForSelection, selectedDialogDocIds]);
 
   const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
     {
       id: 'selection',
       header: (
         <Checkbox
-          checked={
-            documentsForDialog.length > 0 &&
-            selectedDialogDocIds.length === documentsForDialog.filter(doc => doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação").length &&
-            documentsForDialog.every(doc =>
-              (doc.status !== "Arquivado" && doc.status !== "Aguardando prazo para eliminação") || selectedDialogDocIds.includes(doc.id)
-            )
-          }
+          checked={headerCheckboxState}
           onCheckedChange={(value) => {
-             const eligibleDocIds = documentsForDialog
-              .filter(d => d.status === "Arquivado" || d.status === "Aguardando prazo para eliminação")
-              .map(d => d.id);
-            setSelectedDialogDocIds(value ? eligibleDocIds : []);
+             const eligibleDocIds = eligibleDocsForSelection.map(d => d.id);
+            setSelectedDialogDocIds(value === true ? eligibleDocIds : []);
           }}
           aria-label="Selecionar todos os documentos elegíveis"
         />
       ),
       accessorKey: 'selection',
       enableSorting: false,
-      cellFormatter: (_, doc) => (
-        <Checkbox
-          checked={selectedDialogDocIds.includes(doc.id)}
-          onCheckedChange={(value) => {
-            setSelectedDialogDocIds(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
-          }}
-          aria-label={`Selecionar documento ${doc.numeroDocumento}`}
-          disabled={doc.status !== "Arquivado" && doc.status !== "Aguardando prazo para eliminação"}
-        />
-      )
+      cellFormatter: (_, doc) => {
+        const isSelectable = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
+        return (
+          <Checkbox
+            checked={selectedDialogDocIds.includes(doc.id)}
+            onCheckedChange={(value) => {
+              setSelectedDialogDocIds(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
+            }}
+            aria-label={`Selecionar documento ${doc.numeroDocumento}`}
+            disabled={!isSelectable}
+          />
+        )
+      }
     },
     { id: 'numeroDocumento', header: 'Nº Documento', accessorKey: 'numeroDocumento', enableSorting: true },
     { id: 'tipoDocumento', header: 'Espécie de Documento', accessorKey: 'tipoDocumento', enableSorting: true },
@@ -341,7 +354,7 @@ export default function ListagensEliminacaoPage() {
         </Badge>
       )
     },
-  ], [documentsForDialog, selectedDialogDocIds]);
+  ], [headerCheckboxState, eligibleDocsForSelection, selectedDialogDocIds]);
 
   React.useEffect(() => {
     try {
@@ -979,7 +992,7 @@ export default function ListagensEliminacaoPage() {
                 Alterar em Bloco ({selectedRowIds.length})
             </Button>
              <Button asChild variant="outline" disabled={selectedRowIds.length !== 1}>
-              <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'}>
+              <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} onClick={(e) => {if(selectedRowIds.length !==1) e.preventDefault()}}>
                   <Printer className="mr-2 h-4 w-4" /> Gerar LED
               </Link>
             </Button>
@@ -1134,7 +1147,7 @@ export default function ListagensEliminacaoPage() {
                                   <TableRow key={doc.id}>
                                     {DIALOG_DOCUMENT_COLUMNS.map(col => (
                                       <TableCell key={`${doc.id}-${col.id.toString()}`} className="py-1 px-2">
-                                        {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : (doc as any)[col.accessorKey] || "N/A"}
+                                        {col.cellFormatter ? col.cellFormatter((doc as any)[col.accessorKey], doc) : String((doc as any)[col.accessorKey] ?? "N/A")}
                                       </TableCell>
                                     ))}
                                   </TableRow>
