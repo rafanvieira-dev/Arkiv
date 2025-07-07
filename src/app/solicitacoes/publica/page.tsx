@@ -119,6 +119,18 @@ export default function PublicSolicitacaoPage() {
     return !borrowedDocIds.has(doc.id);
   }, [borrowedDocIds]);
 
+  const dialogHeaderCheckboxState = React.useMemo(() => {
+    const selectableDocs = documentsForDialog.filter(isDocumentSelectable);
+    if (selectableDocs.length === 0) return false;
+
+    const selectedCount = selectableDocs.filter(doc => selectedDocIdsInDialog.includes(doc.id)).length;
+    
+    if (selectedCount === selectableDocs.length) return true;
+    if (selectedCount > 0) return 'indeterminate';
+    return false;
+  }, [documentsForDialog, selectedDocIdsInDialog, isDocumentSelectable]);
+
+
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
     
@@ -321,7 +333,21 @@ export default function PublicSolicitacaoPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-10"><Checkbox onCheckedChange={(checked) => setSelectedDocIdsInDialog(checked ? documentsForDialog.filter(isDocumentSelectable).map(d => d.id) : [])} /></TableHead>
+                          <TableHead className="w-10">
+                            <Checkbox 
+                                checked={dialogHeaderCheckboxState}
+                                onCheckedChange={(checked) => {
+                                    const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
+                                    if (checked) {
+                                        setSelectedDocIdsInDialog(prev => [...new Set([...prev, ...selectableIds])]);
+                                    } else {
+                                        const selectableIdsSet = new Set(selectableIds);
+                                        setSelectedDocIdsInDialog(prev => prev.filter(id => !selectableIdsSet.has(id)));
+                                    }
+                                }}
+                                disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
+                            />
+                          </TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')}>Nº Doc {renderDialogDocSortIcon('numeroDocumento')}</Button></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')}>Espécie {renderDialogDocSortIcon('tipoDocumento')}</Button></TableHead>
                           <TableHead><Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')}>Descrição {renderDialogDocSortIcon('descricaoDocumento')}</Button></TableHead>
@@ -365,4 +391,5 @@ export default function PublicSolicitacaoPage() {
     
 
     
+
 

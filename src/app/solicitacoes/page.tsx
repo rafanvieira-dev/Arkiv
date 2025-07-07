@@ -194,7 +194,6 @@ export default function SolicitacoesPage() {
     return false;
   }, [displayedSolicitacoes.length, selectedRowIds.length]);
 
-
   const bulkEditableFields = [
     { value: 'tipo', label: 'Tipo', type: 'select', options: ['Empréstimo', 'Desarquivamento'] },
     { value: 'status', label: 'Status', type: 'select', options: ['Pendente', 'Atendida', 'Devolvido', 'Cancelada'] },
@@ -269,8 +268,6 @@ export default function SolicitacoesPage() {
         const tipoSolicitacao = activeLoanMap.get(doc.id);
         currentDocStatus = tipoSolicitacao === 'Empréstimo' ? 'Emprestado' : 'Desarquivado';
       } else if (!isEliminated && (currentDocStatus === 'Emprestado' || currentDocStatus === 'Desarquivado') && !activeLoanMap.has(doc.id)) {
-          // If a document is marked as on loan but no active loan exists, revert it.
-          // This handles the case when a loan is cancelled or returned.
           currentDocStatus = 'Arquivado';
       }
   
@@ -284,6 +281,23 @@ export default function SolicitacoesPage() {
   
     setAcervoDocs(processedDocs);
   }, [solicitacoes, isDataLoaded]);
+
+  const borrowedDocIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    solicitacoes.forEach(sol => {
+      if ((sol.status === 'Pendente' || sol.status === 'Atendida') && (!editingId || sol.id !== editingId)) {
+        sol.documentoIds.forEach(docId => ids.add(docId));
+      }
+    });
+    return ids;
+  }, [solicitacoes, editingId]);
+
+  const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
+    if (doc.status !== 'Arquivado') {
+      return false;
+    }
+    return !borrowedDocIds.has(doc.id);
+  }, [borrowedDocIds]);
   
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
@@ -292,7 +306,7 @@ export default function SolicitacoesPage() {
       const isAlreadySelectedInThisSolicitation = selectedDocIdsInDialog.includes(doc.id);
   
       if (isAlreadySelectedInThisSolicitation) {
-          return true; // Always show docs already in the request
+          return true;
       }
 
       const isAvailable = doc.status === 'Arquivado';
@@ -325,6 +339,16 @@ export default function SolicitacoesPage() {
     setDocumentsForDialog(filteredDocs);
   }, [dialogDocFilters, dialogDocSortConfig, acervoDocs, selectedDocIdsInDialog]);
 
+  const dialogHeaderCheckboxState = React.useMemo(() => {
+    const selectableDocs = documentsForDialog.filter(isDocumentSelectable);
+    if (selectableDocs.length === 0) return false;
+
+    const selectedCount = selectableDocs.filter(doc => selectedDocIdsInDialog.includes(doc.id)).length;
+    
+    if (selectedCount === selectableDocs.length) return true;
+    if (selectedCount > 0) return 'indeterminate';
+    return false;
+  }, [documentsForDialog, selectedDocIdsInDialog, isDocumentSelectable]);
 
   const updateDocStatusOnDateChange = React.useCallback(() => {
     if (!isDialogOpen) return;
@@ -517,23 +541,6 @@ export default function SolicitacoesPage() {
     return sortConf.direction === 'asc' ? <ArrowUp className="ml-2 h-3 w-3" /> : <ArrowDown className="ml-2 h-3 w-3" />;
   };
 
-  const borrowedDocIds = React.useMemo(() => {
-    const ids = new Set<string>();
-    solicitacoes.forEach(sol => {
-      if ((sol.status === 'Pendente' || sol.status === 'Atendida') && (!editingId || sol.id !== editingId)) {
-        sol.documentoIds.forEach(docId => ids.add(docId));
-      }
-    });
-    return ids;
-  }, [solicitacoes, editingId]);
-
-  const isDocumentSelectable = React.useCallback((doc: SimulatedDocumentForSolicitacaoDialog): boolean => {
-    if (doc.status !== 'Arquivado') {
-      return false;
-    }
-    return !borrowedDocIds.has(doc.id);
-  }, [borrowedDocIds]);
-  
   const getSortableValue = (item: Solicitacao, columnId: string): any => {
     const column = ALL_COLUMNS_CONFIG.find(col => col.id === columnId);
     if (!column) return null;
@@ -992,13 +999,19 @@ export default function SolicitacoesPage() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead className="py-1 px-2 w-10 sticky left-0 bg-card z-10">
-                                    <Checkbox
-                                      checked={documentsForDialog.length > 0 && documentsForDialog.filter(isDocumentSelectable).length > 0 && documentsForDialog.filter(isDocumentSelectable).every(doc => selectedDocIdsInDialog.includes(doc.id))}
-                                      onCheckedChange={(value) => {
-                                        const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
-                                        setSelectedDocIdsInDialog(value ? selectableIds : []);
-                                      }}
-                                      disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
+                                     <Checkbox
+                                        checked={dialogHeaderCheckboxState}
+                                        onCheckedChange={(checked) => {
+                                            const selectableIds = documentsForDialog.filter(isDocumentSelectable).map(d => d.id);
+                                            if (checked) {
+                                                setSelectedDocIdsInDialog(prev => [...new Set([...prev, ...selectableIds])]);
+                                            } else {
+                                                const selectableIdsSet = new Set(selectableIds);
+                                                setSelectedDocIdsInDialog(prev => prev.filter(id => !selectableIdsSet.has(id)));
+                                            }
+                                        }}
+                                        disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
+                                        aria-label="Selecionar todos os documentos disponíveis"
                                     />
                                   </TableHead>
                                   <TableHead className="py-1 px-2 sticky left-12 bg-card z-10">
