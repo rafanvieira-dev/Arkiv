@@ -87,15 +87,12 @@ const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
-  tipoListagem: 'Processos Judiciais',
-  unidadeSetor: "",
   documentoIds: [],
   numeroEditalCiencia: "",
   dataPublicacaoEdital: undefined,
   dataProducaoListagem: new Date().toISOString(),
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
-  observacoes: "",
 };
 
 const initialFiltersState = {
@@ -110,7 +107,7 @@ const initialFiltersState = {
 };
 const ALL_VALUES_SENTINEL = "ALL_VALUES";
 
-type DialogTableSortConfig = { id: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string; direction: 'asc' | 'desc'; };
+type DialogTableSortConfig = { id: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao'; direction: 'asc' | 'desc'; };
 type DialogTableFilters = { anoEliminacaoPrevisto: string; };
 
 type ColumnConfigListagens = {
@@ -158,8 +155,6 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
       return <Badge variant="secondary">Tramitando</Badge>;
     }
   },
-   { id: 'tipoListagem', header: 'Tipo Listagem', accessorKey: 'tipoListagem', defaultVisible: false, enableSorting: true },
-   { id: 'unidadeSetor', header: 'Unidade/Setor', accessorKey: 'unidadeSetor', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   {
     id: 'dataProducaoListagem',
     header: 'Data Prod. Listagem',
@@ -194,13 +189,12 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
     enableSorting: true,
     cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} />
   },
-  { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || "N/A" },
 ];
 
 type DialogDocumentColumn = {
   id: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status';
   header: string | React.ReactNode;
-  accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string;
+  accessorKey: keyof SimulatedDocumentForDialog | 'selection' | 'codigoClassificacao' | 'assuntoClassificacao' | 'status';
   enableSorting: boolean;
   cellFormatter?: (value: any, doc: SimulatedDocumentForDialog) => React.ReactNode;
 };
@@ -266,7 +260,7 @@ export default function ListagensEliminacaoPage() {
     return false;
   }, [eligibleDocsForSelection, selectedDialogDocIds]);
 
-  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
+  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = [
     {
       id: 'selection',
       header: (
@@ -350,7 +344,7 @@ export default function ListagensEliminacaoPage() {
         </Badge>
       )
     },
-  ], [headerCheckboxState, eligibleDocsForSelection, selectedDialogDocIds]);
+  ];
 
   React.useEffect(() => {
     try {
@@ -380,9 +374,7 @@ export default function ListagensEliminacaoPage() {
   }, [listagens, simulatedDocuments, isDataLoaded]);
 
   React.useEffect(() => {
-    // 1. Get the base list of docs that match the text/eligibility filters.
-    // This part does NOT depend on selection state.
-    const baseFilteredDocs = simulatedDocuments.filter(doc => {
+    let filteredDocs = simulatedDocuments.filter(doc => {
       const isEligible = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
       if (!isEligible) {
         return false;
@@ -395,26 +387,9 @@ export default function ListagensEliminacaoPage() {
       }
       return true;
     });
-  
-    // 2. Get the full data for any selected docs that might have been filtered out.
-    const baseFilteredDocsIds = new Set(baseFilteredDocs.map(d => d.id));
-    const missingSelectedDocs = selectedDialogDocIds
-      .filter(id => !baseFilteredDocsIds.has(id))
-      .map(id => simulatedDocuments.find(d => d.id === id))
-      .filter((d): d is SimulatedDocumentForDialog => d !== undefined);
-  
-    // 3. Combine the lists, ensuring no duplicates.
-    const combinedDocsMap = new Map<string, SimulatedDocumentForDialog>();
-    // Add selected missing docs first
-    missingSelectedDocs.forEach(doc => combinedDocsMap.set(doc.id, doc));
-    // Then add the filtered docs. The Map will handle deduplication.
-    baseFilteredDocs.forEach(doc => combinedDocsMap.set(doc.id, doc));
-  
-    let finalDocs = Array.from(combinedDocsMap.values());
-  
-    // 4. Sort the final list.
+
     if (dialogTableSortConfig.length > 0) {
-      finalDocs.sort((a, b) => {
+      filteredDocs.sort((a, b) => {
         for (const sortConf of dialogTableSortConfig) {
           let valA, valB;
           if (sortConf.id === 'codigoClassificacao' || sortConf.id === 'assuntoClassificacao') {
@@ -436,11 +411,11 @@ export default function ListagensEliminacaoPage() {
         return 0;
       });
     }
-  
-    setDocumentsForDialog(finalDocs);
-  }, [simulatedDocuments, dialogTableFilters, dialogTableSortConfig, selectedDialogDocIds]);
 
-  const handleDialogTableSort = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {
+    setDocumentsForDialog(filteredDocs);
+  }, [simulatedDocuments, dialogTableFilters, dialogTableSortConfig]);
+
+  const handleDialogTableSort = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao') => {
     setDialogTableSortConfig(prevSorting => {
       const existingSortIndex = prevSorting.findIndex(s => s.id === columnId);
       let newSorting = [...prevSorting];
@@ -454,7 +429,7 @@ export default function ListagensEliminacaoPage() {
     });
   };
 
-  const renderDialogTableSortIcon = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | 'status' | string) => {
+  const renderDialogTableSortIcon = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | 'status') => {
     const sortConf = dialogTableSortConfig.find(s => s.id === columnId);
     if (!sortConf) return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/50" />;
     if (sortConf.direction === 'asc') return <ArrowUp className="ml-2 h-3 w-3" />;
@@ -472,7 +447,7 @@ export default function ListagensEliminacaoPage() {
     setIsDocumentTableVisible(false);
   };
 
-  const handleOpenDialog = React.useCallback((listagem?: ListagemEliminacao) => {
+  const handleOpenDialog = (listagem?: ListagemEliminacao) => {
     let processedDocsInit = placeholderDocumentos.map(doc => ({ ...doc }));
 
     if (listagem) {
@@ -521,7 +496,7 @@ export default function ListagensEliminacaoPage() {
     setDialogTableFilters({ anoEliminacaoPrevisto: "" });
     setDialogTableSortConfig([]);
     setIsDialogOpen(true);
-  }, [setSimulatedDocuments, setIsEditing, setEditingListagemId, setFormState, setSelectedDialogDocIds, setIsDocumentTableVisible, setDialogTableFilters, setDialogTableSortConfig, setIsDialogOpen ]);
+  };
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -646,15 +621,12 @@ export default function ListagensEliminacaoPage() {
     const listagemDataToSave: ListagemEliminacao = {
       id: isEditing && editingListagemId ? editingListagemId : `LE${Date.now()}`,
       numeroListagem: formState.numeroListagem || "",
-      tipoListagem: formState.tipoListagem || 'Processos Judiciais',
-      unidadeSetor: formState.unidadeSetor,
       documentoIds: selectedDialogDocIds,
       numeroEditalCiencia: formState.numeroEditalCiencia,
       dataPublicacaoEdital: formState.dataPublicacaoEdital,
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
       dataProducaoTermoEliminacao: formState.dataProducaoTermoEliminacao,
-      observacoes: formState.observacoes || "",
     };
 
     let updatedListagens;
@@ -865,21 +837,18 @@ export default function ListagensEliminacaoPage() {
       toast({ variant: "destructive", description: "Nenhuma listagem selecionada para exportar." });
       return;
     }
-    const headers = ['id', 'numeroListagem', 'tipoListagem', 'unidadeSetor', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+    const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(item => {
         const rowData = {
             id: item.id,
             numeroListagem: item.numeroListagem,
-            tipoListagem: item.tipoListagem,
-            unidadeSetor: item.unidadeSetor || '',
             dataProducaoListagem: item.dataProducaoListagem || '',
             numeroEditalCiencia: item.numeroEditalCiencia || '',
             dataPublicacaoEdital: item.dataPublicacaoEdital || '',
             numeroTermoEliminacao: item.numeroTermoEliminacao || '',
             dataProducaoTermoEliminacao: item.dataProducaoTermoEliminacao || '',
-            observacoes: item.observacoes || '',
             documentoIds: item.documentoIds.join(';')
         };
         const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
@@ -908,8 +877,8 @@ export default function ListagensEliminacaoPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['numeroListagem', 'tipoListagem', 'unidadeSetor', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
-    const exampleRow = `"LE-2025-EXEMPLO","Processos Judiciais","Vara Federal de Exemplo","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
+    const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds'];
+    const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","DOC001;DOC002"`;
     const csvContent = `${headers.join(',')}\n${exampleRow}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -955,14 +924,11 @@ export default function ListagensEliminacaoPage() {
                 const newItem: ListagemEliminacao = {
                     id: `LE_IMP_${Date.now()}_${index}`,
                     numeroListagem: newItemData.numeroListagem,
-                    tipoListagem: (newItemData.tipoListagem as ListagemEliminacao['tipoListagem']) || 'Documentos',
-                    unidadeSetor: newItemData.unidadeSetor,
                     dataProducaoListagem: newItemData.dataProducaoListagem || new Date().toISOString(),
                     numeroEditalCiencia: newItemData.numeroEditalCiencia,
                     dataPublicacaoEdital: newItemData.dataPublicacaoEdital,
                     numeroTermoEliminacao: newItemData.numeroTermoEliminacao,
                     dataProducaoTermoEliminacao: newItemData.dataProducaoTermoEliminacao,
-                    observacoes: newItemData.observacoes,
                     documentoIds: docIds,
                 };
                 newItemsFromCsv.push(newItem);
@@ -981,16 +947,6 @@ export default function ListagensEliminacaoPage() {
     };
     reader.readAsText(file);
   };
-
-
-  const mainHeaderCheckboxState = React.useMemo(() => {
-    const numDisplayed = displayedListagens.length;
-    const numSelected = selectedRowIds.length;
-    if (numDisplayed === 0) return false;
-    if (numSelected === numDisplayed) return true;
-    if (numSelected > 0) return 'indeterminate';
-    return false;
-  }, [displayedListagens, selectedRowIds]);
   
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
@@ -1009,11 +965,9 @@ export default function ListagensEliminacaoPage() {
                 <PenSquare className="mr-2 h-4 w-4" />
                 Alterar em Bloco ({selectedRowIds.length})
             </Button>
-             <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} passHref>
-                  <Button variant="outline" disabled={selectedRowIds.length !== 1}>
-                      <Printer className="mr-2 h-4 w-4" /> Gerar LED
-                  </Button>
-              </Link>
+            <Button variant="outline" disabled={true}>
+                <Printer className="mr-2 h-4 w-4" /> Gerar LED
+            </Button>
             <Button variant="outline" onClick={handleImportClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar CSV
@@ -1057,21 +1011,6 @@ export default function ListagensEliminacaoPage() {
                         <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="tipoListagem">Tipo de Listagem*</Label>
-                        <Select onValueChange={(value) => setFormState(prev => ({...prev, tipoListagem: value as ListagemEliminacao['tipoListagem']}))} value={formState.tipoListagem}>
-                            <SelectTrigger id="tipoListagem"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Documentos">Documentos</SelectItem>
-                                <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
-                                <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </div>
-                       <div className="space-y-2">
-                        <Label htmlFor="unidadeSetor">Unidade/Setor*</Label>
-                        <Input id="unidadeSetor" value={formState.unidadeSetor || ""} onChange={handleInputChange} placeholder="Ex: Arquivo Geral" />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
                         <DateInputPicker
                           value={formState.dataProducaoListagem ? new Date(formState.dataProducaoListagem) : undefined}
@@ -1102,10 +1041,6 @@ export default function ListagensEliminacaoPage() {
                           onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)}
                           placeholder="dd/mm/aaaa"
                         />
-                      </div>
-                      <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                        <Label htmlFor="observacoes">Observações</Label>
-                        <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
                       </div>
                   </div>
 
@@ -1147,11 +1082,11 @@ export default function ListagensEliminacaoPage() {
                                       {col.enableSorting ? (
                                         <Button
                                           variant="ghost"
-                                          onClick={() => handleDialogTableSort(col.id.toString())}
+                                          onClick={() => handleDialogTableSort(col.id)}
                                           className="px-1 py-0 h-auto -ml-1 text-xs"
                                         >
                                           {col.header}
-                                          {renderDialogTableSortIcon(col.id.toString())}
+                                          {renderDialogTableSortIcon(col.id)}
                                         </Button>
                                       ) : (
                                         col.header
@@ -1306,7 +1241,7 @@ export default function ListagensEliminacaoPage() {
                 <TableRow>
                   <TableHead className="w-12 py-2 px-3">
                     <Checkbox
-                      checked={mainHeaderCheckboxState}
+                      checked={headerCheckboxState}
                       onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedListagens.map(item => item.id) : [])}
                       aria-label="Selecionar todas as linhas"
                     />

@@ -112,15 +112,12 @@ export interface ClasseJudicial {
 export interface ListagemEliminacao {
   id: string;
   numeroListagem: string; // 3.1
-  tipoListagem: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
-  unidadeSetor?: string;
   documentoIds: string[]; // 3.2 (parsed from comma-separated string)
   numeroEditalCiencia?: string; // 3.3
   dataPublicacaoEdital?: string; // 3.4 (ISO Date string)
   numeroTermoEliminacao?: string; // 3.5
   dataProducaoListagem: string; // Existing field: Date of listing production
   dataProducaoTermoEliminacao?: string; // 3.6 (ISO Date string) - Date of Termo production
-  observacoes?: string; // New field for observations
 }
 
 export interface Solicitacao {
@@ -231,13 +228,4 @@ export interface AuditLog {
   userName: string;
   action: string; // e.g., "CREATE_DOCUMENT", "UPDATE_USER"
   details: Record<string, any>; // e.g., { documentId: 'DOC123', fieldsChanged: ['status'] }
-}
-
-export interface AprovacaoConta {
-  id: string;
-  anoExercicio: number;
-  dataAprovacaoTcu?: string; // ISO Date
-  dataPublicacaoDou?: string; // ISO Date
-  secaoDou?: string;
-  paginaDou?: string;
 }
