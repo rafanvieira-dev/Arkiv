@@ -154,6 +154,15 @@ export default function UsuariosPage() {
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedUsers.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedUsers.length, selectedRowIds.length]);
+
 
   React.useEffect(() => {
     setColumnVisibility(
@@ -527,9 +536,6 @@ export default function UsuariosPage() {
     setFilters(initialFiltersState);
   };
   
-  const numDisplayed = displayedUsers.length;
-  const numSelected = selectedRowIds.length;
-
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
   }, [filters]);
@@ -777,9 +783,9 @@ export default function UsuariosPage() {
                 <TableRow>
                     <TableHead className="w-12 py-2 px-3">
                         <Checkbox
-                        checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
-                        onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedUsers.map(u => u.id) : [])}
-                        aria-label="Selecionar todas as linhas"
+                            checked={headerCheckboxState}
+                            onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedUsers.map(u => u.id) : [])}
+                            aria-label="Selecionar todas as linhas"
                         />
                     </TableHead>
                     {ALL_COLUMNS_CONFIG.map((column) =>
@@ -886,3 +892,5 @@ export default function UsuariosPage() {
     </TooltipProvider>
   );
 }
+
+    

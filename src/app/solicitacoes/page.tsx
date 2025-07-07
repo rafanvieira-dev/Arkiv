@@ -185,6 +185,15 @@ export default function SolicitacoesPage() {
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
 
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedSolicitacoes.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedSolicitacoes.length, selectedRowIds.length]);
+
 
   const bulkEditableFields = [
     { value: 'tipo', label: 'Tipo', type: 'select', options: ['Empréstimo', 'Desarquivamento'] },
@@ -827,9 +836,7 @@ export default function SolicitacoesPage() {
     };
     reader.readAsText(file);
   };
-
-  const numDisplayed = displayedSolicitacoes.length;
-  const numSelected = selectedRowIds.length;
+  
   const filtersAreActive = React.useMemo(() => Object.values(filters).some(value => !!value), [filters]);
 
   return (
@@ -1217,17 +1224,9 @@ export default function SolicitacoesPage() {
                 <TableRow>
                   <TableHead className="w-12 py-2 px-3">
                     <Checkbox
-                      checked={
-                        numDisplayed > 0 && numSelected === numDisplayed
-                          ? true
-                          : numSelected > 0 ? 'indeterminate' : false
-                      }
+                      checked={headerCheckboxState}
                       onCheckedChange={(value) => {
-                        if (value === true) {
-                          setSelectedRowIds(displayedSolicitacoes.map(item => item.id));
-                        } else {
-                          setSelectedRowIds([]);
-                        }
+                        setSelectedRowIds(value === true ? displayedSolicitacoes.map(item => item.id) : []);
                       }}
                       aria-label="Selecionar todas as linhas"
                     />
@@ -1423,3 +1422,6 @@ export default function SolicitacoesPage() {
 
 
 
+
+
+    

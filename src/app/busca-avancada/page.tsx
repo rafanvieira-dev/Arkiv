@@ -102,6 +102,16 @@ export default function BuscaAvancadaPage() {
   
   const masterPartesMap = React.useMemo(() => new Map(masterPartes.map(p => [`${p.nome.toLowerCase()}|${(p.cpfCnpj || "").toLowerCase()}`, p])), [masterPartes]);
 
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedResults.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedResults.length, selectedRowIds.length]);
+
+
   const ALL_COLUMNS_CONFIG: ColumnConfig[] = React.useMemo(() => [
     { 
       id: 'numeroDocumento', 
@@ -347,9 +357,6 @@ export default function BuscaAvancadaPage() {
         }
         return value === undefined || value === null ? 'N/A' : String(value);
     };
-    
-    const numDisplayed = displayedResults.length;
-    const numSelected = selectedRowIds.length;
 
   return (
     <TooltipProvider>
@@ -635,9 +642,9 @@ export default function BuscaAvancadaPage() {
                         <TableRow>
                             <TableHead className="w-12 py-2 px-3">
                                 <Checkbox
-                                checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
-                                onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedResults.map(item => item.id) : [])}
-                                aria-label="Selecionar todas as linhas"
+                                    checked={headerCheckboxState}
+                                    onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedResults.map(item => item.id) : [])}
+                                    aria-label="Selecionar todas as linhas"
                                 />
                             </TableHead>
                             {ALL_COLUMNS_CONFIG.map((column) =>
@@ -698,3 +705,5 @@ export default function BuscaAvancadaPage() {
     </TooltipProvider>
   );
 }
+
+    

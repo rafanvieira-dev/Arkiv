@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -98,6 +99,16 @@ export default function TransferenciasManagementPage() {
   
   const [filters, setFilters] = React.useState(initialFiltersState);
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedTransferencias.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedTransferencias.length, selectedRowIds.length]);
+
 
   const bulkEditableFields = [
     { value: 'status', label: 'Status', type: 'select', options: ['Pendente', 'Aprovada', 'Reprovada'] },
@@ -459,10 +470,6 @@ export default function TransferenciasManagementPage() {
   const clearFilters = () => {
     setFilters(initialFiltersState);
   };
-
-
-  const numDisplayed = displayedTransferencias.length;
-  const numSelected = selectedRowIds.length;
   
   const filtersAreActive = React.useMemo(() => {
     return Object.values(filters).some(value => !!value);
@@ -608,7 +615,7 @@ export default function TransferenciasManagementPage() {
                   <TableRow>
                     <TableHead className="w-12 py-2 px-3">
                       <Checkbox
-                        checked={numDisplayed > 0 && numSelected === numDisplayed ? true : numSelected > 0 ? 'indeterminate' : false}
+                        checked={headerCheckboxState}
                         onCheckedChange={(value) => setSelectedRowIds(value === true ? displayedTransferencias.map(item => item.id) : [])}
                         aria-label="Selecionar todas as linhas"
                       />
@@ -774,3 +781,5 @@ export default function TransferenciasManagementPage() {
     </TooltipProvider>
   );
 }
+
+    
