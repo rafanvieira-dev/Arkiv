@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -250,7 +249,7 @@ export default function LedPrintPage() {
                             <ul className="list-disc pl-5 mt-1 text-xs">
                                 {selectedAprovacoes.map(aprov => (
                                     <li key={aprov.id}>
-                                        Exercício de {aprov.anoExercicio}: Aprovado pelo TCU em {aprov.dataAprovacaoTcu ? <ClientSideDateFormatter isoDateString={aprov.dataAprovacaoTcu} /> : 'N/A'}, publicado no D.O.U em {aprov.dataPublicacaoDou ? <ClientSideDateFormatter isoDateString={aprov.dataPublicacaoDou} /> : 'N/A'}, Seção {aprov.secaoDou || 'N/A'}, pág. {aprov.paginaDou || 'N/A'}.
+                                        Exercício de {aprov.anoExercicio}: Aprovado pelo TCU em {aprov.dataAprovacaoTcu ? <ClientSideDateFormatter isoDateString={aprov.dataAprovacaoTcu} formatString="dd/MM/yyyy" /> : 'N/A'}, publicado no D.O.U em {aprov.dataPublicacaoDou ? <ClientSideDateFormatter isoDateString={aprov.dataPublicacaoDou} formatString="dd/MM/yyyy" /> : 'N/A'}, Seção {aprov.secaoDou || 'N/A'}, pág. {aprov.paginaDou || 'N/A'}.
                                     </li>
                                 ))}
                             </ul>

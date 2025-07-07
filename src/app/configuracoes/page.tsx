@@ -843,8 +843,8 @@ export default function ConfiguracoesPage() {
                             {aprovacoesConta.sort((a,b) => b.anoExercicio - a.anoExercicio).map(aprovacao => (
                                 <TableRow key={aprovacao.id}>
                                     <TableCell className="font-medium">{aprovacao.anoExercicio}</TableCell>
-                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataAprovacaoTcu} placeholderText="-" /></TableCell>
-                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataPublicacaoDou} placeholderText="-" /></TableCell>
+                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataAprovacaoTcu} placeholderText="-" formatString="dd/MM/yyyy" /></TableCell>
+                                    <TableCell><ClientSideDateFormatter isoDateString={aprovacao.dataPublicacaoDou} placeholderText="-" formatString="dd/MM/yyyy" /></TableCell>
                                     <TableCell>{aprovacao.secaoDou && aprovacao.paginaDou ? `Seção ${aprovacao.secaoDou}, pág. ${aprovacao.paginaDou}` : '-'}</TableCell>
                                     <TableCell className="text-right">
                                          <Tooltip>
