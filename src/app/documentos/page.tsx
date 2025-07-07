@@ -2197,6 +2197,13 @@ export default function DocumentosPage() {
 
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
+  
+  const headerCheckboxState = React.useMemo(() => {
+    if (numDisp === 0) return false;
+    if (numSel === numDisp) return true;
+    if (numSel > 0) return 'indeterminate';
+    return false;
+  }, [numDisp, numSel]);
 
   let pageTitle = "Gerenciamento do Acervo";
   let pageDescription = "Cadastre e gerencie as descrições dos documentos do acervo.";
@@ -3051,7 +3058,7 @@ export default function DocumentosPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="filterPrazoCorrente">Prazo Arquivo Corrente</Label>
-                      <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Contém..." />
+                      <Input id="filterPrazoCorrente" name="prazoCorrente" value={filters.prazoCorrente} onChange={handleFilterInputChange} placeholder="Anos ou condição textual" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="filterPrazoIntermediario">Prazo Arquivo Intermediário</Label>
@@ -3122,11 +3129,7 @@ export default function DocumentosPage() {
                       <TableRow>
                         <TableHead className="py-2 px-3 w-12">
                           <Checkbox
-                            checked={
-                              numDisp > 0 && numSel === numDisp
-                                ? true
-                                : numSel > 0 ? 'indeterminate' : false
-                            }
+                            checked={headerCheckboxState}
                             onCheckedChange={(value) => {
                               if (value === true) {
                                 setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
