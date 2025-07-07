@@ -940,7 +940,7 @@ export default function DocumentosPage() {
         return;
     }
 
-    const newMasterPartes: ParteDetalhe[] = [];
+    const newMasterPartesToCreate: ParteDetalhe[] = [];
     const trimmedNome = parteFormState.nome.trim();
     const trimmedCpfCnpj = parteFormState.cpfCnpj?.trim() || "";
     
@@ -948,7 +948,7 @@ export default function DocumentosPage() {
     const existingMasterPart = masterPartes.find(p => p.nome.toLowerCase() === trimmedNome.toLowerCase() && (p.cpfCnpj || "").toLowerCase() === (trimmedCpfCnpj || "").toLowerCase());
 
     if (!existingMasterPart) {
-      newMasterPartes.push({ id: `parte${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj, iniciais: gerarIniciais(trimmedNome) });
+      newMasterPartesToCreate.push({ id: `parte${Date.now()}`, nome: trimmedNome, cpfCnpj: trimmedCpfCnpj, iniciais: gerarIniciais(trimmedNome) });
     }
     
     setFormState(prev => {
@@ -962,8 +962,8 @@ export default function DocumentosPage() {
         return { ...prev, partes: newPartes };
     });
 
-    if (newMasterPartes.length > 0) {
-      setMasterPartes(prev => [...prev, ...newMasterPartes]);
+    if (newMasterPartesToCreate.length > 0) {
+      setMasterPartes(prev => [...prev, ...newMasterPartesToCreate]);
     }
     
     setIsParteDialogOpen(false);
@@ -2126,6 +2126,14 @@ export default function DocumentosPage() {
     return false;
   }, [numDisp, numSel]);
 
+  const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
+    } else {
+      setSelectedRowIds([]);
+    }
+  }, [displayedDocumentos]);
+
   let pageTitle = "Gerenciamento do Acervo";
   let pageDescription = "Cadastre e gerencie as descrições dos documentos do acervo.";
 
@@ -3047,13 +3055,7 @@ export default function DocumentosPage() {
                         <TableHead className="py-2 px-3 w-12">
                           <Checkbox
                             checked={headerCheckboxState}
-                            onCheckedChange={(value) => {
-                              if (value === true) {
-                                setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
-                              } else {
-                                setSelectedRowIds([]);
-                              }
-                            }}
+                            onCheckedChange={handleSelectAllRows}
                             aria-label="Selecionar todas as linhas"
                           />
                         </TableHead>
