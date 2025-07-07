@@ -298,10 +298,6 @@ export default function DocumentosPage() {
   const [excludeMagistrates, setExcludeMagistrates] = React.useState(true);
   const [isPrinting, setIsPrinting] = React.useState(false);
 
-  const [isListagemDialogOpen, setIsListagemDialogOpen] = React.useState(false);
-  const [listagemNumeroInput, setListagemNumeroInput] = React.useState('');
-
-
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
     setDocumentIdToDisplay("(Automático após salvar)");
@@ -2119,81 +2115,6 @@ export default function DocumentosPage() {
     setSelectedRowIds([]);
     setIsAnonymizeDialogOpen(false);
   };
-  
-  const handleIncludeInListagem = () => {
-    if (!listagemNumeroInput.trim()) {
-      toast({ variant: "destructive", title: "Erro", description: "O número da listagem não pode ser vazio." });
-      return;
-    }
-    if (selectedRowIds.length === 0) {
-      toast({ variant: "destructive", title: "Erro", description: "Nenhum documento selecionado." });
-      return;
-    }
-
-    const nonEligibleDocs = documentos
-      .filter(doc => selectedRowIds.includes(doc.id))
-      .filter(doc => {
-        let effectiveDestination = doc.destinacaoFinalDisplay;
-        if (doc.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" || doc.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
-          effectiveDestination = "Guarda Permanente";
-        }
-        return effectiveDestination !== 'Eliminação';
-      });
-
-    if (nonEligibleDocs.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Documentos não elegíveis",
-        description: `Os seguintes documentos não têm destinação para eliminação e não podem ser incluídos: ${nonEligibleDocs.map(d => d.numeroDocumento || d.id).join(', ')}`,
-        duration: 7000,
-      });
-      return;
-    }
-
-    let updatedListagens = [...listagens];
-    const existingListagem = updatedListagens.find(
-      (l) => l.numeroListagem === listagemNumeroInput.trim()
-    );
-
-    if (existingListagem) {
-      const docIdsToAdd = new Set(existingListagem.documentoIds);
-      selectedRowIds.forEach(id => docIdsToAdd.add(id));
-      existingListagem.documentoIds = Array.from(docIdsToAdd);
-    } else {
-      const newListagem: ListagemEliminacao = {
-        id: `LE${Date.now()}`,
-        numeroListagem: listagemNumeroInput.trim(),
-        documentoIds: selectedRowIds,
-        dataProducaoListagem: new Date().toISOString(),
-      };
-      updatedListagens.push(newListagem);
-    }
-    setListagens(updatedListagens);
-
-    const updatedDocs = documentos.map(doc => {
-      if (selectedRowIds.includes(doc.id)) {
-        return { ...doc, numeroListagemEliminacao: listagemNumeroInput.trim() };
-      }
-      return doc;
-    });
-    setDocumentos(updatedDocs);
-
-    logAction('INCLUDE_IN_ELIMINATION_LIST', {
-        count: selectedRowIds.length,
-        documentIds: selectedRowIds,
-        listagemNumero: listagemNumeroInput.trim(),
-    });
-
-    toast({
-      title: "Sucesso!",
-      description: `${selectedRowIds.length} documento(s) foram incluídos na listagem "${listagemNumeroInput.trim()}".`,
-    });
-
-    setIsListagemDialogOpen(false);
-    setListagemNumeroInput('');
-    setSelectedRowIds([]);
-  };
-
 
   const numDisp = displayedDocumentos.length;
   const numSel = selectedRowIds.length;
@@ -2307,10 +2228,6 @@ export default function DocumentosPage() {
                 <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsAnonymizeDialogOpen(true)}>
                     <EyeOff className="mr-2 h-4 w-4" />
                     Anonimizar Partes ({selectedRowIds.length})
-                </Button>
-                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsListagemDialogOpen(true)}>
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    Incluir em Listagem ({selectedRowIds.length})
                 </Button>
                 <Button variant="outline" onClick={() => setIsPrinting(true)} disabled={selectedRowIds.length === 0}>
                     <Printer className="mr-2 h-4 w-4" />
@@ -3529,30 +3446,6 @@ export default function DocumentosPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
-        <Dialog open={isListagemDialogOpen} onOpenChange={setIsListagemDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Incluir Documentos em Listagem de Eliminação</DialogTitle>
-                    <DialogDescription>
-                        Digite o número de uma listagem existente para adicionar os documentos, ou um novo número para criar uma nova listagem.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="listagem-numero-input">Número da Listagem</Label>
-                    <Input
-                        id="listagem-numero-input"
-                        value={listagemNumeroInput}
-                        onChange={(e) => setListagemNumeroInput(e.target.value)}
-                        placeholder="Ex: LE-2024-001"
-                    />
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsListagemDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleIncludeInListagem}>Salvar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
       </div>
     </TooltipProvider>
