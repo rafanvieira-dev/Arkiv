@@ -77,7 +77,8 @@ type SimulatedDocumentForDialog = Pick<
   'anoEliminacaoPrevisto' |
   'destinacaoFinalDisplay' |
   'alteracaoDestinacaoFinal' |
-  'partes'
+  'partes' |
+  'segredoJustica'
 >;
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
@@ -86,6 +87,8 @@ const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
+  tipoListagem: 'Processos Judiciais',
+  unidadeSetor: "",
   documentoIds: [],
   numeroEditalCiencia: "",
   dataPublicacaoEdital: undefined,
@@ -155,6 +158,8 @@ const ALL_COLUMNS_CONFIG_LISTAGENS: ColumnConfigListagens[] = [
       return <Badge variant="secondary">Tramitando</Badge>;
     }
   },
+   { id: 'tipoListagem', header: 'Tipo Listagem', accessorKey: 'tipoListagem', defaultVisible: false, enableSorting: true },
+   { id: 'unidadeSetor', header: 'Unidade/Setor', accessorKey: 'unidadeSetor', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   {
     id: 'dataProducaoListagem',
     header: 'Data Prod. Listagem',
@@ -617,6 +622,8 @@ export default function ListagensEliminacaoPage() {
     const listagemDataToSave: ListagemEliminacao = {
       id: isEditing && editingListagemId ? editingListagemId : `LE${Date.now()}`,
       numeroListagem: formState.numeroListagem || "",
+      tipoListagem: formState.tipoListagem || 'Processos Judiciais',
+      unidadeSetor: formState.unidadeSetor,
       documentoIds: selectedDialogDocIds,
       numeroEditalCiencia: formState.numeroEditalCiencia,
       dataPublicacaoEdital: formState.dataPublicacaoEdital,
@@ -756,7 +763,7 @@ export default function ListagensEliminacaoPage() {
       });
     }
     setDisplayedListagens(itemsToDisplay);
-  }, [filters, sorting, listagens]);
+  }, [filters, sorting, listagens, getSortableValue]);
 
 
   const handleSort = (columnId: string) => {
@@ -834,13 +841,15 @@ export default function ListagensEliminacaoPage() {
       toast({ variant: "destructive", description: "Nenhuma listagem selecionada para exportar." });
       return;
     }
-    const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+    const headers = ['id', 'numeroListagem', 'tipoListagem', 'unidadeSetor', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(item => {
         const rowData = {
             id: item.id,
             numeroListagem: item.numeroListagem,
+            tipoListagem: item.tipoListagem,
+            unidadeSetor: item.unidadeSetor || '',
             dataProducaoListagem: item.dataProducaoListagem || '',
             numeroEditalCiencia: item.numeroEditalCiencia || '',
             dataPublicacaoEdital: item.dataPublicacaoEdital || '',
@@ -875,8 +884,8 @@ export default function ListagensEliminacaoPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
-    const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
+    const headers = ['numeroListagem', 'tipoListagem', 'unidadeSetor', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'observacoes', 'documentoIds'];
+    const exampleRow = `"LE-2025-EXEMPLO","Processos Judiciais","Vara Federal de Exemplo","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","Observação de exemplo","DOC001;DOC002"`;
     const csvContent = `${headers.join(',')}\n${exampleRow}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -922,6 +931,8 @@ export default function ListagensEliminacaoPage() {
                 const newItem: ListagemEliminacao = {
                     id: `LE_IMP_${Date.now()}_${index}`,
                     numeroListagem: newItemData.numeroListagem,
+                    tipoListagem: (newItemData.tipoListagem as ListagemEliminacao['tipoListagem']) || 'Documentos',
+                    unidadeSetor: newItemData.unidadeSetor,
                     dataProducaoListagem: newItemData.dataProducaoListagem || new Date().toISOString(),
                     numeroEditalCiencia: newItemData.numeroEditalCiencia,
                     dataPublicacaoEdital: newItemData.dataPublicacaoEdital,
@@ -1010,10 +1021,25 @@ export default function ListagensEliminacaoPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[calc(80vh-160px)] pr-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 py-4">
                       <div className="space-y-2">
                         <Label htmlFor="numeroListagem">Nº Listagem*</Label>
                         <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoListagem">Tipo de Listagem*</Label>
+                        <Select onValueChange={(value) => setFormState(prev => ({...prev, tipoListagem: value as ListagemEliminacao['tipoListagem']}))} value={formState.tipoListagem}>
+                            <SelectTrigger id="tipoListagem"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Documentos">Documentos</SelectItem>
+                                <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                                <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                            </SelectContent>
+                        </Select>
+                      </div>
+                       <div className="space-y-2">
+                        <Label htmlFor="unidadeSetor">Unidade/Setor*</Label>
+                        <Input id="unidadeSetor" value={formState.unidadeSetor || ""} onChange={handleInputChange} placeholder="Ex: Arquivo Geral" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
@@ -1047,7 +1073,7 @@ export default function ListagensEliminacaoPage() {
                           placeholder="dd/mm/aaaa"
                         />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
+                      <div className="space-y-2 md:col-span-2 lg:col-span-3">
                         <Label htmlFor="observacoes">Observações</Label>
                         <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Observações adicionais sobre a listagem" rows={2} />
                       </div>

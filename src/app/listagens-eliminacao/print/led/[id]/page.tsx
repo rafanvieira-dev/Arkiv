@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -200,7 +201,7 @@ export default function LedPrintPage() {
                         <h2 className="text-center font-bold bg-gray-200 border-b-2 border-black p-1 text-xs">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS Nº {listagem.numeroListagem}</h2>
                         <div className="p-2 space-y-1">
                             <p><strong>ÓRGÃO/ENTIDADE:</strong> Tribunal Regional Federal da 2ª Região - TRF2</p>
-                            <p><strong>UNIDADE/SETOR:</strong> {user.setor}</p>
+                            <p><strong>UNIDADE/SETOR:</strong> {listagem.unidadeSetor || 'Não especificado'}</p>
                         </div>
                     </div>
 

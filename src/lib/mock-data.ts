@@ -20,6 +20,8 @@ export const simulatedListagensData: ListagemEliminacao[] = [
   { 
     id: "LE001", 
     numeroListagem: "LE-2023-001", 
+    tipoListagem: "Processos Judiciais",
+    unidadeSetor: "Arquivo Geral da Justiça Federal",
     documentoIds: ["DOC001", "DOC007"], 
     dataPublicacaoEdital: new Date("2023-10-15").toISOString(),
     dataProducaoListagem: new Date("2023-09-30").toISOString(),
@@ -30,6 +32,8 @@ export const simulatedListagensData: ListagemEliminacao[] = [
   { 
     id: "LE002", 
     numeroListagem: "LE-2024-001", 
+    tipoListagem: "Processos Administrativos",
+    unidadeSetor: "Secretaria de Recursos Humanos",
     documentoIds: ["DOC008"], 
     dataPublicacaoEdital: undefined,
     dataProducaoListagem: new Date("2024-02-10").toISOString()

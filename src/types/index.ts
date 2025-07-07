@@ -112,6 +112,8 @@ export interface ClasseJudicial {
 export interface ListagemEliminacao {
   id: string;
   numeroListagem: string; // 3.1
+  tipoListagem: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
+  unidadeSetor?: string;
   documentoIds: string[]; // 3.2 (parsed from comma-separated string)
   numeroEditalCiencia?: string; // 3.3
   dataPublicacaoEdital?: string; // 3.4 (ISO Date string)
