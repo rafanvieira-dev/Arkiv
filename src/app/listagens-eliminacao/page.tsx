@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -257,11 +258,9 @@ export default function ListagensEliminacaoPage() {
   const headerCheckboxState = React.useMemo(() => {
     const totalEligible = eligibleDocsForSelection.length;
     if (totalEligible === 0) return false;
-
     const selectedEligibleCount = eligibleDocsForSelection.filter(doc => 
         selectedDialogDocIds.includes(doc.id)
     ).length;
-    
     if (selectedEligibleCount === totalEligible) return true;
     if (selectedEligibleCount > 0) return 'indeterminate';
     return false;
@@ -381,26 +380,41 @@ export default function ListagensEliminacaoPage() {
   }, [listagens, simulatedDocuments, isDataLoaded]);
 
   React.useEffect(() => {
-    let filteredDocs = simulatedDocuments.filter(doc => {
-        const isSelected = selectedDialogDocIds.includes(doc.id);
-
-        let passesTextFilters = true;
-        if (dialogTableFilters.anoEliminacaoPrevisto) {
-            if (!doc.anoEliminacaoPrevisto || !doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto)) {
-                passesTextFilters = false;
-            }
+    // 1. Get the base list of docs that match the text/eligibility filters.
+    // This part does NOT depend on selection state.
+    const baseFilteredDocs = simulatedDocuments.filter(doc => {
+      const isEligible = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
+      if (!isEligible) {
+        return false;
+      }
+      
+      if (dialogTableFilters.anoEliminacaoPrevisto) {
+        if (!doc.anoEliminacaoPrevisto || !doc.anoEliminacaoPrevisto.includes(dialogTableFilters.anoEliminacaoPrevisto)) {
+          return false;
         }
-        if (!passesTextFilters && !isSelected) return false; // If not selected and doesn't pass text filters, exclude
-
-        // If selected, ignore status filter, otherwise apply status filter
-        if (isSelected) return true;
-
-        const isEligibleForAdding = doc.status === "Arquivado" || doc.status === "Aguardando prazo para eliminação";
-        return isEligibleForAdding;
+      }
+      return true;
     });
-
+  
+    // 2. Get the full data for any selected docs that might have been filtered out.
+    const baseFilteredDocsIds = new Set(baseFilteredDocs.map(d => d.id));
+    const missingSelectedDocs = selectedDialogDocIds
+      .filter(id => !baseFilteredDocsIds.has(id))
+      .map(id => simulatedDocuments.find(d => d.id === id))
+      .filter((d): d is SimulatedDocumentForDialog => d !== undefined);
+  
+    // 3. Combine the lists, ensuring no duplicates.
+    const combinedDocsMap = new Map<string, SimulatedDocumentForDialog>();
+    // Add selected missing docs first
+    missingSelectedDocs.forEach(doc => combinedDocsMap.set(doc.id, doc));
+    // Then add the filtered docs. The Map will handle deduplication.
+    baseFilteredDocs.forEach(doc => combinedDocsMap.set(doc.id, doc));
+  
+    let finalDocs = Array.from(combinedDocsMap.values());
+  
+    // 4. Sort the final list.
     if (dialogTableSortConfig.length > 0) {
-      filteredDocs.sort((a, b) => {
+      finalDocs.sort((a, b) => {
         for (const sortConf of dialogTableSortConfig) {
           let valA, valB;
           if (sortConf.id === 'codigoClassificacao' || sortConf.id === 'assuntoClassificacao') {
@@ -412,7 +426,7 @@ export default function ListagensEliminacaoPage() {
             valA = (a as any)[sortConf.id];
             valB = (b as any)[sortConf.id];
           }
-
+  
           let comparisonResult = 0;
           if (valA === null || valA === undefined) comparisonResult = 1;
           else if (valB === null || valB === undefined) comparisonResult = -1;
@@ -422,7 +436,8 @@ export default function ListagensEliminacaoPage() {
         return 0;
       });
     }
-    setDocumentsForDialog(filteredDocs);
+  
+    setDocumentsForDialog(finalDocs);
   }, [simulatedDocuments, dialogTableFilters, dialogTableSortConfig, selectedDialogDocIds]);
 
   const handleDialogTableSort = (columnId: keyof SimulatedDocumentForDialog | 'codigoClassificacao' | 'assuntoClassificacao' | string) => {

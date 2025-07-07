@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -134,11 +135,14 @@ export default function PublicSolicitacaoPage() {
   React.useEffect(() => {
     const lowerSearchTerm = dialogDocFilters.searchTerm.toLowerCase();
     
-    let filteredDocs = acervoDocs.filter(doc => {
-      if (selectedDocIdsInDialog.includes(doc.id)) return true;
-      if (!isDocumentSelectable(doc)) return false;
-      if (!lowerSearchTerm) return true;
-
+    // 1. Get base list of docs that are selectable and match filters
+    const baseFilteredDocs = acervoDocs.filter(doc => {
+      if (!isDocumentSelectable(doc)) {
+        return false;
+      }
+      if (!lowerSearchTerm) {
+        return true;
+      }
       return (
         doc.numeroDocumento?.toLowerCase().includes(lowerSearchTerm) ||
         doc.tipoDocumento?.toLowerCase().includes(lowerSearchTerm) ||
@@ -147,8 +151,19 @@ export default function PublicSolicitacaoPage() {
       );
     });
 
+    // 2. Ensure selected docs are always present
+    const baseFilteredDocsIds = new Set(baseFilteredDocs.map(d => d.id));
+    const missingSelectedDocs = selectedDocIdsInDialog
+      .filter(id => !baseFilteredDocsIds.has(id))
+      .map(id => acervoDocs.find(d => d.id === id))
+      .filter((d): d is SimulatedDocumentForSolicitacaoDialog => d !== undefined);
+
+    // 3. Combine and sort
+    let finalDocs = [...missingSelectedDocs, ...baseFilteredDocs];
+    finalDocs = Array.from(new Map(finalDocs.map(item => [item.id, item])).values());
+    
     if (dialogDocSortConfig.length > 0) {
-      filteredDocs.sort((a, b) => {
+      finalDocs.sort((a, b) => {
         for (const sortConf of dialogDocSortConfig) {
           const valA = (a as any)[sortConf.id];
           const valB = (b as any)[sortConf.id];
@@ -158,7 +173,8 @@ export default function PublicSolicitacaoPage() {
         return 0;
       });
     }
-    setDocumentsForDialog(filteredDocs);
+
+    setDocumentsForDialog(finalDocs);
   }, [dialogDocFilters, dialogDocSortConfig, acervoDocs, selectedDocIdsInDialog, isDocumentSelectable]);
 
   const resetForm = () => {
@@ -391,5 +407,6 @@ export default function PublicSolicitacaoPage() {
     
 
     
+
 
 
