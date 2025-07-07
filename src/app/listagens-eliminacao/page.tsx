@@ -93,6 +93,8 @@ const initialFormState: Partial<ListagemEliminacao> = {
   dataProducaoListagem: new Date().toISOString(),
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
+  tipoListagem: 'Documentos',
+  unidadeSetor: '',
 };
 
 const initialFiltersState = {
@@ -259,24 +261,28 @@ export default function ListagensEliminacaoPage() {
     if (selectedEligibleCount > 0) return 'indeterminate';
     return false;
   }, [eligibleDocsForSelection, selectedDialogDocIds]);
+  
+  const handleDialogHeaderCheckboxChange = React.useCallback((value: boolean | 'indeterminate') => {
+    const eligibleDocIds = eligibleDocsForSelection.map(d => d.id);
+    if (value === true) {
+        setSelectedDialogDocIds(prev => [...new Set([...prev, ...eligibleDocIds])]);
+    } else {
+        const eligibleIdsSet = new Set(eligibleDocIds);
+        setSelectedDialogDocIds(prev => prev.filter(id => !eligibleIdsSet.has(id)));
+    }
+  }, [eligibleDocsForSelection]);
+  
+  const handleDialogRowCheckboxChange = React.useCallback((docId: string, checked: boolean) => {
+    setSelectedDialogDocIds(prev => checked ? [...prev, docId] : prev.filter(id => id !== docId));
+  }, []);
 
-  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = [
+  const DIALOG_DOCUMENT_COLUMNS: DialogDocumentColumn[] = React.useMemo(() => [
     {
       id: 'selection',
       header: (
         <Checkbox
           checked={headerCheckboxState}
-          onCheckedChange={(value) => {
-             const eligibleDocIds = eligibleDocsForSelection.map(d => d.id);
-            if (value === true) {
-                // Add only eligible docs to the selection
-                setSelectedDialogDocIds(prev => [...new Set([...prev, ...eligibleDocIds])]);
-            } else {
-                // Remove only eligible docs from the selection
-                const eligibleIdsSet = new Set(eligibleDocIds);
-                setSelectedDialogDocIds(prev => prev.filter(id => !eligibleIdsSet.has(id)));
-            }
-          }}
+          onCheckedChange={handleDialogHeaderCheckboxChange}
           aria-label="Selecionar todos os documentos elegíveis"
           disabled={eligibleDocsForSelection.length === 0}
         />
@@ -288,9 +294,7 @@ export default function ListagensEliminacaoPage() {
         return (
           <Checkbox
             checked={selectedDialogDocIds.includes(doc.id)}
-            onCheckedChange={(value) => {
-              setSelectedDialogDocIds(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
-            }}
+            onCheckedChange={(value) => handleDialogRowCheckboxChange(doc.id, !!value)}
             aria-label={`Selecionar documento ${doc.numeroDocumento}`}
             disabled={!isSelectable}
           />
@@ -331,7 +335,7 @@ export default function ListagensEliminacaoPage() {
         <Badge
           variant={
             value === 'Arquivado' ? 'secondary' :
-            value === 'Aguardando prazo para eliminação' ? 'default' : // Default often blue or primary
+            value === 'Aguardando prazo para eliminação' ? 'default' :
             value === 'Eliminado' ? 'destructive' :
             'outline'
           }
@@ -344,7 +348,8 @@ export default function ListagensEliminacaoPage() {
         </Badge>
       )
     },
-  ];
+  ], [headerCheckboxState, handleDialogHeaderCheckboxChange, handleDialogRowCheckboxChange, eligibleDocsForSelection.length, selectedDialogDocIds]);
+
 
   React.useEffect(() => {
     try {
@@ -460,7 +465,6 @@ export default function ListagensEliminacaoPage() {
       });
       setSelectedDialogDocIds(listagem.documentoIds || []);
 
-      // Process status change due to dataPublicacaoEdital
       if (listagem.dataPublicacaoEdital && listagem.documentoIds && listagem.documentoIds.length > 0) {
         processedDocsInit = processedDocsInit.map(doc => {
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Arquivado") {
@@ -469,7 +473,6 @@ export default function ListagensEliminacaoPage() {
           return doc;
         });
       }
-      // Process status change due to dataProducaoTermoEliminacao, based on potentially already updated status
       if (listagem.dataProducaoTermoEliminacao && listagem.documentoIds && listagem.documentoIds.length > 0) {
          processedDocsInit = processedDocsInit.map(doc => {
           if (listagem.documentoIds.includes(doc.id) && doc.status === "Aguardando prazo para eliminação") {
@@ -578,10 +581,6 @@ export default function ListagensEliminacaoPage() {
       let isInvalid = false;
       let reasons: string[] = [];
 
-      const isProcessedByEdital = formState.dataPublicacaoEdital && docData.status === "Aguardando prazo para eliminação";
-      const isProcessedByTermo = formState.dataProducaoTermoEliminacao && docData.status === "Eliminado";
-      const isStillArchived = docData.status === "Arquivado";
-
       let effectiveDestinacao = docData.destinacaoFinalDisplay;
       if (docData.alteracaoDestinacaoFinal === "Guarda Permanente – Guarda Amostral" ||
           docData.alteracaoDestinacaoFinal === "Guarda Permanente – Decisão da CPAD") {
@@ -602,7 +601,7 @@ export default function ListagensEliminacaoPage() {
       toast({
         variant: "destructive",
         title: "Erro de Validação de Documentos",
-        description: `Os seguintes documentos não podem ser incluídos ou mantidos na listagem: ${errorMessages}. Verifique status e destinação.`,
+        description: `Os seguintes documentos não podem ser incluídos ou mantidos na listagem: ${errorMessages}. Verifique a destinação final.`,
         duration: 8000,
       });
       return;
@@ -627,6 +626,8 @@ export default function ListagensEliminacaoPage() {
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
       dataProducaoTermoEliminacao: formState.dataProducaoTermoEliminacao,
+      tipoListagem: formState.tipoListagem,
+      unidadeSetor: formState.unidadeSetor,
     };
 
     let updatedListagens;
@@ -837,7 +838,7 @@ export default function ListagensEliminacaoPage() {
       toast({ variant: "destructive", description: "Nenhuma listagem selecionada para exportar." });
       return;
     }
-    const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds'];
+    const headers = ['id', 'numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds', 'tipoListagem', 'unidadeSetor'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(item => {
@@ -849,7 +850,9 @@ export default function ListagensEliminacaoPage() {
             dataPublicacaoEdital: item.dataPublicacaoEdital || '',
             numeroTermoEliminacao: item.numeroTermoEliminacao || '',
             dataProducaoTermoEliminacao: item.dataProducaoTermoEliminacao || '',
-            documentoIds: item.documentoIds.join(';')
+            documentoIds: item.documentoIds.join(';'),
+            tipoListagem: item.tipoListagem || 'Documentos',
+            unidadeSetor: item.unidadeSetor || '',
         };
         const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
@@ -877,8 +880,8 @@ export default function ListagensEliminacaoPage() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds'];
-    const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","DOC001;DOC002"`;
+    const headers = ['numeroListagem', 'dataProducaoListagem', 'numeroEditalCiencia', 'dataPublicacaoEdital', 'numeroTermoEliminacao', 'dataProducaoTermoEliminacao', 'documentoIds', 'tipoListagem', 'unidadeSetor'];
+    const exampleRow = `"LE-2025-EXEMPLO","${new Date().toISOString()}","EDITAL-EXEMPLO/2025","","","","DOC001;DOC002","Processos Judiciais","Vara Federal X"`;
     const csvContent = `${headers.join(',')}\n${exampleRow}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -930,6 +933,8 @@ export default function ListagensEliminacaoPage() {
                     numeroTermoEliminacao: newItemData.numeroTermoEliminacao,
                     dataProducaoTermoEliminacao: newItemData.dataProducaoTermoEliminacao,
                     documentoIds: docIds,
+                    tipoListagem: (newItemData.tipoListagem as ListagemEliminacao['tipoListagem']) || 'Documentos',
+                    unidadeSetor: newItemData.unidadeSetor,
                 };
                 newItemsFromCsv.push(newItem);
             });
@@ -1009,6 +1014,21 @@ export default function ListagensEliminacaoPage() {
                       <div className="space-y-2">
                         <Label htmlFor="numeroListagem">Nº Listagem*</Label>
                         <Input id="numeroListagem" value={formState.numeroListagem || ""} onChange={handleInputChange} placeholder="Ex: LE-2024-001" />
+                      </div>
+                       <div className="space-y-2">
+                        <Label htmlFor="tipoListagem">Tipo de Listagem*</Label>
+                        <Select onValueChange={(value) => setFormState(prev => ({...prev, tipoListagem: value as ListagemEliminacao['tipoListagem']}))} value={formState.tipoListagem}>
+                          <SelectTrigger id="tipoListagem"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Documentos">Documentos</SelectItem>
+                            <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                            <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
+                        <Input id="unidadeSetor" value={formState.unidadeSetor || ""} onChange={handleInputChange} placeholder="Ex: Vara Federal de Niterói" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="dataProducaoListagem">Data Prod. Listagem*</Label>
@@ -1437,5 +1457,8 @@ export default function ListagensEliminacaoPage() {
 
 
     
+
+    
+
 
     
