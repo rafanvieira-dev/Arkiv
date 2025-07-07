@@ -25,14 +25,20 @@ export const simulatedListagensData: ListagemEliminacao[] = [
     dataProducaoListagem: new Date("2023-09-30").toISOString(),
     numeroEditalCiencia: "EDITAL-005/2023",
     numeroTermoEliminacao: "TE-2023-001",
-    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString()
+    dataProducaoTermoEliminacao: new Date("2023-11-01").toISOString(),
+    tipoListagem: 'Processos Judiciais',
+    unidadeSetor: '1ª Vara Federal',
+    observacoes: 'Eliminação de processos cíveis antigos.'
   },
   { 
     id: "LE002", 
     numeroListagem: "LE-2024-001", 
     documentoIds: ["DOC008"], 
     dataPublicacaoEdital: undefined,
-    dataProducaoListagem: new Date("2024-02-10").toISOString()
+    dataProducaoListagem: new Date("2024-02-10").toISOString(),
+    tipoListagem: 'Documentos',
+    unidadeSetor: 'Arquivo Central',
+    observacoes: 'Listagem para documentos diversos.'
   },
 ];
 
@@ -505,3 +511,4 @@ export const initialPartes: ParteDetalhe[] = [
   { id: 'P003', nome: 'João da Silva', iniciais: 'JS' },
   { id: 'P004', nome: 'Fazenda Nacional', cpfCnpj: '00.394.460/0001-41', iniciais: 'FN' },
 ];
+

@@ -111,13 +111,16 @@ export interface ClasseJudicial {
 
 export interface ListagemEliminacao {
   id: string;
-  numeroListagem: string; // 3.1
-  documentoIds: string[]; // 3.2 (parsed from comma-separated string)
-  numeroEditalCiencia?: string; // 3.3
-  dataPublicacaoEdital?: string; // 3.4 (ISO Date string)
-  numeroTermoEliminacao?: string; // 3.5
-  dataProducaoListagem: string; // Existing field: Date of listing production
-  dataProducaoTermoEliminacao?: string; // 3.6 (ISO Date string) - Date of Termo production
+  numeroListagem: string; 
+  documentoIds: string[]; 
+  numeroEditalCiencia?: string; 
+  dataPublicacaoEdital?: string; 
+  numeroTermoEliminacao?: string; 
+  dataProducaoListagem: string; 
+  dataProducaoTermoEliminacao?: string;
+  tipoListagem?: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
+  unidadeSetor?: string;
+  observacoes?: string;
 }
 
 export interface Solicitacao {
@@ -229,3 +232,4 @@ export interface AuditLog {
   action: string; // e.g., "CREATE_DOCUMENT", "UPDATE_USER"
   details: Record<string, any>; // e.g., { documentId: 'DOC123', fieldsChanged: ['status'] }
 }
+

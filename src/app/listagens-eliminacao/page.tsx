@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useUserSession } from "@/hooks/use-user-session";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
@@ -188,6 +189,11 @@ export default function ListagensEliminacaoPage() {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
   };
 
+  const handleSelectChange = (id: keyof ListagemEliminacao) => (value: string) => {
+    setFormState(prev => ({ ...prev, [id]: value }));
+  };
+
+
   const handleSaveChanges = () => {
     if (!formState.numeroListagem) {
       toast({ variant: "destructive", title: "Erro", description: "O número da listagem é obrigatório." });
@@ -251,6 +257,8 @@ export default function ListagensEliminacaoPage() {
                 <TableRow>
                   <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('numeroListagem')}>Nº Listagem {renderSortIcon('numeroListagem')}</Button></TableHead>
                   <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('status')}>Status {renderSortIcon('status')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('tipoListagem')}>Tipo {renderSortIcon('tipoListagem')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('unidadeSetor')}>Unidade/Setor {renderSortIcon('unidadeSetor')}</Button></TableHead>
                   <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('dataProducaoListagem')}>Data Produção {renderSortIcon('dataProducaoListagem')}</Button></TableHead>
                   <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('qtdDocumentos')}>Qtd. Docs {renderSortIcon('qtdDocumentos')}</Button></TableHead>
                   <TableHead><Button variant="ghost" className="px-1" onClick={() => handleSort('dataPublicacaoEdital')}>Data Pub. Edital {renderSortIcon('dataPublicacaoEdital')}</Button></TableHead>
@@ -266,6 +274,8 @@ export default function ListagensEliminacaoPage() {
                       </Link>
                     </TableCell>
                     <TableCell><Badge variant={ getStatus(item) === 'Efetivada' ? 'destructive' : getStatus(item) === 'Edital Publicado' ? 'default' : 'secondary'}>{getStatus(item)}</Badge></TableCell>
+                    <TableCell>{item.tipoListagem || 'N/A'}</TableCell>
+                    <TableCell>{item.unidadeSetor || 'N/A'}</TableCell>
                     <TableCell><ClientSideDateFormatter isoDateString={item.dataProducaoListagem} /></TableCell>
                     <TableCell>{item.documentoIds?.length || 0}</TableCell>
                     <TableCell><ClientSideDateFormatter isoDateString={item.dataPublicacaoEdital} /></TableCell>
@@ -310,6 +320,23 @@ export default function ListagensEliminacaoPage() {
               <Label htmlFor="numeroListagem">Nº Listagem*</Label>
               <Input id="numeroListagem" value={formState.numeroListagem || ''} onChange={handleFormInputChange} />
             </div>
+             <div className="space-y-2">
+              <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
+              <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
+                <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
+                    <SelectTrigger id="tipoListagem">
+                    <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Documentos">Documentos</SelectItem>
+                        <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                        <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="dataProducaoListagem">Data Produção*</Label>
               <DateInputPicker value={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined} onChange={(date) => handleDateChange('dataProducaoListagem')(date)} />
@@ -344,3 +371,4 @@ export default function ListagensEliminacaoPage() {
     </div>
   );
 }
+
