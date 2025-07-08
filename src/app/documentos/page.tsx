@@ -68,6 +68,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { AUDIT_LOG_STORAGE_KEY, placeholderDocumentos, simulatedListagensData, placeholderSolicitacoesInitial, initialClassificacoes, initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialCaixas, initialPartes, initialClassesJudiciais } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
@@ -295,6 +296,17 @@ export default function DocumentosPage() {
   const [isAnonymizeDialogOpen, setIsAnonymizeDialogOpen] = React.useState(false);
   const [excludeMagistrates, setExcludeMagistrates] = React.useState(true);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  
+  const [isAddToListagemOpen, setIsAddToListagemOpen] = React.useState(false);
+  const [addToListagemMode, setAddToListagemMode] = React.useState<'new' | 'existing'>('new');
+  const [newListagemData, setNewListagemData] = React.useState({
+    numeroListagem: '',
+    tipoListagem: 'Documentos' as ListagemEliminacao['tipoListagem'],
+    unidadeSetor: '',
+    observacoes: '',
+  });
+  const [selectedExistingListagem, setSelectedExistingListagem] = React.useState('');
+
 
   const resetForm = React.useCallback(() => {
     setFormState(initialFormState);
@@ -1979,6 +1991,72 @@ export default function DocumentosPage() {
   ];
 
   const selectedBulkField = bulkEditableFields.find(f => f.value === bulkEditField);
+  
+  const availableListagens = React.useMemo(() => {
+    return listagens.filter(l => !l.dataProducaoTermoEliminacao);
+  }, [listagens]);
+  
+  const handleConfirmAddToListagem = () => {
+    if (addToListagemMode === 'new') {
+        const { numeroListagem, tipoListagem, unidadeSetor, observacoes } = newListagemData;
+        if (!numeroListagem.trim()) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'O número da listagem é obrigatório.' });
+            return;
+        }
+        if (listagens.some(l => l.numeroListagem === numeroListagem.trim())) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Uma listagem com este número já existe.' });
+            return;
+        }
+
+        const newList: ListagemEliminacao = {
+            id: `LE${Date.now()}`,
+            numeroListagem: numeroListagem.trim(),
+            documentoIds: selectedRowIds,
+            tipoListagem,
+            unidadeSetor,
+            observacoes,
+            dataProducaoListagem: new Date().toISOString(),
+        };
+
+        setListagens(prev => [...prev, newList]);
+        setDocumentos(prevDocs => 
+            prevDocs.map(doc => 
+                selectedRowIds.includes(doc.id) ? { ...doc, numeroListagemEliminacao: newList.numeroListagem } : doc
+            )
+        );
+        logAction('ADD_TO_NEW_ELIMINATION_LIST', { listagemId: newList.id, count: selectedRowIds.length, documentIds: selectedRowIds });
+        toast({ title: 'Sucesso', description: `${selectedRowIds.length} documento(s) adicionado(s) à nova listagem "${newList.numeroListagem}".` });
+
+    } else { // Existing list
+        if (!selectedExistingListagem) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Selecione uma listagem existente.' });
+            return;
+        }
+        const listToUpdate = listagens.find(l => l.id === selectedExistingListagem);
+        if (!listToUpdate) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'A listagem selecionada não foi encontrada.' });
+            return;
+        }
+        
+        const updatedDocIds = Array.from(new Set([...listToUpdate.documentoIds, ...selectedRowIds]));
+        const updatedList = { ...listToUpdate, documentoIds: updatedDocIds };
+        
+        setListagens(prev => prev.map(l => l.id === selectedExistingListagem ? updatedList : l));
+        setDocumentos(prevDocs => 
+            prevDocs.map(doc => 
+                selectedRowIds.includes(doc.id) ? { ...doc, numeroListagemEliminacao: updatedList.numeroListagem } : doc
+            )
+        );
+        logAction('ADD_TO_EXISTING_ELIMINATION_LIST', { listagemId: updatedList.id, count: selectedRowIds.length, documentIds: selectedRowIds });
+        toast({ title: 'Sucesso', description: `${selectedRowIds.length} documento(s) adicionado(s) à listagem "${updatedList.numeroListagem}".` });
+    }
+
+    setIsAddToListagemOpen(false);
+    setSelectedRowIds([]);
+    setNewListagemData({ numeroListagem: '', tipoListagem: 'Documentos', unidadeSetor: '', observacoes: '' });
+    setSelectedExistingListagem('');
+  };
+
 
   const handleBulkUpdate = () => {
     if (!bulkEditField || (typeof bulkEditValue !== 'boolean' && !bulkEditValue)) {
@@ -2224,6 +2302,10 @@ export default function DocumentosPage() {
                     <PenSquare className="mr-2 h-4 w-4" />
                     Alterar em Bloco ({selectedRowIds.length})
                   </Button>
+                <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsAddToListagemOpen(true)}>
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    Adicionar à Listagem ({selectedRowIds.length})
+                </Button>
                 <Button variant="outline" disabled={selectedRowIds.length === 0} onClick={() => setIsAnonymizeDialogOpen(true)}>
                     <EyeOff className="mr-2 h-4 w-4" />
                     Anonimizar Partes ({selectedRowIds.length})
@@ -3131,6 +3213,7 @@ export default function DocumentosPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedDocumentos.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">
@@ -3331,6 +3414,71 @@ export default function DocumentosPage() {
             </DialogContent>
         </Dialog>
         
+        <Dialog open={isAddToListagemOpen} onOpenChange={setIsAddToListagemOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Adicionar Documentos à Listagem de Eliminação</DialogTitle>
+                    <DialogDescription>
+                       Selecione criar uma nova listagem ou adicionar a uma existente. {selectedRowIds.length} documento(s) selecionado(s).
+                    </DialogDescription>
+                </DialogHeader>
+                <Tabs defaultValue="new" onValueChange={(value) => setAddToListagemMode(value as 'new' | 'existing')}>
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="new">Nova Listagem</TabsTrigger>
+                        <TabsTrigger value="existing">Listagem Existente</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="new" className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="newListagemNumero">Número da Listagem*</Label>
+                            <Input id="newListagemNumero" value={newListagemData.numeroListagem} onChange={e => setNewListagemData(p => ({ ...p, numeroListagem: e.target.value }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="newListagemTipo">Tipo de Listagem*</Label>
+                            <Select value={newListagemData.tipoListagem} onValueChange={(value) => setNewListagemData(p => ({ ...p, tipoListagem: value as ListagemEliminacao['tipoListagem'] }))}>
+                                <SelectTrigger id="newListagemTipo"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Documentos">Documentos</SelectItem>
+                                    <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                                    <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="newListagemUnidade">Unidade/Setor</Label>
+                            <Input id="newListagemUnidade" value={newListagemData.unidadeSetor} onChange={e => setNewListagemData(p => ({ ...p, unidadeSetor: e.target.value }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="newListagemObs">Observações</Label>
+                            <Textarea id="newListagemObs" value={newListagemData.observacoes} onChange={e => setNewListagemData(p => ({ ...p, observacoes: e.target.value }))} />
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="existing" className="pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="existingListagemSelect">Selecione a Listagem</Label>
+                             <Select value={selectedExistingListagem} onValueChange={setSelectedExistingListagem}>
+                                <SelectTrigger id="existingListagemSelect">
+                                    <SelectValue placeholder="Selecione uma listagem..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableListagens.length > 0 ? availableListagens.map(l => (
+                                        <SelectItem key={l.id} value={l.id}>
+                                            {l.numeroListagem}
+                                        </SelectItem>
+                                    )) : (
+                                        <div className="p-4 text-sm text-center text-muted-foreground">Nenhuma listagem aberta.</div>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddToListagemOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleConfirmAddToListagem}>Confirmar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
         <Dialog open={isBulkEditOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
             setBulkEditField('');
@@ -3445,4 +3593,5 @@ export default function DocumentosPage() {
 }
 
     
+
 
