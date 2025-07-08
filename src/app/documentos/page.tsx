@@ -2110,15 +2110,6 @@ export default function DocumentosPage() {
     setIsAnonymizeDialogOpen(false);
   };
 
-  const headerCheckboxState = React.useMemo(() => {
-    const numDisp = displayedDocumentos.length;
-    const numSel = selectedRowIds.length;
-    if (numDisp === 0) return false;
-    if (numSel === numDisp) return true;
-    if (numSel > 0) return 'indeterminate';
-    return false;
-  }, [displayedDocumentos.length, selectedRowIds.length]);
-
   const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
     if (checked === true) {
       setSelectedRowIds(displayedDocumentos.map(doc => doc.id));
@@ -2149,6 +2140,14 @@ export default function DocumentosPage() {
 
   const columnsToPrint = React.useMemo(() => ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]), [ALL_COLUMNS_CONFIG, columnVisibility]);
   const dataToPrint = React.useMemo(() => documentos.filter(doc => selectedRowIds.includes(doc.id)), [documentos, selectedRowIds]);
+  const headerCheckboxState = React.useMemo(() => {
+    const numDisp = displayedDocumentos.length;
+    const numSel = selectedRowIds.length;
+    if (numDisp === 0) return false;
+    if (numSel === numDisp) return true;
+    if (numSel > 0) return 'indeterminate';
+    return false;
+  }, [displayedDocumentos.length, selectedRowIds.length]);
 
   const renderLogDetails = (log: AuditLog) => {
     const { action, details } = log;
@@ -3132,7 +3131,6 @@ export default function DocumentosPage() {
                       ))}
                     </TableBody>
                   </Table>
-                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {displayedDocumentos.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">
@@ -3447,3 +3445,4 @@ export default function DocumentosPage() {
 }
 
     
+
