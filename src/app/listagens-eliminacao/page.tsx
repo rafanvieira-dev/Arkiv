@@ -69,6 +69,7 @@ const initialFormState: Partial<ListagemEliminacao> = {
   unidadeSetor: '',
   observacoes: "",
   contasAprovadas: [],
+  memoriaReuniao: "",
 };
 
 type ColumnConfig = {
@@ -139,6 +140,7 @@ export default function ListagensEliminacaoPage() {
     { id: 'numeroTermoEliminacao', header: 'Nº Termo', accessorKey: 'numeroTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataProducaoTermoEliminacao', header: 'Data Prod. Termo', accessorKey: 'dataProducaoTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => value || 'N/A' },
+    { id: 'memoriaReuniao', header: 'Memória de Reunião', accessorKey: 'memoriaReuniao', defaultVisible: false, enableSorting: false, cellFormatter: (value) => value || 'N/A' },
   ], [getStatus]);
 
   React.useEffect(() => {
@@ -296,6 +298,7 @@ export default function ListagensEliminacaoPage() {
       numeroListagem: formState.numeroListagem,
       documentoIds: isEditing ? (formState.documentoIds || []) : [], // Preserve IDs on edit, new is empty
       numeroEditalCiencia: formState.numeroEditalCiencia,
+      memoriaReuniao: formState.memoriaReuniao,
       dataPublicacaoEdital: formState.dataPublicacaoEdital,
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
@@ -360,8 +363,11 @@ export default function ListagensEliminacaoPage() {
             }}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
             </Button>
-            <Button disabled>Gerar Lista de Docs</Button>
-            <Button disabled>Gerar Edital</Button>
+            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
+                if (selectedRowIds.length === 1) {
+                    router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
+                }
+            }}>Gerar Edital</Button>
             <Button disabled>Gerar Termo</Button>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -513,7 +519,7 @@ export default function ListagensEliminacaoPage() {
                 <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
                 <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
               </div>
-              <div className="md:col-span-2 space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
                   <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
                       <SelectTrigger id="tipoListagem">
@@ -533,6 +539,10 @@ export default function ListagensEliminacaoPage() {
               <div className="space-y-2">
                 <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
                 <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="memoriaReuniao">Nº Memória de Reunião</Label>
+                <Input id="memoriaReuniao" value={formState.memoriaReuniao || ''} onChange={handleFormInputChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>

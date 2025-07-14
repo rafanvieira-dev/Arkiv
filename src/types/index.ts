@@ -120,6 +120,7 @@ export interface ListagemEliminacao {
   numeroListagem: string; 
   documentoIds: string[]; 
   numeroEditalCiencia?: string; 
+  memoriaReuniao?: string;
   dataPublicacaoEdital?: string; 
   numeroTermoEliminacao?: string; 
   dataProducaoListagem: string; 
