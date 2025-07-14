@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ListagemEliminacao } from "@/types";
-import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square } from "lucide-react";
+import type { ListagemEliminacao, AprovacaoContas } from "@/types";
+import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   Dialog,
@@ -67,6 +67,7 @@ const initialFormState: Partial<ListagemEliminacao> = {
   tipoListagem: 'Documentos',
   unidadeSetor: '',
   observacoes: "",
+  contasAprovadas: [],
 };
 
 type ColumnConfig = {
@@ -223,7 +224,7 @@ export default function ListagensEliminacaoPage() {
 
 
   const resetFormAndDialogState = () => {
-    setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString() });
+    setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString(), contasAprovadas: [] });
     setIsEditing(false);
     setEditingListagemId(null);
   };
@@ -236,6 +237,7 @@ export default function ListagensEliminacaoPage() {
         ...initialFormState,
         ...listagem,
         dataProducaoListagem: listagem.dataProducaoListagem || new Date().toISOString(),
+        contasAprovadas: listagem.contasAprovadas || [],
       });
     } else {
       resetFormAndDialogState();
@@ -254,6 +256,30 @@ export default function ListagensEliminacaoPage() {
 
   const handleSelectChange = (id: keyof ListagemEliminacao) => (value: string) => {
     setFormState(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleContasChange = (index: number, field: keyof AprovacaoContas, value: string | Date | undefined) => {
+    const newContas = [...(formState.contasAprovadas || [])];
+    if (field === 'dataAprovacao' && value instanceof Date) {
+        newContas[index] = { ...newContas[index], [field]: value.toISOString() };
+    } else if (typeof value === 'string') {
+        newContas[index] = { ...newContas[index], [field]: value };
+    }
+    setFormState(prev => ({ ...prev, contasAprovadas: newContas }));
+  };
+
+  const addContaAprovada = () => {
+    setFormState(prev => ({
+        ...prev,
+        contasAprovadas: [...(prev.contasAprovadas || []), { anoContas: '' }]
+    }));
+  };
+
+  const removeContaAprovada = (index: number) => {
+    setFormState(prev => ({
+        ...prev,
+        contasAprovadas: prev.contasAprovadas?.filter((_, i) => i !== index)
+    }));
   };
 
 
@@ -275,6 +301,7 @@ export default function ListagensEliminacaoPage() {
       tipoListagem: formState.tipoListagem || 'Documentos',
       unidadeSetor: formState.unidadeSetor,
       observacoes: formState.observacoes,
+      contasAprovadas: formState.contasAprovadas,
     };
 
     if (isEditing && editingListagemId) {
@@ -323,10 +350,20 @@ export default function ListagensEliminacaoPage() {
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
-        <Button onClick={() => handleOpenDialog()}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nova Listagem
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+            <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} target="_blank">
+                <Button disabled={selectedRowIds.length !== 1}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
+                </Button>
+            </Link>
+            <Button disabled>Gerar Lista de Docs</Button>
+            <Button disabled>Gerar Edital</Button>
+            <Button disabled>Gerar Termo</Button>
+            <Button onClick={() => handleOpenDialog()}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nova Listagem
+            </Button>
+        </div>
       </PageHeader>
 
       <Card>
@@ -455,60 +492,83 @@ export default function ListagensEliminacaoPage() {
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) resetFormAndDialogState(); setIsDialogOpen(isOpen); }}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Listagem' : 'Nova Listagem de Eliminação'}</DialogTitle>
             <DialogDescription>
               Preencha os metadados da listagem. A adição de documentos é feita na tela de Acervo.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="numeroListagem">Nº Listagem*</Label>
-              <Input id="numeroListagem" value={formState.numeroListagem || ''} onChange={handleFormInputChange} />
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="numeroListagem">Nº Listagem*</Label>
+                <Input id="numeroListagem" value={formState.numeroListagem || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
+                <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
+                  <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
+                      <SelectTrigger id="tipoListagem">
+                      <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="Documentos">Documentos</SelectItem>
+                          <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                          <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataProducaoListagem">Data Produção*</Label>
+                <DateInputPicker value={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined} onChange={(date) => handleDateChange('dataProducaoListagem')(date)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
+                <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
+                <DateInputPicker value={formState.dataPublicacaoEdital ? parseISO(formState.dataPublicacaoEdital) : undefined} onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
+                <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
+                <DateInputPicker value={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined} onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)} />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="observacoes">Observações</Label>
+                <Textarea id="observacoes" value={formState.observacoes || ''} onChange={handleFormInputChange} />
+              </div>
+              <div className="md:col-span-2 space-y-4 pt-4">
+                  <Label className="font-semibold">Comprovação de Aprovação de Contas (TCU)</Label>
+                  {formState.contasAprovadas?.map((conta, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 border p-2 rounded-md relative">
+                          <div className="space-y-1">
+                              <Label htmlFor={`anoContas-${index}`} className="text-xs">Ano Contas</Label>
+                              <Input id={`anoContas-${index}`} value={conta.anoContas || ''} onChange={(e) => handleContasChange(index, 'anoContas', e.target.value)} />
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor={`dataAprovacao-${index}`} className="text-xs">Data Aprovação</Label>
+                              <DateInputPicker value={conta.dataAprovacao ? parseISO(conta.dataAprovacao) : undefined} onChange={(date) => handleContasChange(index, 'dataAprovacao', date)} />
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor={`publicacao-${index}`} className="text-xs">Publicação</Label>
+                              <Input id={`publicacao-${index}`} value={conta.publicacao || ''} onChange={(e) => handleContasChange(index, 'publicacao', e.target.value)} />
+                          </div>
+                          <Button variant="ghost" size="icon" className="absolute -top-2 -right-2 h-6 w-6" onClick={() => removeContaAprovada(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addContaAprovada}>Adicionar Aprovação de Contas</Button>
+              </div>
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
-              <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
-            </div>
-            <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
-                <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
-                    <SelectTrigger id="tipoListagem">
-                    <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Documentos">Documentos</SelectItem>
-                        <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
-                        <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dataProducaoListagem">Data Produção*</Label>
-              <DateInputPicker value={formState.dataProducaoListagem ? parseISO(formState.dataProducaoListagem) : undefined} onChange={(date) => handleDateChange('dataProducaoListagem')(date)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="numeroEditalCiencia">Nº Edital Ciência</Label>
-              <Input id="numeroEditalCiencia" value={formState.numeroEditalCiencia || ''} onChange={handleFormInputChange} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dataPublicacaoEdital">Data Pub. Edital</Label>
-              <DateInputPicker value={formState.dataPublicacaoEdital ? parseISO(formState.dataPublicacaoEdital) : undefined} onChange={(date) => handleDateChange('dataPublicacaoEdital')(date)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="numeroTermoEliminacao">Nº Termo Eliminação</Label>
-              <Input id="numeroTermoEliminacao" value={formState.numeroTermoEliminacao || ''} onChange={handleFormInputChange} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
-              <DateInputPicker value={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined} onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)} />
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea id="observacoes" value={formState.observacoes || ''} onChange={handleFormInputChange} />
-            </div>
-          </div>
+          </ScrollArea>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
             <Button onClick={handleSaveChanges}>Salvar</Button>

@@ -109,6 +109,12 @@ export interface ClasseJudicial {
   inativo: boolean; 
 }
 
+export interface AprovacaoContas {
+  anoContas: string;
+  dataAprovacao?: string; // ISO Date String
+  publicacao?: string;
+}
+
 export interface ListagemEliminacao {
   id: string;
   numeroListagem: string; 
@@ -121,6 +127,7 @@ export interface ListagemEliminacao {
   tipoListagem?: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
   unidadeSetor?: string;
   observacoes?: string;
+  contasAprovadas?: AprovacaoContas[];
 }
 
 export interface Solicitacao {
@@ -232,4 +239,3 @@ export interface AuditLog {
   action: string; // e.g., "CREATE_DOCUMENT", "UPDATE_USER"
   details: Record<string, any>; // e.g., { documentId: 'DOC123', fieldsChanged: ['status'] }
 }
-
