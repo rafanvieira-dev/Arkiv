@@ -4,6 +4,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -85,6 +86,7 @@ type SortConfig = { id: keyof ListagemEliminacao | 'status' | 'qtdDocumentos'; d
 export default function ListagensEliminacaoPage() {
   const { toast } = useToast();
   const { permissions } = useUserSession();
+  const router = useRouter();
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
@@ -351,11 +353,13 @@ export default function ListagensEliminacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Link href={selectedRowIds.length === 1 ? `/listagens-eliminacao/print/led/${selectedRowIds[0]}` : '#'} target="_blank">
-                <Button disabled={selectedRowIds.length !== 1}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
-                </Button>
-            </Link>
+            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
+                if (selectedRowIds.length === 1) {
+                    router.push(`/listagens-eliminacao/print/led/${selectedRowIds[0]}`);
+                }
+            }}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
+            </Button>
             <Button disabled>Gerar Lista de Docs</Button>
             <Button disabled>Gerar Edital</Button>
             <Button disabled>Gerar Termo</Button>
@@ -463,7 +467,7 @@ export default function ListagensEliminacaoPage() {
                         </TableCell>
                       ) : null
                     )}
-                    <TableCell className="sticky right-0 bg-card z-10 text-right">
+                    <TableCell className="sticky right-0 bg-card z-10 py-2 px-3 text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(item)}><Edit className="h-4 w-4" /></Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
