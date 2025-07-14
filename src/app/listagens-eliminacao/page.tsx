@@ -65,6 +65,7 @@ const initialFormState: Partial<ListagemEliminacao> = {
   dataProducaoListagem: new Date().toISOString(),
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
+  quantificacaoFisica: "",
   tipoListagem: 'Documentos',
   unidadeSetor: '',
   observacoes: "",
@@ -303,6 +304,7 @@ export default function ListagensEliminacaoPage() {
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
       dataProducaoTermoEliminacao: formState.dataProducaoTermoEliminacao,
+      quantificacaoFisica: formState.quantificacaoFisica,
       tipoListagem: formState.tipoListagem || 'Documentos',
       unidadeSetor: formState.unidadeSetor,
       observacoes: formState.observacoes,
@@ -368,7 +370,16 @@ export default function ListagensEliminacaoPage() {
                     router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
                 }
             }}>Gerar Edital</Button>
-            <Button disabled>Gerar Termo</Button>
+            <Button
+                disabled={selectedRowIds.length !== 1 || !listagens.find(l => l.id === selectedRowIds[0])?.dataProducaoTermoEliminacao}
+                onClick={() => {
+                    if (selectedRowIds.length === 1) {
+                        router.push(`/listagens-eliminacao/print/termo/${selectedRowIds[0]}`);
+                    }
+                }}
+            >
+                Gerar Termo
+            </Button>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Listagem
@@ -555,6 +566,10 @@ export default function ListagensEliminacaoPage() {
               <div className="space-y-2">
                 <Label htmlFor="dataProducaoTermoEliminacao">Data Prod. Termo</Label>
                 <DateInputPicker value={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined} onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quantificacaoFisica">Quantificação Física (ex: 3,06 metros lineares)</Label>
+                <Input id="quantificacaoFisica" value={formState.quantificacaoFisica || ''} onChange={handleFormInputChange} />
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="observacoes">Observações</Label>
