@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -42,7 +41,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useUserSession } from "@/hooks/use-user-session";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -136,7 +135,7 @@ export default function ListagensEliminacaoPage() {
     { id: 'unidadeSetor', header: 'Unidade/Setor', accessorKey: 'unidadeSetor', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataProducaoListagem', header: 'Data Produção', accessorKey: 'dataProducaoListagem', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'qtdDocumentos', header: 'Qtd. Docs', accessorKey: 'qtdDocumentos', defaultVisible: true, enableSorting: true, cellFormatter: (_, item) => item.documentoIds?.length || 0 },
-    { id: 'dataPublicacaoEdital', header: 'Data Pub. Edital', accessorKey: 'dataPublicacaoEdital', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+    { id: 'dataPublicacaoEdital', header: 'Data Pub. Edital', accessorKey: 'dataPublicacaoEdital', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'numeroEditalCiencia', header: 'Nº Edital', accessorKey: 'numeroEditalCiencia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'numeroTermoEliminacao', header: 'Nº Termo', accessorKey: 'numeroTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataProducaoTermoEliminacao', header: 'Data Prod. Termo', accessorKey: 'dataProducaoTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
@@ -151,9 +150,9 @@ export default function ListagensEliminacaoPage() {
   }, [ALL_COLUMNS_CONFIG]);
   
   const displayedListagens = React.useMemo(() => {
-    let itemsToDisplay = listagens.filter(item =>
-      item.numeroListagem.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let itemsToDisplay = listagens
+      .filter(item => getStatus(item) === 'Tramitando')
+      .filter(item => item.numeroListagem.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (sorting.length > 0) {
       itemsToDisplay.sort((a, b) => {
@@ -358,28 +357,6 @@ export default function ListagensEliminacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
-                if (selectedRowIds.length === 1) {
-                    router.push(`/listagens-eliminacao/print/led/${selectedRowIds[0]}`);
-                }
-            }}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
-            </Button>
-            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
-                if (selectedRowIds.length === 1) {
-                    router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
-                }
-            }}>Gerar Edital</Button>
-            <Button
-                disabled={selectedRowIds.length !== 1 || !listagens.find(l => l.id === selectedRowIds[0])?.dataProducaoTermoEliminacao}
-                onClick={() => {
-                    if (selectedRowIds.length === 1) {
-                        router.push(`/listagens-eliminacao/print/termo/${selectedRowIds[0]}`);
-                    }
-                }}
-            >
-                Gerar Termo
-            </Button>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Listagem
@@ -390,7 +367,8 @@ export default function ListagensEliminacaoPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Listagens Cadastradas</CardTitle>
+            <CardTitle>Listagens em Tramitação</CardTitle>
+            <CardDescription>Listagens aguardando publicação do edital.</CardDescription>
             <div className="mt-2">
               <Input 
                 placeholder="Buscar por Nº da Listagem..."
@@ -431,11 +409,11 @@ export default function ListagensEliminacaoPage() {
           </DropdownMenu>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[65vh] w-full">
-            <Table>
+          <ScrollArea className="w-full">
+            <Table className="min-w-full whitespace-nowrap">
               <TableHeader>
                 <TableRow>
-                   <TableHead className="sticky left-0 bg-card z-10 py-2 px-3 w-12">
+                   <TableHead className="sticky left-0 bg-card z-10 w-12 py-2 px-3">
                      <Checkbox
                         checked={headerCheckboxState}
                         onCheckedChange={handleSelectAllRows}
@@ -484,7 +462,7 @@ export default function ListagensEliminacaoPage() {
                         </TableCell>
                       ) : null
                     )}
-                    <TableCell className="sticky right-0 bg-card z-10 py-2 px-3 text-right">
+                    <TableCell className="sticky right-0 bg-card z-10 text-right py-2 px-3">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(item)}><Edit className="h-4 w-4" /></Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -508,7 +486,11 @@ export default function ListagensEliminacaoPage() {
                 ))}
               </TableBody>
             </Table>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
+           {displayedListagens.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">Nenhuma listagem em tramitação encontrada.</p>
+          )}
         </CardContent>
       </Card>
       

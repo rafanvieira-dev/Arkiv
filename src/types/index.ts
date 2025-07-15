@@ -185,7 +185,7 @@ export interface Usuario {
     caixas: boolean;
     classificacao: boolean;
     classesJudiciais: boolean;
-    listagens: boolean;
+    listagens: boolean; // Now also covers Editais and Termos
     solicitacoes: boolean;
     buscaAvancada: boolean;
     transferencias: boolean;
