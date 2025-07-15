@@ -2,10 +2,10 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, ArrowLeft } from "lucide-react";
 import type { ListagemEliminacao, Documento, Classificacao, AprovacaoContas } from "@/types";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 
@@ -26,6 +26,7 @@ function parseDataAbrangenteForYear(dataAbrangente?: string): string | undefined
 
 export default function LedPrintPage() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const { toast } = useToast();
     
     const [listagem, setListagem] = React.useState<ListagemEliminacao | null>(null);
@@ -119,9 +120,15 @@ export default function LedPrintPage() {
 
     return (
         <div className="bg-white text-black p-8 font-serif">
-            <Button variant="outline" className="absolute top-4 right-4 print:hidden" onClick={() => window.print()}>
-                <Printer className="mr-2 h-4 w-4" />Imprimir
-            </Button>
+            <div className="absolute top-4 right-4 print:hidden flex items-center gap-2">
+                <Button variant="outline" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar
+                </Button>
+                <Button variant="outline" onClick={() => window.print()}>
+                    <Printer className="mr-2 h-4 w-4" />Imprimir
+                </Button>
+            </div>
             
             <header className="text-center mb-4">
                 <h1 className="text-lg font-bold">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS - LED TRF2 Nº {listagem.numeroListagem}</h1>
