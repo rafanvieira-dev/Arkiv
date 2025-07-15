@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,8 +24,9 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
 
@@ -42,6 +44,7 @@ type SortConfig = { id: string; direction: 'asc' | 'desc' };
 
 export default function TermosEliminacaoPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   
@@ -182,11 +185,19 @@ export default function TermosEliminacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Termos de Eliminação" description="Visualize o histórico de termos de eliminação de documentos efetivados.">
          <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
-                if (selectedRowIds.length === 1) {
-                    router.push(`/listagens-eliminacao/print/termo/${selectedRowIds[0]}`);
-                }
-            }}>
+            <Button
+                disabled={selectedRowIds.length !== 1}
+                onClick={() => {
+                    const listagem = listagens.find(l => l.id === selectedRowIds[0]);
+                    if (listagem && !listagem.dataProducaoTermoEliminacao) {
+                        toast({variant: 'destructive', title: "Ação não permitida", description: "É necessário preencher a 'Data Prod. Termo' na listagem para gerar o Termo de Eliminação."});
+                        return;
+                    }
+                    if (selectedRowIds.length === 1) {
+                        router.push(`/listagens-eliminacao/print/termo/${selectedRowIds[0]}`);
+                    }
+                }}
+            >
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar Termo
             </Button>
         </div>

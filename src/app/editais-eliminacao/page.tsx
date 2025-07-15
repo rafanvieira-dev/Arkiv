@@ -201,21 +201,6 @@ export default function EditaisEliminacaoPage() {
                     router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
                 }
             }}>Gerar Edital</Button>
-            <Button
-                disabled={selectedRowIds.length !== 1}
-                onClick={() => {
-                    const listagem = listagens.find(l => l.id === selectedRowIds[0]);
-                    if (listagem && !listagem.dataProducaoTermoEliminacao) {
-                        toast({variant: 'destructive', title: "Ação não permitida", description: "É necessário preencher a 'Data Prod. Termo' na listagem para gerar o Termo de Eliminação."});
-                        return;
-                    }
-                    if (selectedRowIds.length === 1) {
-                        router.push(`/listagens-eliminacao/print/termo/${selectedRowIds[0]}`);
-                    }
-                }}
-            >
-                Gerar Termo
-            </Button>
         </div>
       </PageHeader>
 
