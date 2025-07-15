@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, AprovacaoContas } from "@/types";
-import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet, Newspaper } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   Dialog,
@@ -100,6 +100,10 @@ export default function ListagensEliminacaoPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
+
+  const [isEditalDialogOpen, setIsEditalDialogOpen] = React.useState(false);
+  const [currentListagemToUpdate, setCurrentListagemToUpdate] = React.useState<ListagemEliminacao | null>(null);
+  const [editalFormState, setEditalFormState] = React.useState({ numeroEditalCiencia: "", dataPublicacaoEdital: undefined as Date | undefined });
 
   React.useEffect(() => {
     try {
@@ -353,6 +357,41 @@ export default function ListagensEliminacaoPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
   
+  const handleOpenEditalDialog = () => {
+    const listagem = listagens.find(l => l.id === selectedRowIds[0]);
+    if (listagem) {
+      setCurrentListagemToUpdate(listagem);
+      setEditalFormState({
+        numeroEditalCiencia: listagem.numeroEditalCiencia || "",
+        dataPublicacaoEdital: listagem.dataPublicacaoEdital ? new Date(listagem.dataPublicacaoEdital) : undefined,
+      });
+      setIsEditalDialogOpen(true);
+    }
+  };
+  
+  const handleSaveEdital = () => {
+    if (!currentListagemToUpdate || !editalFormState.dataPublicacaoEdital) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'A Data de Publicação do Edital é obrigatória.' });
+      return;
+    }
+    const updatedListagem = { 
+      ...currentListagemToUpdate, 
+      numeroEditalCiencia: editalFormState.numeroEditalCiencia, 
+      dataPublicacaoEdital: editalFormState.dataPublicacaoEdital.toISOString() 
+    };
+    
+    const updatedListagens = listagens.map(l => l.id === updatedListagem.id ? updatedListagem : l);
+    localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(updatedListagens));
+    setListagens(updatedListagens);
+
+    logAction('PUBLICAR_EDITAL', { listagemId: updatedListagem.id, numeroEdital: updatedListagem.numeroEditalCiencia });
+    toast({ title: 'Sucesso', description: 'O edital foi publicado e a listagem movida para a próxima etapa.' });
+    
+    setIsEditalDialogOpen(false);
+    setSelectedRowIds([]);
+    setCurrentListagemToUpdate(null);
+  };
+  
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
@@ -363,6 +402,9 @@ export default function ListagensEliminacaoPage() {
                 }
             }}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
+            </Button>
+            <Button disabled={selectedRowIds.length !== 1} onClick={handleOpenEditalDialog}>
+                <Newspaper className="mr-2 h-4 w-4" /> Publicar Edital
             </Button>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -590,6 +632,40 @@ export default function ListagensEliminacaoPage() {
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
             <Button onClick={handleSaveChanges}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isEditalDialogOpen} onOpenChange={setIsEditalDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Publicar Edital</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para publicar o edital da listagem <strong>{currentListagemToUpdate?.numeroListagem}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="numeroEditalCiencia">Nº do Edital de Ciência</Label>
+              <Input
+                id="numeroEditalCiencia"
+                value={editalFormState.numeroEditalCiencia}
+                onChange={(e) => setEditalFormState({ ...editalFormState, numeroEditalCiencia: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dataPublicacaoEdital">Data de Publicação do Edital*</Label>
+              <DateInputPicker
+                value={editalFormState.dataPublicacaoEdital}
+                onChange={(date) => setEditalFormState({ ...editalFormState, dataPublicacaoEdital: date })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={handleSaveEdital}>Salvar e Publicar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

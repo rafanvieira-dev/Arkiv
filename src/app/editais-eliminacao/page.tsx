@@ -4,11 +4,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao } from "@/types";
-import { ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet, CheckCircle } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,20 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { DateInputPicker } from "@/components/date-input-picker";
+import { logAction } from "@/lib/audit";
+import { useUserSession } from "@/hooks/use-user-session";
 
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
@@ -44,6 +58,7 @@ type SortConfig = { id: keyof ListagemEliminacao | 'status' | 'qtdDocumentos'; d
 export default function EditaisEliminacaoPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { permissions } = useUserSession();
   const [listagens, setListagens] = React.useState<ListagemEliminacao[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
   
@@ -51,6 +66,10 @@ export default function EditaisEliminacaoPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
+
+  const [isTermoDialogOpen, setIsTermoDialogOpen] = React.useState(false);
+  const [currentListagemToUpdate, setCurrentListagemToUpdate] = React.useState<ListagemEliminacao | null>(null);
+  const [termoFormState, setTermoFormState] = React.useState({ numeroTermoEliminacao: "", dataProducaoTermoEliminacao: undefined as Date | undefined });
 
   React.useEffect(() => {
     try {
@@ -192,6 +211,41 @@ export default function EditaisEliminacaoPage() {
     return value === undefined || value === null ? 'N/A' : String(value);
   };
   
+  const handleOpenTermoDialog = () => {
+    const listagem = listagens.find(l => l.id === selectedRowIds[0]);
+    if (listagem) {
+      setCurrentListagemToUpdate(listagem);
+      setTermoFormState({
+        numeroTermoEliminacao: listagem.numeroTermoEliminacao || "",
+        dataProducaoTermoEliminacao: listagem.dataProducaoTermoEliminacao ? new Date(listagem.dataProducaoTermoEliminacao) : undefined,
+      });
+      setIsTermoDialogOpen(true);
+    }
+  };
+  
+  const handleSaveTermo = () => {
+    if (!currentListagemToUpdate || !termoFormState.dataProducaoTermoEliminacao) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Por favor, preencha todos os campos do termo.' });
+      return;
+    }
+    const updatedListagem = { 
+      ...currentListagemToUpdate, 
+      numeroTermoEliminacao: termoFormState.numeroTermoEliminacao,
+      dataProducaoTermoEliminacao: termoFormState.dataProducaoTermoEliminacao.toISOString() 
+    };
+    
+    const updatedListagens = listagens.map(l => l.id === updatedListagem.id ? updatedListagem : l);
+    localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(updatedListagens));
+    setListagens(updatedListagens);
+
+    logAction('EFETIVAR_ELIMINACAO', { listagemId: updatedListagem.id, numeroTermo: updatedListagem.numeroTermoEliminacao });
+    toast({ title: 'Sucesso', description: 'A eliminação foi efetivada.' });
+    
+    setIsTermoDialogOpen(false);
+    setSelectedRowIds([]);
+    setCurrentListagemToUpdate(null);
+  };
+  
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Editais de Eliminação" description="Acompanhe os editais publicados e efetive as eliminações.">
@@ -200,7 +254,12 @@ export default function EditaisEliminacaoPage() {
                 if (selectedRowIds.length === 1) {
                     router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
                 }
-            }}>Gerar Edital</Button>
+            }}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar Edital
+            </Button>
+            <Button disabled={selectedRowIds.length !== 1 || !permissions.exclusaoDados} onClick={handleOpenTermoDialog}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Efetivar Eliminação
+            </Button>
         </div>
       </PageHeader>
 
@@ -312,6 +371,40 @@ export default function EditaisEliminacaoPage() {
           )}
         </CardContent>
       </Card>
+
+       <Dialog open={isTermoDialogOpen} onOpenChange={setIsTermoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Efetivar Eliminação</DialogTitle>
+            <DialogDescription>
+              Preencha os dados abaixo para criar o Termo de Eliminação e concluir o processo para a listagem <strong>{currentListagemToUpdate?.numeroListagem}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="numeroTermoEliminacao">Nº do Termo de Eliminação</Label>
+              <Input
+                id="numeroTermoEliminacao"
+                value={termoFormState.numeroTermoEliminacao}
+                onChange={(e) => setTermoFormState({ ...termoFormState, numeroTermoEliminacao: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dataProducaoTermoEliminacao">Data de Produção do Termo*</Label>
+              <DateInputPicker
+                value={termoFormState.dataProducaoTermoEliminacao}
+                onChange={(date) => setTermoFormState({ ...termoFormState, dataProducaoTermoEliminacao: date })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={handleSaveTermo}>Salvar e Efetivar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
