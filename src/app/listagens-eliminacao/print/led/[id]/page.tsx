@@ -133,7 +133,7 @@ export default function LedPrintPage() {
                         <h2 className="text-base font-bold">LISTAGEM DE ELIMINAÇÃO DE DOCUMENTOS Nº {listagem.numeroListagem}</h2>
                     </div>
                     <div className="border-b border-black p-1 text-sm">
-                        <p><strong>ÓRGÃO/ENTIDADE:</strong> Tribunal Regional Federal da 2ª Região - TRF2</p>
+                        <p><strong>ÓRGÃO/ENTIDADE:</strong> {listagem.orgao || 'Não especificado'}</p>
                     </div>
                     <div className="p-1 text-sm">
                         <p><strong>UNIDADE/SETOR:</strong> {listagem.unidadeSetor || 'Não especificado'}</p>

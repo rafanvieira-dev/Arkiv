@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import type { ListagemEliminacao, AprovacaoContas, Documento, Classificacao } from "@/types";
 import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet, Newspaper, ChevronsUpDown } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
+import { DateInputPicker } from "@/components/date-input-picker";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DateInputPicker } from "@/components/date-input-picker";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { simulatedListagensData, initialAprovacoesContas } from "@/lib/mock-data";
@@ -65,6 +65,7 @@ const APROVACOES_CONTAS_STORAGE_KEY = 'arquivocentral_aprovacoes_contas';
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
+  orgao: "",
   documentoIds: [],
   numeroEditalCiencia: "",
   dataPublicacaoEdital: undefined,
@@ -152,6 +153,7 @@ export default function ListagensEliminacaoPage() {
     )},
     { id: 'status', header: 'Status', accessorKey: 'status', defaultVisible: true, enableSorting: true, cellFormatter: (_, item) => <Badge variant={ getStatus(item) === 'Efetivada' ? 'destructive' : getStatus(item) === 'Edital Publicado' ? 'default' : 'secondary'}>{getStatus(item)}</Badge> },
     { id: 'tipoListagem', header: 'Tipo', accessorKey: 'tipoListagem', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
+    { id: 'orgao', header: 'Órgão', accessorKey: 'orgao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'unidadeSetor', header: 'Unidade/Setor', accessorKey: 'unidadeSetor', defaultVisible: true, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataProducaoListagem', header: 'Data Produção', accessorKey: 'dataProducaoListagem', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
     { id: 'qtdDocumentos', header: 'Qtd. Docs', accessorKey: 'qtdDocumentos', defaultVisible: true, enableSorting: true, cellFormatter: (_, item) => item.documentoIds?.length || 0 },
@@ -301,6 +303,7 @@ export default function ListagensEliminacaoPage() {
     const listagemDataToSave: ListagemEliminacao = {
       id: isEditing && editingListagemId ? editingListagemId : `LE${Date.now()}`,
       numeroListagem: formState.numeroListagem,
+      orgao: formState.orgao,
       documentoIds: isEditing ? (formState.documentoIds || []) : [], // Preserve IDs on edit, new is empty
       numeroEditalCiencia: formState.numeroEditalCiencia,
       memoriaReuniao: formState.memoriaReuniao,
@@ -589,21 +592,32 @@ export default function ListagensEliminacaoPage() {
                 <Input id="numeroListagem" value={formState.numeroListagem || ''} onChange={handleFormInputChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
-                <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
+                <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
+                <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
+                    <SelectTrigger id="tipoListagem">
+                    <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Documentos">Documentos</SelectItem>
+                        <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
+                        <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
+                    </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                  <Label htmlFor="tipoListagem">Tipo de Listagem de Eliminação</Label>
-                  <Select onValueChange={(value) => handleSelectChange('tipoListagem')(value as ListagemEliminacao['tipoListagem'])} value={formState.tipoListagem}>
-                      <SelectTrigger id="tipoListagem">
-                      <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="Documentos">Documentos</SelectItem>
-                          <SelectItem value="Processos Administrativos">Processos Administrativos</SelectItem>
-                          <SelectItem value="Processos Judiciais">Processos Judiciais</SelectItem>
-                      </SelectContent>
+                  <Label htmlFor="orgao">Órgão*</Label>
+                  <Select onValueChange={(value) => handleSelectChange('orgao')(value)} value={formState.orgao}>
+                    <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tribunal Regional Federal da 2ª Região (TRF2)">Tribunal Regional Federal da 2ª Região (TRF2)</SelectItem>
+                      <SelectItem value="Seção Judiciária do Rio de Janeiro (SJRJ)">Seção Judiciária do Rio de Janeiro (SJRJ)</SelectItem>
+                      <SelectItem value="Seção Judiciária do Espírito Santo (SJES)">Seção Judiciária do Espírito Santo (SJES)</SelectItem>
+                    </SelectContent>
                   </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unidadeSetor">Unidade/Setor</Label>
+                <Input id="unidadeSetor" value={formState.unidadeSetor || ''} onChange={handleFormInputChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dataProducaoListagem">Data Produção*</Label>
@@ -728,6 +742,7 @@ export default function ListagensEliminacaoPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+              <p className="text-sm"><strong>Órgão:</strong> {ledDialogListagem?.orgao || 'Não especificado'}</p>
               <p className="text-sm"><strong>Tipo:</strong> {ledDialogListagem?.tipoListagem}</p>
               <p className="text-sm"><strong>Unidade/Setor:</strong> {ledDialogListagem?.unidadeSetor}</p>
               <p className="text-sm"><strong>Anos de Contas Selecionados:</strong> {ledDialogListagem?.anosContasAprovadas?.join(', ') || 'Nenhum'}</p>

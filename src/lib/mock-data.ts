@@ -21,6 +21,7 @@ export const simulatedListagensData: ListagemEliminacao[] = [
   { 
     id: "LE001", 
     numeroListagem: "LE-2023-001", 
+    orgao: "Tribunal Regional Federal da 2ª Região (TRF2)",
     documentoIds: ["DOC001", "DOC007"], 
     dataPublicacaoEdital: new Date("2023-10-15").toISOString(),
     dataProducaoListagem: new Date("2023-09-30").toISOString(),
@@ -34,6 +35,7 @@ export const simulatedListagensData: ListagemEliminacao[] = [
   { 
     id: "LE002", 
     numeroListagem: "LE-2024-001", 
+    orgao: "Seção Judiciária do Rio de Janeiro (SJRJ)",
     documentoIds: ["DOC008"], 
     dataPublicacaoEdital: undefined,
     dataProducaoListagem: new Date("2024-02-10").toISOString(),
@@ -44,6 +46,7 @@ export const simulatedListagensData: ListagemEliminacao[] = [
   { 
     id: "LE003", 
     numeroListagem: "LE-2024-002", 
+    orgao: "Seção Judiciária do Espírito Santo (SJES)",
     documentoIds: ["DOC005"], 
     dataPublicacaoEdital: new Date("2024-05-01").toISOString(),
     dataProducaoListagem: new Date("2024-04-15").toISOString(),

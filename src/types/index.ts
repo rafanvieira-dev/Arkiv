@@ -121,6 +121,7 @@ export interface AprovacaoContas {
 export interface ListagemEliminacao {
   id: string;
   numeroListagem: string; 
+  orgao?: string;
   documentoIds: string[]; 
   numeroEditalCiencia?: string; 
   memoriaReuniao?: string;
