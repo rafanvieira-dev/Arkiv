@@ -1,6 +1,6 @@
 
 
-import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Usuario, Transferencia, Caixa, TipoOrigem, Classificacao, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe, AprovacaoContas } from "@/types";
 import { getYear, parseISO, isValid } from 'date-fns';
 
 export const AUDIT_LOG_STORAGE_KEY = 'arquivocentral_audit_logs';
@@ -514,6 +514,11 @@ export const initialClassesJudiciais: ClasseJudicial[] = [
   { id: "CJ002", codigo: "22", descricao: "Ação Penal - Procedimento Ordinário", prazoGuardaAnos: 5, destinacaoFinal: "Guarda Permanente", inativo: false },
   { id: "CJ003", codigo: "12078", descricao: "Cumprimento de Sentença", prazoGuardaAnos: 0, destinacaoFinal: "Vide Guia de Aplicação", inativo: true, observacoes: "Arquivar processo principal junto." },
   { id: "CJ004", codigo: "99", descricao: "Carta Precatória Cível", destinacaoFinal: "Não se Aplica", inativo: false },
+];
+
+export const initialAprovacoesContas: AprovacaoContas[] = [
+    { id: 'ac1', anoExercicio: '2020', dataAprovacaoTCU: new Date('2021-05-10T00:00:00Z').toISOString(), dataPublicacaoDOU: new Date('2021-05-12T00:00:00Z').toISOString(), secao: '1', pagina: '150' },
+    { id: 'ac2', anoExercicio: '2019', dataAprovacaoTCU: new Date('2020-04-20T00:00:00Z').toISOString(), dataPublicacaoDOU: new Date('2020-04-22T00:00:00Z').toISOString(), secao: '1', pagina: '123' },
 ];
 
 export const PARTES_STORAGE_KEY = 'arquivocentral_partes';

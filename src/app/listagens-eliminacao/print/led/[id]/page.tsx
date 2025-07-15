@@ -2,16 +2,11 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { useSearchParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
-import type { ListagemEliminacao, Documento, Classificacao } from "@/types";
-
-const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
-const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
-const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+import type { ListagemEliminacao, Documento, Classificacao, AprovacaoContas } from "@/types";
 
 interface AggregatedRow {
   codigo: string;
@@ -29,37 +24,35 @@ function parseDataAbrangenteForYear(dataAbrangente?: string): string | undefined
 }
 
 export default function LedPrintPage() {
-    const params = useParams();
-    const id = params.id as string;
+    const searchParams = useSearchParams();
     const { toast } = useToast();
-
+    
     const [listagem, setListagem] = React.useState<ListagemEliminacao | null>(null);
     const [aggregatedData, setAggregatedData] = React.useState<AggregatedRow[]>([]);
     const [totalGeral, setTotalGeral] = React.useState(0);
     const [datasLimiteGerais, setDatasLimiteGerais] = React.useState("");
+    const [comprovacaoContas, setComprovacaoContas] = React.useState<AprovacaoContas[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
-        if (!id) return;
-
         try {
-            const storedListagens = localStorage.getItem(LISTAGENS_STORAGE_KEY);
-            const allListagens = storedListagens ? JSON.parse(storedListagens) : [];
-            const currentListagem = allListagens.find((l: ListagemEliminacao) => l.id === id);
+            const listagemData = searchParams.get('listagem');
+            const docsData = searchParams.get('docs');
+            const classifData = searchParams.get('classif');
+            const aprovacoesData = searchParams.get('aprovacoes');
 
-            if (!currentListagem) {
-                toast({ variant: "destructive", title: "Erro", description: "Listagem não encontrada." });
+            if (!listagemData || !docsData || !classifData) {
+                toast({ variant: "destructive", title: "Erro", description: "Dados insuficientes para gerar o relatório." });
                 return;
             }
+
+            const currentListagem: ListagemEliminacao = JSON.parse(decodeURIComponent(listagemData));
+            const docsNestaListagem: Documento[] = JSON.parse(decodeURIComponent(docsData));
+            const allClassificacoes: Classificacao[] = JSON.parse(decodeURIComponent(classifData));
+            const aprovacoesSelecionadas: AprovacaoContas[] = aprovacoesData ? JSON.parse(decodeURIComponent(aprovacoesData)) : [];
+            
             setListagem(currentListagem);
-
-            const storedDocumentos = localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
-            const allDocumentos: Documento[] = storedDocumentos ? JSON.parse(storedDocumentos) : [];
-
-            const storedClassificacoes = localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
-            const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : [];
-
-            const docsNestaListagem = allDocumentos.filter(d => currentListagem.documentoIds.includes(d.id));
+            setComprovacaoContas(aprovacoesSelecionadas);
 
             const dataMap = new Map<string, { docs: Documento[], classif: Classificacao | undefined }>();
 
@@ -118,7 +111,7 @@ export default function LedPrintPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [id, toast]);
+    }, [searchParams, toast]);
 
     if (isLoading) return <div className="p-8 text-center">Carregando relatório...</div>;
     if (!listagem) return <div className="p-8 text-center">Não foi possível carregar a listagem.</div>;
@@ -183,14 +176,16 @@ export default function LedPrintPage() {
                     <p><strong>Datas-Limite Gerais:</strong> {datasLimiteGerais}</p>
                 </section>
 
-                {listagem.contasAprovadas && listagem.contasAprovadas.length > 0 && (
+                {comprovacaoContas && comprovacaoContas.length > 0 && (
                     <section className="mt-4 text-sm space-y-2">
                         <h3 className="font-bold">Comprovação de aprovação das contas:</h3>
-                        {listagem.contasAprovadas.map((conta, index) => (
+                        {comprovacaoContas.map((conta, index) => (
                             <p key={index}>
-                                Referente ao exercício de <strong>{conta.anoContas || 'N/A'}</strong>, 
-                                aprovada em <strong>{conta.dataAprovacao ? <ClientSideDateFormatter isoDateString={conta.dataAprovacao} /> : 'N/A'}</strong>, 
-                                publicado em <strong>{conta.publicacao || 'N/A'}</strong>.
+                                Referente ao exercício de <strong>{conta.anoExercicio || 'N/A'}</strong>, 
+                                aprovada em <strong>{conta.dataAprovacaoTCU ? <ClientSideDateFormatter isoDateString={conta.dataAprovacaoTCU} /> : 'N/A'}</strong>, 
+                                publicado em <strong>{conta.dataPublicacaoDOU ? <ClientSideDateFormatter isoDateString={conta.dataPublicacaoDOU} /> : 'N/A'}</strong>
+                                {conta.secao && <span>, Seção {conta.secao}</span>}
+                                {conta.pagina && <span>, Página {conta.pagina}</span>}.
                             </p>
                         ))}
                     </section>

@@ -30,13 +30,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes } from "@/lib/mock-data";
+import { initialTiposDocumento, initialGenerosDocumentais, initialTiposMidia, initialTiposParte, initialTiposOrigem, initialTiposCaixa, initialPartes, initialAprovacoesContas } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import type { TipoOrigem, ParteDetalhe } from "@/types";
+import type { TipoOrigem, ParteDetalhe, AprovacaoContas } from "@/types";
 import { parseCsvRow, gerarIniciais } from "@/lib/utils";
 import { useUserSession } from "@/hooks/use-user-session";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DateInputPicker } from "@/components/date-input-picker";
+import { format, parse, isValid, parseISO } from 'date-fns';
 
 
 const TIPOS_DOCUMENTO_STORAGE_KEY = 'arquivocentral_tipos_documento';
@@ -46,6 +48,7 @@ const TIPOS_MIDIA_STORAGE_KEY = 'arquivocentral_tipos_midia';
 const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const TIPOS_CAIXA_STORAGE_KEY = 'arquivocentral_tipos_caixa';
 const PARTES_STORAGE_KEY = 'arquivocentral_partes';
+const APROVACOES_CONTAS_STORAGE_KEY = 'arquivocentral_aprovacoes_contas';
 
 type DialogMode = 'tipoDocumento' | 'tipoParte' | 'generoDocumental' | 'tipoMidia' | 'tipoCaixa';
 
@@ -61,6 +64,7 @@ export default function ConfiguracoesPage() {
   const [tiposOrigem, setTiposOrigem] = React.useState<TipoOrigem[]>([]);
   const [tiposCaixa, setTiposCaixa] = React.useState<string[]>([]);
   const [partes, setPartes] = React.useState<ParteDetalhe[]>([]);
+  const [aprovacoesContas, setAprovacoesContas] = React.useState<AprovacaoContas[]>([]);
   const [isDataLoaded, setIsDataLoaded] = React.useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -75,12 +79,16 @@ export default function ConfiguracoesPage() {
   const [isParteDialogOpen, setIsParteDialogOpen] = React.useState(false);
   const [parteFormState, setParteFormState] = React.useState<Partial<ParteDetalhe>>({ nome: "", cpfCnpj: "" });
   const [isEditingParte, setIsEditingParte] = React.useState(false);
+  
+  const [isAprovacaoDialogOpen, setIsAprovacaoDialogOpen] = React.useState(false);
+  const [aprovacaoFormState, setAprovacaoFormState] = React.useState<Partial<AprovacaoContas>>({ anoExercicio: new Date().getFullYear().toString() });
+  const [isEditingAprovacao, setIsEditingAprovacao] = React.useState(false);
 
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const activeImportContext = React.useRef<{
     setter: React.Dispatch<React.SetStateAction<any>>;
-    type: 'simple' | 'origem' | 'parte';
+    type: 'simple' | 'origem' | 'parte' | 'aprovacaoContas';
     listName: string;
   } | null>(null);
 
@@ -107,9 +115,13 @@ export default function ConfiguracoesPage() {
       
       const storedPartes = window.localStorage.getItem(PARTES_STORAGE_KEY);
       setPartes(storedPartes ? JSON.parse(storedPartes) : initialPartes);
+      
+      const storedAprovacoes = window.localStorage.getItem(APROVACOES_CONTAS_STORAGE_KEY);
+      setAprovacoesContas(storedAprovacoes ? JSON.parse(storedAprovacoes) : initialAprovacoesContas);
 
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
+      // Reset all to initial mock data on error
       setTiposDocumento(initialTiposDocumento);
       setTiposParte(initialTiposParte);
       setGenerosDocumentais(initialGenerosDocumentais);
@@ -117,6 +129,7 @@ export default function ConfiguracoesPage() {
       setTiposOrigem(initialTiposOrigem);
       setTiposCaixa(initialTiposCaixa);
       setPartes(initialPartes);
+      setAprovacoesContas(initialAprovacoesContas);
     }
     setIsDataLoaded(true);
   }, []);
@@ -131,11 +144,12 @@ export default function ConfiguracoesPage() {
         window.localStorage.setItem(TIPOS_ORIGEM_STORAGE_KEY, JSON.stringify(tiposOrigem));
         window.localStorage.setItem(TIPOS_CAIXA_STORAGE_KEY, JSON.stringify(tiposCaixa));
         window.localStorage.setItem(PARTES_STORAGE_KEY, JSON.stringify(partes));
+        window.localStorage.setItem(APROVACOES_CONTAS_STORAGE_KEY, JSON.stringify(aprovacoesContas));
       } catch (error) {
         console.error("Failed to write to localStorage:", error);
       }
     }
-  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, partes, isDataLoaded]);
+  }, [tiposDocumento, tiposParte, generosDocumentais, tiposMidia, tiposOrigem, tiposCaixa, partes, aprovacoesContas, isDataLoaded]);
 
   const resetForm = () => {
     setDialogConfig(null);
@@ -234,6 +248,22 @@ export default function ConfiguracoesPage() {
     setIsParteDialogOpen(true);
   };
 
+  const handleOpenAprovacaoDialog = (aprovacao?: AprovacaoContas) => {
+    if(aprovacao) {
+      setIsEditingAprovacao(true);
+      setAprovacaoFormState({
+        ...aprovacao,
+        dataAprovacaoTCU: aprovacao.dataAprovacaoTCU ? parseISO(aprovacao.dataAprovacaoTCU) : undefined,
+        dataPublicacaoDOU: aprovacao.dataPublicacaoDOU ? parseISO(aprovacao.dataPublicacaoDOU) : undefined,
+      });
+    } else {
+      setIsEditingAprovacao(false);
+      setAprovacaoFormState({ anoExercicio: new Date().getFullYear().toString() });
+    }
+    setIsAprovacaoDialogOpen(true);
+  };
+
+
   const handleSaveOrigem = () => {
     if (!origemFormState.nome.trim()) {
         toast({ variant: "destructive", title: "Erro", description: "O nome não pode ser vazio." });
@@ -303,6 +333,38 @@ export default function ConfiguracoesPage() {
     resetParteForm();
   };
   
+  const handleSaveAprovacao = () => {
+    if (!aprovacaoFormState.anoExercicio?.trim()) {
+      toast({ variant: "destructive", title: "Erro", description: "O Ano de Exercício é obrigatório." });
+      return;
+    }
+
+    const isDuplicate = aprovacoesContas.some(
+      (item) => item.anoExercicio === aprovacaoFormState.anoExercicio?.trim() && item.id !== aprovacaoFormState.id
+    );
+    if(isDuplicate){
+      toast({ variant: "destructive", title: "Erro", description: "Já existe um registro para este Ano de Exercício." });
+      return;
+    }
+
+    const finalState: AprovacaoContas = {
+      ...aprovacaoFormState,
+      id: isEditingAprovacao ? aprovacaoFormState.id! : `ac_${Date.now()}`,
+      anoExercicio: aprovacaoFormState.anoExercicio.trim(),
+      dataAprovacaoTCU: aprovacaoFormState.dataAprovacaoTCU instanceof Date ? aprovacaoFormState.dataAprovacaoTCU.toISOString() : undefined,
+      dataPublicacaoDOU: aprovacaoFormState.dataPublicacaoDOU instanceof Date ? aprovacaoFormState.dataPublicacaoDOU.toISOString() : undefined,
+    } as AprovacaoContas;
+
+    if(isEditingAprovacao){
+      setAprovacoesContas(prev => prev.map(a => a.id === finalState.id ? finalState : a));
+      toast({ title: "Sucesso", description: "Registro de aprovação atualizado." });
+    } else {
+      setAprovacoesContas(prev => [...prev, finalState]);
+      toast({ title: "Sucesso", description: "Novo registro de aprovação adicionado." });
+    }
+    setIsAprovacaoDialogOpen(false);
+  };
+  
   const handleDeleteOrigem = (idToDelete: string) => {
     setTiposOrigem(prev => prev.filter(item => item.id !== idToDelete));
     toast({ title: "Sucesso", description: `Origem removida.` });
@@ -313,7 +375,12 @@ export default function ConfiguracoesPage() {
     toast({ title: "Sucesso", description: "Parte removida." });
   };
   
-  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem' | 'parte', listName: string) => {
+  const handleDeleteAprovacao = (idToDelete: string) => {
+    setAprovacoesContas(prev => prev.filter(item => item.id !== idToDelete));
+    toast({ title: "Sucesso", description: "Registro de aprovação removido." });
+  };
+  
+  const handleImportClick = (setter: React.Dispatch<React.SetStateAction<any>>, type: 'simple' | 'origem' | 'parte' | 'aprovacaoContas', listName: string) => {
     activeImportContext.current = { setter, type, listName };
     fileInputRef.current?.click();
   };
@@ -374,8 +441,33 @@ export default function ConfiguracoesPage() {
             return [...prev, ...uniqueNewItems].sort((a, b) => a.nome.localeCompare(b.nome));
           });
           toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
-        }
+        } else if (type === 'aprovacaoContas') {
+          const requiredHeaders = ['anoExercicio', 'dataAprovacaoTCU', 'dataPublicacaoDOU', 'secao', 'pagina'];
+          if (!requiredHeaders.every(h => headers.includes(h))) throw new Error("Cabeçalho inválido. Verifique o modelo.");
+          const newItems: AprovacaoContas[] = [];
+          rows.forEach((row, index) => {
+            const values = parseCsvRow(row);
+            const newItemData: { [key: string]: any } = {};
+            headers.forEach((h, i) => newItemData[h] = values[i] || "");
+            const dataAprovacao = parse(newItemData.dataAprovacaoTCU, 'dd/MM/yyyy', new Date());
+            const dataPublicacao = parse(newItemData.dataPublicacaoDOU, 'dd/MM/yyyy', new Date());
 
+            newItems.push({
+              id: `ac_imp_${Date.now()}_${index}`,
+              anoExercicio: newItemData.anoExercicio,
+              dataAprovacaoTCU: isValid(dataAprovacao) ? dataAprovacao.toISOString() : undefined,
+              dataPublicacaoDOU: isValid(dataPublicacao) ? dataPublicacao.toISOString() : undefined,
+              secao: newItemData.secao,
+              pagina: newItemData.pagina,
+            });
+          });
+          (setter as React.Dispatch<React.SetStateAction<AprovacaoContas[]>>)(prev => {
+            const existingYears = new Set(prev.map(i => i.anoExercicio));
+            const uniqueNewItems = newItems.filter(item => item.anoExercicio && !existingYears.has(item.anoExercicio));
+            return [...prev, ...uniqueNewItems].sort((a,b) => b.anoExercicio.localeCompare(a.anoExercicio));
+          });
+          toast({ title: "Importação Concluída", description: `${newItems.length} itens foram importados para ${listName}.` });
+        }
       } catch (error: any) {
         toast({ variant: "destructive", title: "Erro de Importação", description: `Falha ao processar o arquivo: ${error.message}` });
       } finally {
@@ -397,7 +489,13 @@ export default function ConfiguracoesPage() {
       (list as string[]).forEach(item => csvRows.push(`"${item.replace(/"/g, '""')}"`));
     } else {
       list.forEach(item => {
-        const row = headers.map(header => `"${String(item[header as keyof typeof item] ?? '').replace(/"/g, '""')}"`);
+        const row = headers.map(header => {
+          let value = item[header as keyof typeof item];
+          if (header.startsWith('data') && value && isValid(parseISO(value))) {
+            value = format(parseISO(value), 'dd/MM/yyyy');
+          }
+          return `"${String(value ?? '').replace(/"/g, '""')}"`
+        });
         csvRows.push(row.join(','));
       });
     }
@@ -712,6 +810,94 @@ export default function ConfiguracoesPage() {
                 )}
             </CardContent>
         </Card>
+        <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div>
+                    <CardTitle className="font-headline text-primary">Aprovação de Contas (TCU)</CardTitle>
+                    <CardDescription>Gerencie os registros de aprovação de contas para usar nos relatórios LED.</CardDescription>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
+                      <Button size="sm" variant="outline" onClick={() => handleImportClick(setAprovacoesContas, 'aprovacaoContas', 'Aprovação de Contas')}>
+                          <Upload className="mr-2 h-4 w-4" /> Importar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(aprovacoesContas, 'aprovacoes_contas_export.csv', ['anoExercicio', 'dataAprovacaoTCU', 'dataPublicacaoDOU', 'secao', 'pagina'])}>
+                          <Download className="mr-2 h-4 w-4" /> Exportar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadTemplate('modelo_aprovacoes_contas.csv', ['anoExercicio', 'dataAprovacaoTCU', 'dataPublicacaoDOU', 'secao', 'pagina'])}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" /> Modelo
+                      </Button>
+                      <Button size="sm" onClick={() => handleOpenAprovacaoDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Novo Registro
+                      </Button>
+                  </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-72">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Ano Exercício</TableHead>
+                                <TableHead>Data Aprovação (TCU)</TableHead>
+                                <TableHead>Data Publicação (DOU)</TableHead>
+                                <TableHead>Seção</TableHead>
+                                <TableHead>Página</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {aprovacoesContas.sort((a,b) => b.anoExercicio.localeCompare(a.anoExercicio)).map(aprovacao => (
+                                <TableRow key={aprovacao.id}>
+                                    <TableCell className="font-medium">{aprovacao.anoExercicio}</TableCell>
+                                    <TableCell>{aprovacao.dataAprovacaoTCU ? format(parseISO(aprovacao.dataAprovacaoTCU), 'dd/MM/yyyy') : 'N/A'}</TableCell>
+                                    <TableCell>{aprovacao.dataPublicacaoDOU ? format(parseISO(aprovacao.dataPublicacaoDOU), 'dd/MM/yyyy') : 'N/A'}</TableCell>
+                                    <TableCell>{aprovacao.secao || 'N/A'}</TableCell>
+                                    <TableCell>{aprovacao.pagina || 'N/A'}</TableCell>
+                                    <TableCell className="text-right">
+                                         <Tooltip>
+                                            <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenAprovacaoDialog(aprovacao)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Editar</p></TooltipContent>
+                                        </Tooltip>
+                                        <AlertDialog>
+                                            <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" disabled={!permissions.usuarios}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                </AlertDialogTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>{permissions.usuarios ? "Excluir" : "Permissão necessária"}</p></TooltipContent>
+                                            </Tooltip>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o registro para o ano {aprovacao.anoExercicio}.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteAprovacao(aprovacao.id)}>Sim, excluir</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+                {aprovacoesContas.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground py-4">Nenhum registro de aprovação de contas cadastrado.</p>
+                )}
+            </CardContent>
+        </Card>
       </div>
 
        <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -806,6 +992,64 @@ export default function ConfiguracoesPage() {
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
               <Button onClick={handleSaveParte}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isAprovacaoDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) setIsAprovacaoDialogOpen(false);
+          else setIsAprovacaoDialogOpen(isOpen);
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{isEditingAprovacao ? "Editar Aprovação de Contas" : "Nova Aprovação de Contas"}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="aprovacao-ano">Ano de Exercício*</Label>
+                <Input
+                  id="aprovacao-ano"
+                  value={aprovacaoFormState.anoExercicio || ""}
+                  onChange={(e) => setAprovacaoFormState(p => ({...p, anoExercicio: e.target.value}))}
+                  placeholder="AAAA"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="aprovacao-data-tcu">Data de Aprovação (TCU)</Label>
+                <DateInputPicker
+                  value={aprovacaoFormState.dataAprovacaoTCU as Date | undefined}
+                  onChange={(date) => setAprovacaoFormState(p => ({...p, dataAprovacaoTCU: date}))}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="aprovacao-data-dou">Data de Publicação (DOU)</Label>
+                <DateInputPicker
+                  value={aprovacaoFormState.dataPublicacaoDOU as Date | undefined}
+                  onChange={(date) => setAprovacaoFormState(p => ({...p, dataPublicacaoDOU: date}))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="aprovacao-secao">Seção (DOU)</Label>
+                <Input
+                  id="aprovacao-secao"
+                  value={aprovacaoFormState.secao || ""}
+                  onChange={(e) => setAprovacaoFormState(p => ({...p, secao: e.target.value}))}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="aprovacao-pagina">Página (DOU)</Label>
+                <Input
+                  id="aprovacao-pagina"
+                  value={aprovacaoFormState.pagina || ""}
+                  onChange={(e) => setAprovacaoFormState(p => ({...p, pagina: e.target.value}))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button onClick={handleSaveAprovacao}>Salvar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

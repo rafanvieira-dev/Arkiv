@@ -110,9 +110,12 @@ export interface ClasseJudicial {
 }
 
 export interface AprovacaoContas {
-  anoContas: string;
-  dataAprovacao?: string; // ISO Date String
-  publicacao?: string;
+  id: string;
+  anoExercicio: string;
+  dataAprovacaoTCU?: string; // ISO Date String
+  dataPublicacaoDOU?: string; // ISO Date String
+  secao?: string;
+  pagina?: string;
 }
 
 export interface ListagemEliminacao {
