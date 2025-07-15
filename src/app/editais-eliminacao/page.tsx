@@ -198,13 +198,6 @@ export default function EditaisEliminacaoPage() {
         <div className="flex flex-wrap items-center gap-2">
             <Button disabled={selectedRowIds.length !== 1} onClick={() => {
                 if (selectedRowIds.length === 1) {
-                    router.push(`/listagens-eliminacao/print/led/${selectedRowIds[0]}`);
-                }
-            }}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
-            </Button>
-            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
-                if (selectedRowIds.length === 1) {
                     router.push(`/listagens-eliminacao/print/edital/${selectedRowIds[0]}`);
                 }
             }}>Gerar Edital</Button>

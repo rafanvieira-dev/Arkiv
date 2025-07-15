@@ -357,6 +357,13 @@ export default function ListagensEliminacaoPage() {
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
         <div className="flex flex-wrap items-center gap-2">
+            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
+                if (selectedRowIds.length === 1) {
+                    router.push(`/listagens-eliminacao/print/led/${selectedRowIds[0]}`);
+                }
+            }}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
+            </Button>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Listagem
