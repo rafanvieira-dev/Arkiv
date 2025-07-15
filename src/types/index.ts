@@ -132,7 +132,7 @@ export interface ListagemEliminacao {
   tipoListagem?: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
   unidadeSetor?: string;
   observacoes?: string;
-  contasAprovadas?: AprovacaoContas[];
+  anosContasAprovadas?: string[];
 }
 
 export interface Solicitacao {

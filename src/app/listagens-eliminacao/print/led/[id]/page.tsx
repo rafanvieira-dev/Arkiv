@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import type { ListagemEliminacao, Documento, Classificacao, AprovacaoContas } from "@/types";
+import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 
 interface AggregatedRow {
   codigo: string;

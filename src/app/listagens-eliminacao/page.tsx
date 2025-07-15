@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ListagemEliminacao, AprovacaoContas } from "@/types";
-import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet, Newspaper } from "lucide-react";
+import type { ListagemEliminacao, AprovacaoContas, Documento, Classificacao } from "@/types";
+import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ColumnsIcon, CheckSquare, Square, FileSpreadsheet, Newspaper, ChevronsUpDown } from "lucide-react";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import {
   Dialog,
@@ -24,11 +24,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DateInputPicker } from "@/components/date-input-picker";
+import { DateInputPicker } from "@/components/ui/date-input-picker";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { simulatedListagensData } from "@/lib/mock-data";
-import { parseISO } from "date-fns";
+import { simulatedListagensData, initialAprovacoesContas } from "@/lib/mock-data";
+import { parseISO, format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,8 +53,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
 
 const LISTAGENS_STORAGE_KEY = 'arquivocentral_listagens';
+const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
+const CLASSIFICACOES_STORAGE_KEY = 'arquivocentral_classificacoes';
+const APROVACOES_CONTAS_STORAGE_KEY = 'arquivocentral_aprovacoes_contas';
 
 const initialFormState: Partial<ListagemEliminacao> = {
   numeroListagem: "",
@@ -68,8 +75,8 @@ const initialFormState: Partial<ListagemEliminacao> = {
   tipoListagem: 'Documentos',
   unidadeSetor: '',
   observacoes: "",
-  contasAprovadas: [],
   memoriaReuniao: "",
+  anosContasAprovadas: [],
 };
 
 type ColumnConfig = {
@@ -105,10 +112,19 @@ export default function ListagensEliminacaoPage() {
   const [currentListagemToUpdate, setCurrentListagemToUpdate] = React.useState<ListagemEliminacao | null>(null);
   const [editalFormState, setEditalFormState] = React.useState({ numeroEditalCiencia: "", dataPublicacaoEdital: undefined as Date | undefined });
 
+  const [isLedDialogOpen, setIsLedDialogOpen] = React.useState(false);
+  const [ledDialogListagem, setLedDialogListagem] = React.useState<ListagemEliminacao | null>(null);
+  
+  const [aprovacoesContas, setAprovacoesContas] = React.useState<AprovacaoContas[]>([]);
+  const [isContasPopoverOpen, setIsContasPopoverOpen] = React.useState(false);
+
   React.useEffect(() => {
     try {
       const stored = window.localStorage.getItem(LISTAGENS_STORAGE_KEY);
       setListagens(stored ? JSON.parse(stored) : simulatedListagensData);
+      
+      const storedAprovacoes = window.localStorage.getItem(APROVACOES_CONTAS_STORAGE_KEY);
+      setAprovacoesContas(storedAprovacoes ? JSON.parse(storedAprovacoes) : initialAprovacoesContas);
     } catch (error) {
       console.error("Failed to read from localStorage:", error);
       setListagens(simulatedListagensData);
@@ -143,7 +159,7 @@ export default function ListagensEliminacaoPage() {
     { id: 'numeroEditalCiencia', header: 'Nº Edital', accessorKey: 'numeroEditalCiencia', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'numeroTermoEliminacao', header: 'Nº Termo', accessorKey: 'numeroTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || 'N/A' },
     { id: 'dataProducaoTermoEliminacao', header: 'Data Prod. Termo', accessorKey: 'dataProducaoTermoEliminacao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
-    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => value || 'N/A' },
+    { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
     { id: 'memoriaReuniao', header: 'Memória de Reunião', accessorKey: 'memoriaReuniao', defaultVisible: false, enableSorting: false, cellFormatter: (value) => value || 'N/A' },
   ], [getStatus]);
 
@@ -232,7 +248,7 @@ export default function ListagensEliminacaoPage() {
 
 
   const resetFormAndDialogState = () => {
-    setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString(), contasAprovadas: [] });
+    setFormState({ ...initialFormState, dataProducaoListagem: new Date().toISOString(), anosContasAprovadas: [] });
     setIsEditing(false);
     setEditingListagemId(null);
   };
@@ -245,7 +261,7 @@ export default function ListagensEliminacaoPage() {
         ...initialFormState,
         ...listagem,
         dataProducaoListagem: listagem.dataProducaoListagem || new Date().toISOString(),
-        contasAprovadas: listagem.contasAprovadas || [],
+        anosContasAprovadas: listagem.anosContasAprovadas || [],
       });
     } else {
       resetFormAndDialogState();
@@ -266,30 +282,15 @@ export default function ListagensEliminacaoPage() {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleContasChange = (index: number, field: keyof AprovacaoContas, value: string | Date | undefined) => {
-    const newContas = [...(formState.contasAprovadas || [])];
-    if (field === 'dataAprovacao' && value instanceof Date) {
-        newContas[index] = { ...newContas[index], [field]: value.toISOString() };
-    } else if (typeof value === 'string') {
-        newContas[index] = { ...newContas[index], [field]: value };
-    }
-    setFormState(prev => ({ ...prev, contasAprovadas: newContas }));
+  const handleContasSelection = (ano: string) => {
+      setFormState(prev => {
+          const currentSelection = prev.anosContasAprovadas || [];
+          const newSelection = currentSelection.includes(ano)
+              ? currentSelection.filter(a => a !== ano)
+              : [...currentSelection, ano];
+          return { ...prev, anosContasAprovadas: newSelection };
+      });
   };
-
-  const addContaAprovada = () => {
-    setFormState(prev => ({
-        ...prev,
-        contasAprovadas: [...(prev.contasAprovadas || []), { anoContas: '' }]
-    }));
-  };
-
-  const removeContaAprovada = (index: number) => {
-    setFormState(prev => ({
-        ...prev,
-        contasAprovadas: prev.contasAprovadas?.filter((_, i) => i !== index)
-    }));
-  };
-
 
   const handleSaveChanges = () => {
     if (!formState.numeroListagem) {
@@ -311,7 +312,7 @@ export default function ListagensEliminacaoPage() {
       tipoListagem: formState.tipoListagem || 'Documentos',
       unidadeSetor: formState.unidadeSetor,
       observacoes: formState.observacoes,
-      contasAprovadas: formState.contasAprovadas,
+      anosContasAprovadas: formState.anosContasAprovadas || [],
     };
 
     if (isEditing && editingListagemId) {
@@ -363,7 +364,7 @@ export default function ListagensEliminacaoPage() {
       setCurrentListagemToUpdate(listagem);
       setEditalFormState({
         numeroEditalCiencia: listagem.numeroEditalCiencia || "",
-        dataPublicacaoEdital: listagem.dataPublicacaoEdital ? new Date(listagem.dataPublicacaoEdital) : undefined,
+        dataPublicacaoEdital: listagem.dataPublicacaoEdital ? parseISO(listagem.dataPublicacaoEdital) : undefined,
       });
       setIsEditalDialogOpen(true);
     }
@@ -384,7 +385,6 @@ export default function ListagensEliminacaoPage() {
     localStorage.setItem(LISTAGENS_STORAGE_KEY, JSON.stringify(updatedListagens));
     setListagens(updatedListagens);
 
-    logAction('PUBLICAR_EDITAL', { listagemId: updatedListagem.id, numeroEdital: updatedListagem.numeroEditalCiencia });
     toast({ title: 'Sucesso', description: 'O edital foi publicado e a listagem movida para a próxima etapa.' });
     
     setIsEditalDialogOpen(false);
@@ -392,15 +392,46 @@ export default function ListagensEliminacaoPage() {
     setCurrentListagemToUpdate(null);
   };
   
+  const handleGenerateLed = () => {
+    if (!ledDialogListagem) return;
+    
+    const storedDocs = localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
+    const allDocs: Documento[] = storedDocs ? JSON.parse(storedDocs) : [];
+    const docsNestaListagem = allDocs.filter(d => ledDialogListagem.documentoIds.includes(d.id));
+
+    const storedClassif = localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
+    const allClassif: Classificacao[] = storedClassif ? JSON.parse(storedClassif) : [];
+    
+    const storedAprovacoes = localStorage.getItem(APROVACOES_CONTAS_STORAGE_KEY);
+    const allAprovacoes: AprovacaoContas[] = storedAprovacoes ? JSON.parse(storedAprovacoes) : [];
+
+    const aprovacoesSelecionadas = allAprovacoes.filter(aprovacao => 
+      ledDialogListagem.anosContasAprovadas?.includes(aprovacao.anoExercicio)
+    );
+    
+    const params = new URLSearchParams({
+      listagem: encodeURIComponent(JSON.stringify(ledDialogListagem)),
+      docs: encodeURIComponent(JSON.stringify(docsNestaListagem)),
+      classif: encodeURIComponent(JSON.stringify(allClassif)),
+      aprovacoes: encodeURIComponent(JSON.stringify(aprovacoesSelecionadas)),
+    });
+    
+    router.push(`/listagens-eliminacao/print/led/${ledDialogListagem.id}?${params.toString()}`);
+  }
+
+  const handleOpenLedDialog = () => {
+    const listagem = listagens.find(l => l.id === selectedRowIds[0]);
+    if (listagem) {
+      setLedDialogListagem(listagem);
+      setIsLedDialogOpen(true);
+    }
+  };
+
   return (
     <div className="container mx-auto py-2">
       <PageHeader title="Listagens de Eliminação" description="Crie e gerencie as listagens para eliminação de documentos.">
         <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={selectedRowIds.length !== 1} onClick={() => {
-                if (selectedRowIds.length === 1) {
-                    router.push(`/listagens-eliminacao/print/led/${selectedRowIds[0]}`);
-                }
-            }}>
+            <Button disabled={selectedRowIds.length !== 1} onClick={handleOpenLedDialog}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Gerar LED
             </Button>
             <Button disabled={selectedRowIds.length !== 1} onClick={handleOpenEditalDialog}>
@@ -606,26 +637,44 @@ export default function ListagensEliminacaoPage() {
                 <Label htmlFor="observacoes">Observações</Label>
                 <Textarea id="observacoes" value={formState.observacoes || ''} onChange={handleFormInputChange} />
               </div>
-              <div className="md:col-span-2 space-y-4 pt-4">
+              <div className="md:col-span-2 space-y-2 pt-4">
                   <Label className="font-semibold">Comprovação de Aprovação de Contas (TCU)</Label>
-                  {formState.contasAprovadas?.map((conta, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 border p-2 rounded-md relative">
-                          <div className="space-y-1">
-                              <Label htmlFor={`anoContas-${index}`} className="text-xs">Ano Contas</Label>
-                              <Input id={`anoContas-${index}`} value={conta.anoContas || ''} onChange={(e) => handleContasChange(index, 'anoContas', e.target.value)} />
-                          </div>
-                          <div className="space-y-1">
-                              <Label htmlFor={`dataAprovacao-${index}`} className="text-xs">Data Aprovação</Label>
-                              <DateInputPicker value={conta.dataAprovacao ? parseISO(conta.dataAprovacao) : undefined} onChange={(date) => handleContasChange(index, 'dataAprovacao', date)} />
-                          </div>
-                          <div className="space-y-1">
-                              <Label htmlFor={`publicacao-${index}`} className="text-xs">Publicação</Label>
-                              <Input id={`publicacao-${index}`} value={conta.publicacao || ''} onChange={(e) => handleContasChange(index, 'publicacao', e.target.value)} />
-                          </div>
-                          <Button variant="ghost" size="icon" className="absolute -top-2 -right-2 h-6 w-6" onClick={() => removeContaAprovada(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addContaAprovada}>Adicionar Aprovação de Contas</Button>
+                  <Popover open={isContasPopoverOpen} onOpenChange={setIsContasPopoverOpen}>
+                      <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" className="w-full justify-between">
+                              {formState.anosContasAprovadas?.length > 0 ? `${formState.anosContasAprovadas.length} ano(s) selecionado(s)` : "Selecione os anos..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                              <CommandInput placeholder="Buscar ano..." />
+                              <CommandList>
+                                  <CommandEmpty>Nenhum ano encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                      {aprovacoesContas.map((aprovacao) => (
+                                          <CommandItem
+                                              key={aprovacao.id}
+                                              value={aprovacao.anoExercicio}
+                                              onSelect={() => handleContasSelection(aprovacao.anoExercicio)}
+                                          >
+                                              <CheckSquare
+                                                  className={cn(
+                                                      "mr-2 h-4 w-4",
+                                                      formState.anosContasAprovadas?.includes(aprovacao.anoExercicio)
+                                                          ? "opacity-100"
+                                                          : "opacity-0"
+                                                  )}
+                                              />
+                                              {aprovacao.anoExercicio}
+                                          </CommandItem>
+                                      ))}
+                                  </CommandGroup>
+                              </CommandList>
+                          </Command>
+                      </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">Os detalhes serão buscados do cadastro de Configurações.</p>
               </div>
             </div>
           </ScrollArea>
@@ -669,6 +718,27 @@ export default function ListagensEliminacaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={isLedDialogOpen} onOpenChange={setIsLedDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Gerar LED: {ledDialogListagem?.numeroListagem}</DialogTitle>
+            <DialogDescription>
+              Confirme os detalhes e as contas a serem comprovadas antes de gerar o relatório.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+              <p className="text-sm"><strong>Tipo:</strong> {ledDialogListagem?.tipoListagem}</p>
+              <p className="text-sm"><strong>Unidade/Setor:</strong> {ledDialogListagem?.unidadeSetor}</p>
+              <p className="text-sm"><strong>Anos de Contas Selecionados:</strong> {ledDialogListagem?.anosContasAprovadas?.join(', ') || 'Nenhum'}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLedDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleGenerateLed}>Gerar Preview do Relatório</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
