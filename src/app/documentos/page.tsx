@@ -3120,7 +3120,7 @@ export default function DocumentosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="w-full h-[65vh]">
+                <ScrollArea className="w-full" style={{ height: '65vh' }}>
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="sticky top-0 z-10 bg-card">
                       <TableRow>
@@ -3593,5 +3593,6 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
