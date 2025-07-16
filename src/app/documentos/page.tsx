@@ -86,6 +86,7 @@ const initialFormState: Partial<Documento> & {
   prazoGuardaClasseProcessualDisplay?: string;
   destinacaoFinalClasseProcessualDisplay?: string;
   isClassificationInactive?: boolean;
+  isClasseJudicialInactive?: boolean;
   necessidadeReclassificacao?: 'Sim' | 'Não';
 } = {
   status: "Arquivado",
@@ -133,6 +134,7 @@ const initialFormState: Partial<Documento> & {
   prazoGuardaClasseProcessualDisplay: "",
   destinacaoFinalClasseProcessualDisplay: "",
   isClassificationInactive: false,
+  isClasseJudicialInactive: false,
 };
 
 const initialFiltersState = {
@@ -250,6 +252,7 @@ export default function DocumentosPage() {
     prazoGuardaClasseProcessualDisplay?: string;
     destinacaoFinalClasseProcessualDisplay?: string;
     isClassificationInactive?: boolean;
+    isClasseJudicialInactive?: boolean;
     necessidadeReclassificacao?: 'Sim' | 'Não';
   }>(initialFormState);
   const [originalDocOnEdit, setOriginalDocOnEdit] = React.useState<Documento | null>(null);
@@ -331,15 +334,16 @@ export default function DocumentosPage() {
         classId = doc.classificacaoArquivisticaId || "";
       }
 
-      let nomeClasse = "", prazoClasse = "", destinacaoClasse = "";
+      let nomeClasse = "", prazoClasse = "", destinacaoClasse = "", isClasseJudicialInactive = false;
       if (doc.codigoClassificacaoJudicialId) {
-        const classeJudicial = classesJudiciais.find(c => c.codigo === doc.codigoClassificacaoJudicialId && !c.inativo);
+        const classeJudicial = classesJudiciais.find(c => c.codigo === doc.codigoClassificacaoJudicialId);
         if (classeJudicial) {
           nomeClasse = classeJudicial.descricao;
           prazoClasse = classeJudicial.prazoGuardaAnos !== undefined ? `${classeJudicial.prazoGuardaAnos} anos` : 'N/A';
           destinacaoClasse = classeJudicial.destinacaoFinal;
+          isClasseJudicialInactive = classeJudicial.inativo;
         } else if (doc.codigoClassificacaoJudicialId) {
-            nomeClasse = "Código não encontrado ou inativo.";
+            nomeClasse = "Código não encontrado.";
         }
       }
 
@@ -362,6 +366,7 @@ export default function DocumentosPage() {
         nomeClasseProcessualDisplay: nomeClasse,
         prazoGuardaClasseProcessualDisplay: prazoClasse,
         destinacaoFinalClasseProcessualDisplay: destinacaoClasse,
+        isClasseJudicialInactive: isClasseJudicialInactive,
       });
       setDocumentIdToDisplay(doc.id);
       setIsFormDisabled(doc.status === 'Eliminado');
@@ -889,7 +894,7 @@ export default function DocumentosPage() {
     const codigoInput = formState.codigoClassificacaoJudicialId?.trim();
     if (codigoInput) {
         const foundClasse = classesJudiciais.find(
-            c => c.codigo === codigoInput && !c.inativo
+            c => c.codigo === codigoInput
         );
 
         if (foundClasse) {
@@ -898,13 +903,15 @@ export default function DocumentosPage() {
                 nomeClasseProcessualDisplay: foundClasse.descricao,
                 prazoGuardaClasseProcessualDisplay: foundClasse.prazoGuardaAnos !== undefined ? `${foundClasse.prazoGuardaAnos} anos` : 'N/A',
                 destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinal,
+                isClasseJudicialInactive: foundClasse.inativo,
             }));
         } else {
             setFormState(prev => ({
                 ...prev,
-                nomeClasseProcessualDisplay: "Código não encontrado ou inativo.",
+                nomeClasseProcessualDisplay: "Código não encontrado.",
                 prazoGuardaClasseProcessualDisplay: "",
                 destinacaoFinalClasseProcessualDisplay: "",
+                isClasseJudicialInactive: false,
             }));
         }
     } else {
@@ -914,6 +921,7 @@ export default function DocumentosPage() {
             nomeClasseProcessualDisplay: "",
             prazoGuardaClasseProcessualDisplay: "",
             destinacaoFinalClasseProcessualDisplay: "",
+            isClasseJudicialInactive: false,
         }));
     }
   };
@@ -2787,6 +2795,11 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                               <Label htmlFor="destinacaoFinalClasseProcessualDisplay">Destinação Final</Label>
                                               <Input id="destinacaoFinalClasseProcessualDisplay" value={formState.destinacaoFinalClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                              {formState.isClasseJudicialInactive && (
+                                                  <p className="text-sm font-medium text-destructive">
+                                                      Código Inativo. Reclassificar.
+                                                  </p>
+                                              )}
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -3593,6 +3606,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 
