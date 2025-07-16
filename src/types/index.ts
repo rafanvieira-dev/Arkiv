@@ -129,7 +129,8 @@ export interface ListagemEliminacao {
   numeroTermoEliminacao?: string; 
   dataProducaoListagem: string; 
   dataProducaoTermoEliminacao?: string;
-  quantificacaoFisica?: string;
+  mensuracaoTotal?: string;
+  observacaoQuantificacao?: string;
   tipoListagem?: 'Documentos' | 'Processos Administrativos' | 'Processos Judiciais';
   unidadeSetor?: string;
   observacoes?: string;

@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { simulatedListagensData, initialAprovacoesContas } from "@/lib/mock-data";
-import { parseISO, format } from "date-fns";
+import { parseISO } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +72,8 @@ const initialFormState: Partial<ListagemEliminacao> = {
   dataProducaoListagem: new Date().toISOString(),
   numeroTermoEliminacao: "",
   dataProducaoTermoEliminacao: undefined,
-  quantificacaoFisica: "",
+  mensuracaoTotal: "",
+  observacaoQuantificacao: "",
   tipoListagem: 'Documentos',
   unidadeSetor: '',
   observacoes: "",
@@ -311,7 +312,8 @@ export default function ListagensEliminacaoPage() {
       dataProducaoListagem: formState.dataProducaoListagem || new Date().toISOString(),
       numeroTermoEliminacao: formState.numeroTermoEliminacao,
       dataProducaoTermoEliminacao: formState.dataProducaoTermoEliminacao,
-      quantificacaoFisica: formState.quantificacaoFisica,
+      mensuracaoTotal: formState.mensuracaoTotal,
+      observacaoQuantificacao: formState.observacaoQuantificacao,
       tipoListagem: formState.tipoListagem || 'Documentos',
       unidadeSetor: formState.unidadeSetor,
       observacoes: formState.observacoes,
@@ -644,8 +646,12 @@ export default function ListagensEliminacaoPage() {
                 <DateInputPicker value={formState.dataProducaoTermoEliminacao ? parseISO(formState.dataProducaoTermoEliminacao) : undefined} onChange={(date) => handleDateChange('dataProducaoTermoEliminacao')(date)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="quantificacaoFisica">Quantificação Física (ex: 3,06 metros lineares)</Label>
-                <Input id="quantificacaoFisica" value={formState.quantificacaoFisica || ''} onChange={handleFormInputChange} />
+                <Label htmlFor="mensuracaoTotal">Mensuração Total</Label>
+                <Input id="mensuracaoTotal" value={formState.mensuracaoTotal || ''} onChange={handleFormInputChange} placeholder="Ex: 12 unidades"/>
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="observacaoQuantificacao">Observação sobre a Quantificação</Label>
+                <Input id="observacaoQuantificacao" value={formState.observacaoQuantificacao || ''} onChange={handleFormInputChange} placeholder="Ex: 0,18 metros lineares"/>
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="observacoes">Observações</Label>

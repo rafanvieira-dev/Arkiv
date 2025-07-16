@@ -176,17 +176,19 @@ export default function LedPrintPage() {
                                 <td className="border border-black p-1">{row.observacoes.join(', ')}</td>
                             </tr>
                         ))}
+                         <tr>
+                            <td colSpan={6} className="border border-black p-2">
+                                <p><strong>Mensuração Total:</strong> {listagem.mensuracaoTotal || 'Não informado'}</p>
+                                <p><strong>Observação sobre a Quantificação:</strong> {listagem.observacaoQuantificacao || 'Não informado'}</p>
+                                <p><strong>Datas-Limite Gerais:</strong> {datasLimiteGerais}</p>
+                            </td>
+                         </tr>
                     </tbody>
                 </table>
-                
-                <section className="mt-4 text-sm space-y-2">
-                    <p><strong>Mensuração total:</strong> {totalGeral} Unidades</p>
-                    <p><strong>Datas-Limite Gerais:</strong> {datasLimiteGerais}</p>
-                </section>
 
                 {comprovacaoContas && comprovacaoContas.length > 0 && (
                     <section className="mt-4 text-sm space-y-2">
-                        <h3 className="font-bold">Comprovação de aprovação das contas:</h3>
+                        <h3 className="font-bold uppercase text-center border-t border-b border-black py-1">Comprovação de aprovação das contas</h3>
                         {comprovacaoContas.map((conta, index) => (
                             <p key={index}>
                                 Referente ao exercício de <strong>{conta.anoExercicio || 'N/A'}</strong>, 
