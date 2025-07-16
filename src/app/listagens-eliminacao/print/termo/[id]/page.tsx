@@ -149,7 +149,7 @@ export default function TermoPrintPage() {
 
             <header className="text-center mb-10">
                 <h1 className="text-lg font-bold uppercase">
-                    TERMO DE ELIMINAÇÃO DE DOCUMENTOS {aggregatedData.siglaOrgao} Nº {listagem.numeroTermoEliminacao || 'XXX'}, DE {listagem.dataProducaoTermoEliminacao ? dataPorExtenso(listagem.dataProducaoTermoEliminacao).toUpperCase() : 'DATA INVÁLIDA'}
+                    TERMO DE ELIMINAÇÃO DE DOCUMENTOS {aggregatedData.siglaOrgao} Nº {listagem.numeroTermoEliminacao || 'XXX'}
                 </h1>
             </header>
 
