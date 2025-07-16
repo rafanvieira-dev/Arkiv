@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, Caixa, ParteDocumento, Classificacao, TipoOrigem } from "@/types";
+import type { Documento, Caixa, ParteDocumento, Classificacao, TipoOrigem, ParteDetalhe } from "@/types";
 import { initialDocumentos, initialCaixas, initialClassificacoes, initialTiposOrigem, initialPartes } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -639,65 +639,89 @@ export default function RelatoriosPage() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                          <Input id="numeroDocumento" placeholder="Ex: PRC-2023-001" value={filters.numeroDocumento} onChange={handleInputChange} />
+                            <Label htmlFor="numeroDocumento">Número do Documento</Label>
+                            <Input id="numeroDocumento" placeholder="Ex: PRC-2023-001" value={filters.numeroDocumento} onChange={handleInputChange} />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                          <Input id="descricaoDocumento" placeholder="Contém..." value={filters.descricaoDocumento} onChange={handleInputChange} />
+                            <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
+                            <Input id="descricaoDocumento" placeholder="Contém..." value={filters.descricaoDocumento} onChange={handleInputChange} />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="dataArquivamentoDe">Data de Arquivamento (De)</Label>
-                          <DateInputPicker value={filters.dataArquivamentoDe} onChange={handleDateChange('dataArquivamentoDe')} placeholder="dd/mm/aaaa" />
+                            <Label htmlFor="dataArquivamentoDe">Data de Arquivamento (De)</Label>
+                            <DateInputPicker value={filters.dataArquivamentoDe} onChange={handleDateChange('dataArquivamentoDe')} placeholder="dd/mm/aaaa" />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="dataArquivamentoAte">Data de Arquivamento (Até)</Label>
-                          <DateInputPicker value={filters.dataArquivamentoAte} onChange={handleDateChange('dataArquivamentoAte')} placeholder="dd/mm/aaaa" />
+                            <Label htmlFor="dataArquivamentoAte">Data de Arquivamento (Até)</Label>
+                            <DateInputPicker value={filters.dataArquivamentoAte} onChange={handleDateChange('dataArquivamentoAte')} placeholder="dd/mm/aaaa" />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="classificacao">Classificação Arquivística</Label>
-                          <Select onValueChange={handleSelectChange('classificacao')} value={filters.classificacao}>
+                            <Label htmlFor="classificacao">Classificação Arquivística</Label>
+                            <Select onValueChange={handleSelectChange('classificacao')} value={filters.classificacao}>
                             <SelectTrigger id="classificacao"><SelectValue placeholder="Selecione a classificação" /></SelectTrigger>
                             <SelectContent>
-                              {allClassificacoes.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.descricao}</SelectItem>)}
+                                {allClassificacoes.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.descricao}</SelectItem>)}
                             </SelectContent>
-                          </Select>
+                            </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="status">Status do Documento</Label>
-                          <Select onValueChange={handleSelectChange('status')} value={filters.status}>
+                            <Label htmlFor="status">Status do Documento</Label>
+                            <Select onValueChange={handleSelectChange('status')} value={filters.status}>
                             <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Arquivado">Arquivado</SelectItem>
-                              <SelectItem value="Emprestado">Emprestado</SelectItem>
-                              <SelectItem value="Desarquivado">Desarquivado</SelectItem>
-                              <SelectItem value="Eliminado">Eliminado</SelectItem>
-                              <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
+                                <SelectItem value="Arquivado">Arquivado</SelectItem>
+                                <SelectItem value="Emprestado">Emprestado</SelectItem>
+                                <SelectItem value="Desarquivado">Desarquivado</SelectItem>
+                                <SelectItem value="Eliminado">Eliminado</SelectItem>
+                                <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
                             </SelectContent>
-                          </Select>
+                            </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="orgao">Órgão</Label>
-                          <Select onValueChange={handleSelectChange('orgao')} value={filters.orgao}>
-                              <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="TRF2">TRF2</SelectItem>
-                                  <SelectItem value="SJRJ">SJRJ</SelectItem>
-                                  <SelectItem value="SJES">SJES</SelectItem>
-                              </SelectContent>
-                          </Select>
+                            <Label htmlFor="orgao">Órgão</Label>
+                            <Select onValueChange={handleSelectChange('orgao')} value={filters.orgao}>
+                                <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="TRF2">TRF2</SelectItem>
+                                    <SelectItem value="SJRJ">SJRJ</SelectItem>
+                                    <SelectItem value="SJES">SJES</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="destinacaoFinal">Destinação Final</Label>
-                          <Select onValueChange={handleSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
-                              <SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Selecione a destinação" /></SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="Eliminação">Eliminação</SelectItem>
-                                  <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                                  <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                                  <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                              </SelectContent>
-                          </Select>
+                            <Label htmlFor="destinacaoFinal">Destinação Final</Label>
+                            <Select onValueChange={handleSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
+                                <SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Selecione a destinação" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="origem">Origem</Label>
+                            <Select onValueChange={handleSelectChange('origem')} value={filters.origem}>
+                                <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
+                                <SelectContent>
+                                {tiposOrigem.filter(o => o && o.nome).sort((a, b) => a.nome.localeCompare(b.nome)).map(o => {
+                                    const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
+                                    return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>);
+                                })}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="partes">Partes Envolvidas</Label>
+                            <Input id="partes" placeholder="Contém..." value={filters.partes} onChange={handleInputChange} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="codigoCaixa">Código da Caixa</Label>
+                            <Input id="codigoCaixa" placeholder="Contém..." value={filters.codigoCaixa} onChange={handleInputChange} />
+                        </div>
+                        <div className="flex items-center space-x-2 pt-6">
+                            <Checkbox id="segredoJustica" checked={filters.segredoJustica} onCheckedChange={handleCheckboxChange('segredoJustica')} />
+                            <Label htmlFor="segredoJustica">Segredo de Justiça</Label>
                         </div>
                     </CardContent>
                     <CardFooter className="flex justify-end gap-2">
