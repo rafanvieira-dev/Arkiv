@@ -22,7 +22,8 @@ function parseDataAbrangenteForYear(dataAbrangente?: string): string | undefined
 
 function dataPorExtenso(isoDate: string): string {
     const date = parseISO(isoDate);
-    return format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+    // Formato alterado para incluir "do ano de"
+    return format(date, "d 'de' MMMM 'do ano de' yyyy", { locale: ptBR });
 }
 
 function formatDate(isoDate: string): string {
@@ -53,7 +54,7 @@ export default function TermoPrintPage() {
 
         try {
             const storedListagens = localStorage.getItem(LISTAGENS_STORAGE_KEY);
-            const allListagens = storedListagens ? JSON.parse(storedListagens) : [];
+            const allListagens: ListagemEliminacao[] = storedListagens ? JSON.parse(storedListagens) : [];
             const currentListagem = allListagens.find((l: ListagemEliminacao) => l.id === id);
 
             if (!currentListagem) {
@@ -161,10 +162,10 @@ export default function TermoPrintPage() {
             <footer className="mt-24 text-center text-sm">
                  <div className="flex justify-around items-end">
                     <div className="inline-block">
-                        <p className="border-t border-black px-8 pt-1">Responsável pela efetivação da eliminação</p>
+                        <p className="border-t border-black w-64 mx-auto pt-1">Responsável pela efetivação da eliminação</p>
                     </div>
                     <div className="inline-block">
-                        <p className="border-t border-black px-8 pt-1">Presidente da CPAD</p>
+                        <p className="border-t border-black w-64 mx-auto pt-1">Presidente da CPAD</p>
                     </div>
                 </div>
             </footer>
