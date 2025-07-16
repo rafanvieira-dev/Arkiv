@@ -20,10 +20,33 @@ function parseDataAbrangenteForYear(dataAbrangente?: string): string | undefined
     return matchAno ? matchAno[0] : undefined;
 }
 
+function numeroPorExtenso(num: number): string {
+    const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+    const dezenas = ["", "dez", "vinte", "trinta"];
+    const especiais = ["", "onze", "doze", "treze", "catorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+
+    if (num <= 0 || num > 31) return "";
+
+    if (num < 10) return unidades[num];
+    if (num === 10) return dezenas[1];
+    if (num > 10 && num < 20) return especiais[num - 10];
+    
+    const dezena = Math.floor(num / 10);
+    const unidade = num % 10;
+
+    if (unidade === 0) {
+        return dezenas[dezena];
+    } else {
+        return `${dezenas[dezena]} e ${unidades[unidade]}`;
+    }
+}
+
 function dataPorExtenso(isoDate: string): string {
     const date = parseISO(isoDate);
-    // Formato alterado para incluir "do ano de"
-    return format(date, "d 'de' MMMM 'do ano de' yyyy", { locale: ptBR });
+    const dia = date.getDate();
+    const diaPorExtenso = numeroPorExtenso(dia);
+    const restoDaData = format(date, "MMMM 'do ano de' yyyy", { locale: ptBR });
+    return `${diaPorExtenso} dias do mês de ${restoDaData}`;
 }
 
 function formatDate(isoDate: string): string {
