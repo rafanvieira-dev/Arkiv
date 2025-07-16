@@ -60,37 +60,32 @@ const TIPOS_ORIGEM_STORAGE_KEY = 'arquivocentral_tipos_origem';
 const PARTES_STORAGE_KEY = 'arquivocentral_partes';
 
 const initialFilters = {
-  numeroDocumento: "",
-  processoOriginario: "",
-  numeroAntigo: "",
-  origem: "",
-  tipoDocumento: "",
-  descricaoDocumento: "",
-  dataDocumentoDe: undefined as Date | undefined,
-  dataDocumentoAte: undefined as Date | undefined,
-  dataArquivamentoDe: undefined as Date | undefined,
-  dataArquivamentoAte: undefined as Date | undefined,
-  partes: "",
-  classificacao: "",
-  codigoCaixa: "",
   status: "",
-  orgao: "",
-  tipoMeio: "",
+  origem: "",
+  numeroDocumento: "",
+  numeroAntigo: "",
+  processoOriginario: "",
+  descricaoDocumento: "",
+  codClassificacao: "",
+  destinacaoFinal: "",
+  necessidadeReclassificacao: "",
+  anoProducao: "",
+  anoArquivamento: "",
+  anoElimPrevistoExato: "",
+  anoElimPrevistoAte: "",
+  codigoCaixa: "",
   generoDocumental: "",
   categoria: "",
-  destinacaoFinal: "",
-  anoEliminacaoPrevisto: "",
-  grauSigilo: "",
+  tipoDocumento: "",
+  partes: "",
   codigoAtoM: "",
-  observacoesGerais: "",
-  codigoClasseJudicial: "",
+  segredoJustica: "",
+  grauSigilo: "",
+  digitalizado: "",
+  anoLimiteDocumento: "",
+  prazoCorrente: "",
+  prazoIntermediario: "",
   numeroListagemEliminacao: "",
-  numeroDocumentoTransferencia: "",
-  caixaMidia: "",
-  palavrasChave: "",
-  segredoJustica: false,
-  digitalizado: false,
-  necessidadeReclassificacao: "",
 };
 
 
@@ -325,6 +320,12 @@ export default function RelatoriosPage() {
           ALL_CUSTOM_REPORT_COLUMNS.slice(0, 5).reduce((acc, col) => ({...acc, [col.id]: true}), {})
         );
     }, [ALL_CUSTOM_REPORT_COLUMNS]);
+    
+    const parseDataAbrangenteForYear = (dataAbrangente?: string): string | undefined => {
+        if (!dataAbrangente) return undefined;
+        const matchAno = dataAbrangente.match(/\d{4}/);
+        return matchAno ? matchAno[0] : undefined;
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -361,34 +362,45 @@ export default function RelatoriosPage() {
             if (filters.codigoCaixa && !doc.codigosCaixa?.toLowerCase().includes(filters.codigoCaixa.toLowerCase())) return false;
             if (filters.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoEliminacaoPrevisto) return false;
             if (filters.codigoAtoM && !doc.codigoAtoM?.toLowerCase().includes(filters.codigoAtoM.toLowerCase())) return false;
-            if (filters.observacoesGerais && !doc.observacoesGerais?.toLowerCase().includes(filters.observacoesGerais.toLowerCase())) return false;
-            if (filters.codigoClasseJudicial && !doc.codigoClassificacaoJudicialId?.toLowerCase().includes(filters.codigoClasseJudicial.toLowerCase())) return false;
             if (filters.numeroListagemEliminacao && !doc.numeroListagemEliminacao?.toLowerCase().includes(filters.numeroListagemEliminacao.toLowerCase())) return false;
-            if (filters.numeroDocumentoTransferencia && !doc.numeroDocumentoTransferencia?.toLowerCase().includes(filters.numeroDocumentoTransferencia.toLowerCase())) return false;
-            if (filters.caixaMidia && !doc.midias?.some(m => m.caixaMidia?.toLowerCase().includes(filters.caixaMidia.toLowerCase()))) return false;
-            if (filters.palavrasChave && (!doc.palavrasChave || !doc.palavrasChave.some(k => k.toLowerCase().includes(filters.palavrasChave.toLowerCase())))) return false;
-    
-            if (filters.classificacao && doc.classificacaoArquivisticaId !== filters.classificacao) return false;
+            
+            if (filters.codClassificacao && doc.classificacaoArquivisticaId) {
+              const classificacao = allClassificacoes.find(c => c.id === doc.classificacaoArquivisticaId);
+              if (!classificacao || (classificacao.codigo && !classificacao.codigo.toLowerCase().includes(filters.codClassificacao.toLowerCase()))) {
+                return false;
+              }
+            } else if (filters.codClassificacao && !doc.classificacaoArquivisticaId) {
+              return false;
+            }
+
             if (filters.status && doc.status !== filters.status) return false;
-            if (filters.orgao && doc.orgao !== filters.orgao) return false;
-            if (filters.tipoMeio && doc.tipoMeio !== filters.tipoMeio) return false;
             if (filters.generoDocumental && doc.generoDocumental !== filters.generoDocumental) return false;
             if (filters.categoria && doc.categoria !== filters.categoria) return false;
             if (filters.destinacaoFinal && doc.destinacaoFinalDisplay !== filters.destinacaoFinal) return false;
             if (filters.grauSigilo && doc.grauSigilo !== filters.grauSigilo) return false;
             if (filters.necessidadeReclassificacao && (doc.necessidadeReclassificacao || 'Não') !== filters.necessidadeReclassificacao) return false;
-    
+
             if (filters.segredoJustica && doc.segredoJustica !== "Sim") return false;
-            if (filters.digitalizado && doc.digitalizado !== "Sim") return false;
+            if (filters.digitalizado && doc.digitalizado !== filters.digitalizado) return false;
             
-            if (filters.dataArquivamentoDe || filters.dataArquivamentoAte) {
-                if (!doc.dataArquivamento) return false;
-                try {
-                    const docArqDate = parseISO(doc.dataArquivamento);
-                    if (filters.dataArquivamentoDe && isBefore(docArqDate, filters.dataArquivamentoDe)) return false;
-                    if (filters.dataArquivamentoAte && isAfter(docArqDate, filters.dataArquivamentoAte)) return false;
-                } catch (e) { return false; }
+            if (filters.anoProducao) {
+              const anoProducaoDoc = parseDataAbrangenteForYear(doc.dataAbrangente);
+              if (!anoProducaoDoc || anoProducaoDoc !== filters.anoProducao) return false;
             }
+            if (filters.anoArquivamento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+              const docYear = getYear(parseISO(doc.dataArquivamento)).toString();
+              if (docYear !== filters.anoArquivamento) return false;
+            }
+            if (filters.anoElimPrevistoExato && doc.anoEliminacaoPrevisto && doc.anoEliminacaoPrevisto !== filters.anoElimPrevistoExato) return false;
+            if (filters.anoElimPrevistoAte && doc.anoEliminacaoPrevisto && parseInt(doc.anoEliminacaoPrevisto, 10) > parseInt(filters.anoElimPrevistoAte, 10)) return false;
+             if (filters.anoLimiteDocumento && doc.dataArquivamento && isValid(parseISO(doc.dataArquivamento))) {
+              const docYear = getYear(parseISO(doc.dataArquivamento));
+              if (docYear > parseInt(filters.anoLimiteDocumento, 10)) return false;
+            }
+             if (filters.prazoCorrente && doc.prazoArquivoCorrenteDisplay && !doc.prazoArquivoCorrenteDisplay.toLowerCase().includes(filters.prazoCorrente.toLowerCase())) return false;
+            if (filters.prazoIntermediario && doc.prazoArquivoIntermediarioDisplay && !doc.prazoArquivoIntermediarioDisplay.toLowerCase().includes(filters.prazoIntermediario.toLowerCase())) return false;
+
+
             return true;
         });
     
@@ -637,92 +649,39 @@ export default function RelatoriosPage() {
                         <CardTitle>Relatório Customizado de Acervo</CardTitle>
                         <CardDescription>Use os filtros para pesquisar no acervo e gere um relatório personalizado para impressão ou PDF.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="numeroDocumento">Número do Documento</Label>
-                            <Input id="numeroDocumento" placeholder="Ex: PRC-2023-001" value={filters.numeroDocumento} onChange={handleInputChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="descricaoDocumento">Descrição do Documento</Label>
-                            <Input id="descricaoDocumento" placeholder="Contém..." value={filters.descricaoDocumento} onChange={handleInputChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dataArquivamentoDe">Data de Arquivamento (De)</Label>
-                            <DateInputPicker value={filters.dataArquivamentoDe} onChange={handleDateChange('dataArquivamentoDe')} placeholder="dd/mm/aaaa" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dataArquivamentoAte">Data de Arquivamento (Até)</Label>
-                            <DateInputPicker value={filters.dataArquivamentoAte} onChange={handleDateChange('dataArquivamentoAte')} placeholder="dd/mm/aaaa" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="classificacao">Classificação Arquivística</Label>
-                            <Select onValueChange={handleSelectChange('classificacao')} value={filters.classificacao}>
-                            <SelectTrigger id="classificacao"><SelectValue placeholder="Selecione a classificação" /></SelectTrigger>
-                            <SelectContent>
-                                {allClassificacoes.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo} - {c.descricao}</SelectItem>)}
-                            </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="status">Status do Documento</Label>
-                            <Select onValueChange={handleSelectChange('status')} value={filters.status}>
-                            <SelectTrigger id="status"><SelectValue placeholder="Selecione o status" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Arquivado">Arquivado</SelectItem>
-                                <SelectItem value="Emprestado">Emprestado</SelectItem>
-                                <SelectItem value="Desarquivado">Desarquivado</SelectItem>
-                                <SelectItem value="Eliminado">Eliminado</SelectItem>
-                                <SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem>
-                            </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="orgao">Órgão</Label>
-                            <Select onValueChange={handleSelectChange('orgao')} value={filters.orgao}>
-                                <SelectTrigger id="orgao"><SelectValue placeholder="Selecione o órgão" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="TRF2">TRF2</SelectItem>
-                                    <SelectItem value="SJRJ">SJRJ</SelectItem>
-                                    <SelectItem value="SJES">SJES</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="destinacaoFinal">Destinação Final</Label>
-                            <Select onValueChange={handleSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}>
-                                <SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Selecione a destinação" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Eliminação">Eliminação</SelectItem>
-                                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                                    <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                                    <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="origem">Origem</Label>
-                            <Select onValueChange={handleSelectChange('origem')} value={filters.origem}>
-                                <SelectTrigger id="origem"><SelectValue placeholder="Selecione a origem" /></SelectTrigger>
-                                <SelectContent>
-                                {tiposOrigem.filter(o => o && o.nome).sort((a, b) => a.nome.localeCompare(b.nome)).map(o => {
-                                    const displayValue = o.sigla ? `${o.nome} - ${o.sigla}` : o.nome;
-                                    return (<SelectItem key={o.id} value={displayValue}>{displayValue}</SelectItem>);
-                                })}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="partes">Partes Envolvidas</Label>
-                            <Input id="partes" placeholder="Contém..." value={filters.partes} onChange={handleInputChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="codigoCaixa">Código da Caixa</Label>
-                            <Input id="codigoCaixa" placeholder="Contém..." value={filters.codigoCaixa} onChange={handleInputChange} />
-                        </div>
-                        <div className="flex items-center space-x-2 pt-6">
-                            <Checkbox id="segredoJustica" checked={filters.segredoJustica} onCheckedChange={handleCheckboxChange('segredoJustica')} />
-                            <Label htmlFor="segredoJustica">Segredo de Justiça</Label>
-                        </div>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="space-y-2"><Label htmlFor="status">Status</Label><Select onValueChange={handleSelectChange('status')} value={filters.status}><SelectTrigger id="status"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="Arquivado">Arquivado</SelectItem><SelectItem value="Emprestado">Emprestado</SelectItem><SelectItem value="Desarquivado">Desarquivado</SelectItem><SelectItem value="Eliminado">Eliminado</SelectItem><SelectItem value="Aguardando prazo para eliminação">Aguardando prazo para eliminação</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="origem">Origem do Documento</Label><Input id="origem" placeholder="Contém..." value={filters.origem} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="numeroDocumento">Número do Documento</Label><Input id="numeroDocumento" placeholder="Contém..." value={filters.numeroDocumento} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="numeroAntigo">Número Antigo</Label><Input id="numeroAntigo" placeholder="Contém..." value={filters.numeroAntigo} onChange={handleInputChange} /></div>
+
+                        <div className="space-y-2"><Label htmlFor="processoOriginario">Processo Originário</Label><Input id="processoOriginario" placeholder="Contém..." value={filters.processoOriginario} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="descricaoDocumento">Descrição</Label><Input id="descricaoDocumento" placeholder="Contém..." value={filters.descricaoDocumento} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="codClassificacao">Cód. Classificação</Label><Input id="codClassificacao" placeholder="Contém..." value={filters.codClassificacao} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="destinacaoFinal">Destinação Final</Label><Select onValueChange={handleSelectChange('destinacaoFinal')} value={filters.destinacaoFinal}><SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Todas as destinações" /></SelectTrigger><SelectContent><SelectItem value="Eliminação">Eliminação</SelectItem><SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem></SelectContent></Select></div>
+
+                        <div className="space-y-2"><Label htmlFor="necessidadeReclassificacao">Necess. Reclassificação</Label><Select onValueChange={handleSelectChange('necessidadeReclassificacao')} value={filters.necessidadeReclassificacao}><SelectTrigger id="necessidadeReclassificacao"><SelectValue placeholder="Ambos" /></SelectTrigger><SelectContent><SelectItem value="Sim">Sim</SelectItem><SelectItem value="Não">Não</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="anoProducao">Ano de Produção</Label><Input id="anoProducao" type="number" placeholder="AAAA" value={filters.anoProducao} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="anoArquivamento">Ano de Arquivamento</Label><Input id="anoArquivamento" type="number" placeholder="AAAA" value={filters.anoArquivamento} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="anoElimPrevistoExato">Ano Elim. Previsto (Exato)</Label><Input id="anoElimPrevistoExato" type="number" placeholder="AAAA" value={filters.anoElimPrevistoExato} onChange={handleInputChange} /></div>
+
+                        <div className="space-y-2"><Label htmlFor="anoElimPrevistoAte">Ano Elim. Previsto (Até)</Label><Input id="anoElimPrevistoAte" type="number" placeholder="AAAA" value={filters.anoElimPrevistoAte} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="codigoCaixa">Código da Caixa</Label><Input id="codigoCaixa" placeholder="Contém..." value={filters.codigoCaixa} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="generoDocumental">Gênero Documental</Label><Select onValueChange={handleSelectChange('generoDocumental')} value={filters.generoDocumental}><SelectTrigger id="generoDocumental"><SelectValue placeholder="Todos os gêneros" /></SelectTrigger><SelectContent><SelectItem value="Textual">Textual</SelectItem><SelectItem value="Iconográfico">Iconográfico</SelectItem><SelectItem value="Cartográfico">Cartográfico</SelectItem><SelectItem value="Sonoro">Sonoro</SelectItem><SelectItem value="Filmográfico">Filmográfico</SelectItem><SelectItem value="Audiovisual">Audiovisual</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="categoria">Categoria Documento</Label><Select onValueChange={handleSelectChange('categoria')} value={filters.categoria}><SelectTrigger id="categoria"><SelectValue placeholder="Todas as categorias" /></SelectTrigger><SelectContent><SelectItem value="Documento">Documento</SelectItem><SelectItem value="Dossiê">Dossiê</SelectItem><SelectItem value="Processo Judicial">Processo Judicial</SelectItem><SelectItem value="Processo Administrativo">Processo Administrativo</SelectItem></SelectContent></Select></div>
+                        
+                        <div className="space-y-2"><Label htmlFor="tipoDocumento">Espécie de Documento</Label><Input id="tipoDocumento" placeholder="Contém..." value={filters.tipoDocumento} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="partes">Pessoas Referidas</Label><Input id="partes" placeholder="Contém..." value={filters.partes} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="codigoAtoM">Código AtoM</Label><Input id="codigoAtoM" placeholder="Contém..." value={filters.codigoAtoM} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="segredoJustica">Segredo de Justiça</Label><Select onValueChange={handleSelectChange('segredoJustica')} value={filters.segredoJustica}><SelectTrigger id="segredoJustica"><SelectValue placeholder="Ambos" /></SelectTrigger><SelectContent><SelectItem value="Sim">Sim</SelectItem><SelectItem value="Não">Não</SelectItem></SelectContent></Select></div>
+
+                        <div className="space-y-2"><Label htmlFor="grauSigilo">Grau de Sigilo LAI</Label><Select onValueChange={handleSelectChange('grauSigilo')} value={filters.grauSigilo}><SelectTrigger id="grauSigilo"><SelectValue placeholder="Todos os graus" /></SelectTrigger><SelectContent><SelectItem value="Ostensivo">Ostensivo</SelectItem><SelectItem value="Reservado">Reservado</SelectItem><SelectItem value="Secreto">Secreto</SelectItem><SelectItem value="Ultrassecreto">Ultrassecreto</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="digitalizado">Digitalizado</Label><Select onValueChange={handleSelectChange('digitalizado')} value={filters.digitalizado}><SelectTrigger id="digitalizado"><SelectValue placeholder="Todos" /></SelectTrigger><SelectContent><SelectItem value="Sim">Sim</SelectItem><SelectItem value="Não">Não</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="anoLimiteDocumento">Documentos Até o Ano (Arq.)</Label><Input id="anoLimiteDocumento" type="number" placeholder="AAAA" value={filters.anoLimiteDocumento} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="prazoCorrente">Prazo Arquivo Corrente</Label><Input id="prazoCorrente" placeholder="Anos ou condição textual" value={filters.prazoCorrente} onChange={handleInputChange} /></div>
+
+                        <div className="space-y-2"><Label htmlFor="prazoIntermediario">Prazo Arquivo Intermediário</Label><Input id="prazoIntermediario" placeholder="Contém..." value={filters.prazoIntermediario} onChange={handleInputChange} /></div>
+                        <div className="space-y-2"><Label htmlFor="numeroListagemEliminacao">Nº Listagem Eliminação</Label><Input id="numeroListagemEliminacao" placeholder="Contém..." value={filters.numeroListagemEliminacao} onChange={handleInputChange} /></div>
                     </CardContent>
                     <CardFooter className="flex justify-end gap-2">
                         <Button variant="outline" onClick={handleClear}>
@@ -805,4 +764,3 @@ export default function RelatoriosPage() {
         </div>
     );
 }
-
