@@ -25,14 +25,27 @@ function dataPorExtenso(isoDate: string): string {
     return format(date, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 }
 
+function formatDate(isoDate: string): string {
+    const date = parseISO(isoDate);
+    return format(date, "dd/MM/yyyy", { locale: ptBR });
+}
+
+
 export default function TermoPrintPage() {
     const params = useParams();
     const id = params.id as string;
     const { toast } = useToast();
 
     const [listagem, setListagem] = React.useState<ListagemEliminacao | null>(null);
-    const [documentos, setDocumentos] = React.useState<Documento[]>([]);
-    const [classificacoes, setClassificacoes] = React.useState<Classificacao[]>([]);
+    const [aggregatedData, setAggregatedData] = React.useState({
+        assuntos: "",
+        periodo: "",
+        setor: "",
+        siglaOrgao: "",
+        nomeOrgaoComArtigo: "",
+        autoridade: "",
+        nomeCompletoOrgao: "",
+    });
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
@@ -47,7 +60,7 @@ export default function TermoPrintPage() {
                 toast({ variant: "destructive", title: "Erro", description: "Listagem não encontrada." });
                 return;
             }
-            if (!currentListagem.dataProducaoTermoEliminacao) {
+             if (!currentListagem.dataProducaoTermoEliminacao) {
                 toast({ variant: "destructive", title: "Erro", description: "Esta listagem ainda não foi efetivada (não possui data de produção do termo)." });
                 return;
             }
@@ -56,11 +69,65 @@ export default function TermoPrintPage() {
             const storedDocumentos = localStorage.getItem(DOCUMENTOS_STORAGE_KEY);
             const allDocumentos: Documento[] = storedDocumentos ? JSON.parse(storedDocumentos) : [];
             const docsNestaListagem = allDocumentos.filter(d => currentListagem.documentoIds.includes(d.id));
-            setDocumentos(docsNestaListagem);
             
             const storedClassificacoes = localStorage.getItem(CLASSIFICACOES_STORAGE_KEY);
             const allClassificacoes: Classificacao[] = storedClassificacoes ? JSON.parse(storedClassificacoes) : [];
-            setClassificacoes(allClassificacoes);
+            
+            // --- Aggregate Data ---
+            const classifIds = new Set(docsNestaListagem.map(d => d.classificacaoArquivisticaId).filter(Boolean));
+            const assuntos = Array.from(classifIds).map(id => {
+                const classif = allClassificacoes.find(c => c.id === id);
+                return classif ? `"${classif.descricao}"` : '';
+            }).filter(Boolean).join(', ');
+
+            const allYears = new Set<number>();
+            docsNestaListagem.forEach(d => {
+                const yearStr = parseDataAbrangenteForYear(d.dataAbrangente);
+                if (yearStr) {
+                    const yearNum = parseInt(yearStr, 10);
+                    if (!isNaN(yearNum)) {
+                        allYears.add(yearNum);
+                    }
+                }
+            });
+            const sortedAllYears = Array.from(allYears).sort();
+            let periodo = "N/A";
+            if (sortedAllYears.length > 1) {
+                periodo = `${sortedAllYears[0]} a ${sortedAllYears[sortedAllYears.length - 1]}`;
+            } else if (sortedAllYears.length === 1) {
+                periodo = String(sortedAllYears[0]);
+            }
+            
+            const setor = currentListagem.unidadeSetor || 'Arquivo';
+            
+            // --- Dynamic Text Generation ---
+            const orgao = currentListagem.orgao;
+            let siglaOrgao = 'TRF2';
+            let nomeOrgaoComArtigo = 'o Tribunal Regional Federal da 2ª Região';
+            let autoridade = 'Presidente do Tribunal Regional Federal da 2ª Região';
+            let nomeCompletoOrgao = 'Tribunal Regional Federal da 2ª Região';
+
+            if (orgao?.includes('SJRJ')) {
+                siglaOrgao = 'SJRJ';
+                nomeOrgaoComArtigo = 'a Seção Judiciária do Rio de Janeiro (SJRJ)';
+                autoridade = 'Diretor do Foro da Seção Judiciária do Rio de Janeiro (SJRJ)';
+                nomeCompletoOrgao = 'Seção Judiciária do Rio de Janeiro (SJRJ)';
+            } else if (orgao?.includes('SJES')) {
+                siglaOrgao = 'SJES';
+                nomeOrgaoComArtigo = 'a Seção Judiciária do Espírito Santo (SJES)';
+                autoridade = 'Diretor do Foro da Seção Judiciária do Espírito Santo (SJES)';
+                nomeCompletoOrgao = 'Seção Judiciária do Espírito Santo (SJES)';
+            }
+
+            setAggregatedData({
+                assuntos,
+                periodo,
+                setor,
+                siglaOrgao,
+                nomeOrgaoComArtigo,
+                autoridade,
+                nomeCompletoOrgao
+            });
 
         } catch (error) {
             console.error("Failed to generate termo data:", error);
@@ -69,44 +136,6 @@ export default function TermoPrintPage() {
             setIsLoading(false);
         }
     }, [id, toast]);
-
-    const aggregatedData = React.useMemo(() => {
-        if (!listagem || documentos.length === 0 || classificacoes.length === 0) {
-            return {
-                assuntos: "",
-                periodo: "",
-                setor: "",
-            };
-        }
-
-        const classifIds = new Set(documentos.map(d => d.classificacaoArquivisticaId).filter(Boolean));
-        const assuntos = Array.from(classifIds).map(id => {
-            const classif = classificacoes.find(c => c.id === id);
-            return classif ? `"${classif.descricao}"` : '';
-        }).filter(Boolean).join(', ');
-
-        const allYears = new Set<number>();
-        documentos.forEach(d => {
-            const yearStr = parseDataAbrangenteForYear(d.dataAbrangente);
-            if (yearStr) {
-                const yearNum = parseInt(yearStr, 10);
-                if (!isNaN(yearNum)) {
-                    allYears.add(yearNum);
-                }
-            }
-        });
-        const sortedAllYears = Array.from(allYears).sort();
-        let periodo = "N/A";
-        if (sortedAllYears.length > 1) {
-            periodo = `${sortedAllYears[0]} a ${sortedAllYears[sortedAllYears.length - 1]}`;
-        } else if (sortedAllYears.length === 1) {
-            periodo = String(sortedAllYears[0]);
-        }
-        
-        const setor = listagem.unidadeSetor || 'Arquivo/Tribunal Regional Federal da 2ª Região';
-
-        return { assuntos, periodo, setor };
-    }, [listagem, documentos, classificacoes]);
 
     if (isLoading) return <div className="p-8 text-center">Carregando termo...</div>;
     if (!listagem) return <div className="p-8 text-center">Não foi possível carregar o termo de eliminação.</div>;
@@ -119,20 +148,20 @@ export default function TermoPrintPage() {
 
             <header className="text-center mb-10">
                 <h1 className="text-lg font-bold uppercase">
-                    TERMO DE ELIMINAÇÃO DE DOCUMENTOS TRF2 Nº {listagem.numeroTermoEliminacao || 'XXX'}, DE {listagem.dataProducaoTermoEliminacao ? dataPorExtenso(listagem.dataProducaoTermoEliminacao).toUpperCase() : 'DATA INVÁLIDA'}
+                    TERMO DE ELIMINAÇÃO DE DOCUMENTOS {aggregatedData.siglaOrgao} Nº {listagem.numeroTermoEliminacao || 'XXX'}, DE {listagem.dataProducaoTermoEliminacao ? dataPorExtenso(listagem.dataProducaoTermoEliminacao).toUpperCase() : 'DATA INVÁLIDA'}
                 </h1>
             </header>
 
             <main className="text-sm leading-relaxed indent-8 space-y-4">
                 <p>
-                    Aos {listagem.dataProducaoTermoEliminacao ? dataPorExtenso(listagem.dataProducaoTermoEliminacao) : '[data]'}, o Tribunal Regional Federal da 2ª Região, de acordo com o que estabelece a Tabela de Temporalidade de Documentos em vigor e consta da Listagem de Eliminação de Documentos - LED TRF2 Nº {listagem.numeroListagem} e do Edital de Ciência de Eliminação de Documentos nº {listagem.numeroEditalCiencia || 'XXX'}, de {listagem.dataPublicacaoEdital ? dataPorExtenso(listagem.dataPublicacaoEdital) : '[data do edital]'}, aprovados pelo Presidente do Tribunal Regional Federal da 2ª Região e publicado no Diário Eletrônico da Justiça Federal da 2ª Região, de {listagem.dataPublicacaoEdital ? dataPorExtenso(listagem.dataPublicacaoEdital) : '[data de publicação]'}, procedeu à eliminação de {listagem.quantificacaoFisica || '[quantificação]'} de {listagem.tipoListagem?.toLowerCase()} relativos a {aggregatedData.assuntos}, do período de {aggregatedData.periodo}, do Setor de {aggregatedData.setor}.
+                    Aos {listagem.dataProducaoTermoEliminacao ? dataPorExtenso(listagem.dataProducaoTermoEliminacao) : '[data]'}, {aggregatedData.nomeOrgaoComArtigo}, de acordo com o que estabelece a Tabela de Temporalidade de Documentos em vigor e consta da Listagem de Eliminação de Documentos - LED TRF2 Nº {listagem.numeroListagem} e do Edital de Ciência de Eliminação de Documentos nº {listagem.numeroEditalCiencia || 'XXX'}, de {listagem.dataPublicacaoEdital ? formatDate(listagem.dataPublicacaoEdital) : '[data do edital]'}, aprovados pelo(a) {aggregatedData.autoridade} e publicado no Diário Eletrônico da Justiça Federal da 2ª Região, de {listagem.dataPublicacaoEdital ? formatDate(listagem.dataPublicacaoEdital) : '[data de publicação]'}, procedeu à eliminação de {listagem.mensuracaoTotal || '[quantificação]'} de {listagem.tipoListagem?.toLowerCase() || 'documentos'} relativos a {aggregatedData.assuntos}, do período de {aggregatedData.periodo}, do(a) {aggregatedData.setor}/{aggregatedData.nomeCompletoOrgao}.
                 </p>
             </main>
 
             <footer className="mt-24 text-center text-sm">
                  <div className="flex justify-around items-end">
                     <div className="inline-block">
-                        <p className="border-t border-black px-8 pt-1">Responsável pelo Arquivo</p>
+                        <p className="border-t border-black px-8 pt-1">Responsável pela efetivação da eliminação</p>
                     </div>
                     <div className="inline-block">
                         <p className="border-t border-black px-8 pt-1">Presidente da CPAD</p>
