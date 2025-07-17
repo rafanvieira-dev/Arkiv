@@ -348,56 +348,7 @@ export const placeholderDocumentos: Documento[] = [
     numeroListagemEliminacao: "LE-2024-001", 
     numeroDocumentoTransferencia: "",
     dataCadastro: new Date("2018-03-01T14:00:00Z").toISOString(), 
-  },
-  ...Array.from({ length: 20 }, (_, i) => {
-    const docIndex = i + 9;
-    const anoBase = 2020 - i;
-    const mes = (i % 12) + 1;
-    const dia = (i % 28) + 1;
-    const dataArquivamento = new Date(anoBase, mes - 1, dia);
-    const classification = placeholderClassificacoesSimulado[i % placeholderClassificacoesSimulado.length];
-    let anoEliminacao = "";
-    if (classification.destinacaoFinal === 'Eliminação') {
-        const prazoIntermediario = classification.prazoGuardaFaseIntermediariaAnos ?? 0;
-        anoEliminacao = (anoBase + prazoIntermediario + 1).toString();
-    }
-    const isJudicial = (i % 3 === 0);
-
-    return {
-      id: `DOC${String(docIndex).padStart(3, '0')}`,
-      status: "Arquivado" as const,
-      orgao: (["TRF2", "SJRJ", "SJES"] as const)[i % 3],
-      origem: `Origem Teste ${i+1}`,
-      tipoMeio: (["Não digital", "Digital", "Híbrido"] as const)[i % 3],
-      generoDocumental: "Textual",
-      categoria: isJudicial ? "Processo Judicial" : "Processo Administrativo" as const,
-      tipoDocumento: isJudicial ? "Ação Teste" : "Relatório Teste",
-      numeroDocumento: `DOC-TESTE-${docIndex}`,
-      dataAbrangente: `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anoBase}`,
-      descricaoDocumento: `Documento de teste número ${docIndex} para popular a base de dados do acervo.`,
-      partes: [{ id: `p${docIndex}`, nome: `Pessoa Teste ${docIndex}`, tipoParte: 'Interessado' }],
-      dataArquivamento: dataArquivamento.toISOString(),
-      quantidadeVolumes: 1,
-      quantidadeApensos: 0,
-      apensos: [],
-      totalMidias: 0,
-      midias: [],
-      digitalizado: "Não" as const,
-      classificacaoArquivisticaId: classification.id,
-      prazoArquivoCorrenteDisplay: classification.tipoPrazoFaseCorrente === 'Anos' ? `${classification.prazoGuardaFaseCorrenteAnos} Anos` : (classification.prazoGuardaFaseCorrenteCondicaoTextual || ''),
-      prazoArquivoIntermediarioDisplay: `${classification.prazoGuardaFaseIntermediariaAnos} Anos`,
-      destinacaoFinalDisplay: classification.destinacaoFinal,
-      alteracaoDestinacaoFinal: "Não Alterar" as const,
-      anoEliminacaoPrevisto: anoEliminacao,
-      necessidadeReclassificacao: "Não" as const,
-      segredoJustica: "Não" as const,
-      grauSigilo: "Ostensivo" as const,
-      codigosCaixa: `CX-T-${String(docIndex).padStart(3, '0')}`,
-      codigoAtoM: `ATOM${String(docIndex).padStart(3, '0')}`,
-      dataCadastro: dataArquivamento.toISOString(),
-      codigoClassificacaoJudicialId: isJudicial ? "CJ001" : undefined,
-    }
-  })
+  }
 ];
 
 export const placeholderSolicitacoesInitial: Solicitacao[] = [
