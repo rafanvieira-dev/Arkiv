@@ -19,6 +19,7 @@ import {
 } from "@/lib/mock-data";
 import { ClientSideDateFormatter } from "@/components/client-side-date-formatter";
 import type { Documento, Solicitacao, Transferencia, Caixa, ListagemEliminacao } from '@/types';
+import { parseISO, differenceInDays } from "date-fns";
 
 
 const DOCUMENTOS_STORAGE_KEY = 'arquivocentral_documentos';
@@ -42,6 +43,7 @@ export default function DashboardPage() {
         totalDocsAguardandoEliminacao: 0,
         totalCaixas: 0,
         totalListagens: 0,
+        dueLoans: 0,
     });
     
     const [recentActivities, setRecentActivities] = React.useState<{ type: string; id: string; date: string; link: string; }[]>([]);
@@ -87,6 +89,17 @@ export default function DashboardPage() {
 
         const totalCaixas = allCaixas.length;
         const totalListagens = allListagens.length;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueLoans = allSolicitacoes.filter(s => {
+            if (s.tipo !== 'Empréstimo' || !s.dataPrevistaDevolucao || s.dataDevolucao) {
+                return false;
+            }
+            const dueDate = parseISO(s.dataPrevistaDevolucao);
+            return differenceInDays(dueDate, today) <= 5;
+        }).length;
+
 
         setStats({ 
             totalDocs, 
@@ -100,7 +113,8 @@ export default function DashboardPage() {
             totalDocsEliminados,
             totalDocsAguardandoEliminacao,
             totalCaixas,
-            totalListagens
+            totalListagens,
+            dueLoans
         });
 
         const newRecentActivities = [
@@ -213,7 +227,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </Link>
-                <Link href="/solicitacoes" className="block">
+                <Link href="/solicitacoes?status=Pendente" className="block">
                     <Card className="hover:bg-muted/50 transition-colors">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Solicitações Pendentes</CardTitle>
@@ -225,7 +239,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </Link>
-                <Link href="/transferencias" className="block">
+                <Link href="/transferencias?status=Pendente" className="block">
                     <Card className="hover:bg-muted/50 transition-colors">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Transferências Pendentes</CardTitle>
@@ -249,15 +263,15 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </Link>
-                <Link href={`/documentos?anoElimPrevistoAte=${years.current}`} className="block">
-                    <Card className="hover:bg-muted/50 transition-colors">
+                <Link href={`/solicitacoes?tipo=Empréstimo`} className="block">
+                    <Card className={`hover:bg-muted/50 transition-colors ${stats.dueLoans > 0 ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500' : ''}`}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Documentos Expirados</CardTitle>
-                            <CalendarX className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Empréstimos Vencidos/Próximos</CardTitle>
+                            <CalendarX className={`h-4 w-4 ${stats.dueLoans > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-muted-foreground'}`} />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.docsExpired}</div>
-                            <p className="text-xs text-muted-foreground">Eliminação neste ano ou anterior</p>
+                            <div className="text-2xl font-bold">{stats.dueLoans}</div>
+                            <p className="text-xs text-muted-foreground">Empréstimos vencidos ou a vencer em 5 dias</p>
                         </CardContent>
                     </Card>
                 </Link>

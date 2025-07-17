@@ -9,11 +9,11 @@ import { PageHeader } from "@/components/page-header";
 import type { Solicitacao, Documento } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ListFilter,
-  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet, Printer, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw
+  ColumnsIcon, CheckSquare, Square, Upload, Download, FileSpreadsheet, Printer, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, RefreshCw
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { parseISO, isBefore, isAfter } from 'date-fns';
+import { parseISO, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -76,7 +76,9 @@ const initialFormStateSolicitacao: Partial<Solicitacao> = {
   tipo: 'Empréstimo',
   dataSolicitacao: new Date().toISOString(),
   dataAtendimento: undefined,
+  dataPrevistaDevolucao: undefined,
   dataDevolucao: undefined,
+  renovacoes: 0,
   documentoIds: [],
   status: "Pendente",
   observacoes: "",
@@ -142,6 +144,26 @@ const ALL_COLUMNS_CONFIG: ColumnConfig[] = [
   { id: 'emailContato', header: 'E-mail', accessorKey: 'emailContato', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   { id: 'dataSolicitacao', header: 'Data Solicitação', accessorKey: 'dataSolicitacao', defaultVisible: true, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
   { id: 'dataAtendimento', header: 'Data Atendimento', accessorKey: 'dataAtendimento', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
+  { id: 'dataPrevistaDevolucao', header: 'Prazo Devolução', accessorKey: 'dataPrevistaDevolucao', defaultVisible: true, enableSorting: true, cellFormatter: (value, item) => {
+    if (item.tipo !== 'Empréstimo' || !item.dataAtendimento || item.dataDevolucao) {
+      return 'N/A';
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = value ? parseISO(value) : null;
+    if (!dueDate) return <span className="text-muted-foreground">Sem prazo</span>;
+
+    const daysLeft = differenceInDays(dueDate, today);
+    let colorClass = 'text-green-600 dark:text-green-400';
+    if (daysLeft < 0) colorClass = 'text-red-600 dark:text-red-400 font-bold';
+    else if (daysLeft <= 5) colorClass = 'text-yellow-600 dark:text-yellow-400';
+
+    return (
+      <span className={colorClass}>
+        <ClientSideDateFormatter isoDateString={value} /> ({item.renovacoes || 0} renov.)
+      </span>
+    );
+  }},
   { id: 'dataDevolucao', header: 'Data Devolução', accessorKey: 'dataDevolucao', defaultVisible: false, enableSorting: true, cellFormatter: (value) => <ClientSideDateFormatter isoDateString={value} /> },
   { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: false, cellFormatter: (value) => <span className="block max-w-xs truncate" title={value as string}>{value || 'N/A'}</span> },
   { id: 'documentoIds', header: 'Docs Solicitados (Qtd)', accessorKey: 'documentoIds', defaultVisible: true, enableSorting: true, cellFormatter: (value: string[]) => value.length },
@@ -426,7 +448,14 @@ export default function SolicitacoesPage() {
       finalDate.setSeconds(now.getSeconds());
     }
     const isoDate = finalDate?.toISOString();
-    setFormState(prev => ({ ...prev, [id]: isoDate }));
+    
+    setFormState(prev => {
+        const newState = {...prev, [id]: isoDate};
+        if (id === 'dataAtendimento' && isoDate && prev.tipo === 'Empréstimo') {
+            newState.dataPrevistaDevolucao = addDays(parseISO(isoDate), 15).toISOString();
+        }
+        return newState;
+    });
   };
 
 
@@ -461,7 +490,9 @@ export default function SolicitacoesPage() {
       tipo: formState.tipo || 'Empréstimo',
       dataSolicitacao: formState.dataSolicitacao || new Date().toISOString(),
       dataAtendimento: formState.dataAtendimento,
+      dataPrevistaDevolucao: formState.dataPrevistaDevolucao,
       dataDevolucao: formState.dataDevolucao,
+      renovacoes: formState.renovacoes || 0,
       documentoIds: selectedDocIdsInDialog,
       status: finalStatus,
       observacoes: formState.observacoes,
@@ -547,7 +578,7 @@ export default function SolicitacoesPage() {
 
     const value = item[column.accessorKey as keyof Solicitacao];
 
-    if (['dataSolicitacao', 'dataAtendimento', 'dataDevolucao'].includes(column.accessorKey as string) && typeof value === 'string') {
+    if (['dataSolicitacao', 'dataAtendimento', 'dataPrevistaDevolucao', 'dataDevolucao'].includes(column.accessorKey as string) && typeof value === 'string') {
       const parsedDate = parseISO(value);
       return parsedDate.getTime();
     }
@@ -845,6 +876,25 @@ export default function SolicitacoesPage() {
   };
   
   const filtersAreActive = React.useMemo(() => Object.values(filters).some(value => !!value), [filters]);
+  
+  const handleRenewLoan = (solicitacaoId: string) => {
+    setSolicitacoes(prev => {
+        return prev.map(sol => {
+            if (sol.id === solicitacaoId && sol.dataPrevistaDevolucao) {
+                const novaData = addDays(parseISO(sol.dataPrevistaDevolucao), 15);
+                const renovacoes = (sol.renovacoes || 0) + 1;
+                toast({ title: 'Empréstimo Renovado', description: `O prazo foi estendido para ${novaData.toLocaleDateString()}.` });
+                logAction('RENEW_LOAN', { solicitacaoId });
+                return { 
+                    ...sol, 
+                    dataPrevistaDevolucao: novaData.toISOString(),
+                    renovacoes: renovacoes,
+                };
+            }
+            return sol;
+        });
+    });
+  };
 
   return (
     <TooltipProvider>
@@ -963,6 +1013,16 @@ export default function SolicitacoesPage() {
                         placeholder="dd/mm/aaaa"
                       />
                     </div>
+                    {formState.tipo === 'Empréstimo' && (
+                        <div className="space-y-2">
+                        <Label htmlFor="dataPrevistaDevolucao">Data Prevista Devolução</Label>
+                        <DateInputPicker 
+                            value={formState.dataPrevistaDevolucao ? parseISO(formState.dataPrevistaDevolucao) : undefined}
+                            onChange={(date) => handleDateChange('dataPrevistaDevolucao')(date)}
+                            placeholder="Calculado automaticamente"
+                        />
+                        </div>
+                    )}
 
                     <div className="lg:col-span-3 space-y-2">
                       <Label htmlFor="observacoes">Observações</Label>
@@ -1296,6 +1356,16 @@ export default function SolicitacoesPage() {
                           </TooltipTrigger>
                           <TooltipContent><p>Imprimir Guia de Remessa</p></TooltipContent>
                         </Tooltip>
+                        {item.tipo === 'Empréstimo' && item.status === 'Atendida' && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" aria-label="Renovar Empréstimo" onClick={() => handleRenewLoan(item.id)}>
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Renovar Empréstimo (+15 dias)</p></TooltipContent>
+                            </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" aria-label="Editar Solicitação" onClick={() => handleOpenDialog(item)} >
@@ -1438,3 +1508,4 @@ export default function SolicitacoesPage() {
 
 
     
+

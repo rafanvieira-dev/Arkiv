@@ -150,7 +150,9 @@ export interface Solicitacao {
   tipo: 'Empréstimo' | 'Desarquivamento';
   dataSolicitacao: string; 
   dataAtendimento?: string; 
+  dataPrevistaDevolucao?: string;
   dataDevolucao?: string; 
+  renovacoes?: number;
   documentoIds: string[]; 
   status: 'Pendente' | 'Atendida' | 'Devolvido' | 'Cancelada';
   observacoes?: string;
