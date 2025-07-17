@@ -79,6 +79,7 @@ export interface Documento {
   codigoAtoM?: string; // 1.33
   observacoesGerais?: string; // 1.35
   codigoClassificacaoJudicialId?: string; // 1.36 - Habilitado se categoria for "Processo Judicial"
+  reuCondenado?: 'Sim' | 'Não'; // 1.37 - Habilitado se categoria for "Processo Judicial"
   numeroListagemEliminacao?: string; // New field for elimination list number
   numeroDocumentoTransferencia?: string;
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)

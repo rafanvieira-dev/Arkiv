@@ -128,6 +128,7 @@ const initialFormState: Partial<Documento> & {
   documentosRelacionadosIds: "",
   observacoesGerais: "",
   codigoClassificacaoJudicialId: "",
+  reuCondenado: undefined,
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
   nomeClasseProcessualDisplay: "",
@@ -502,6 +503,7 @@ export default function DocumentosPage() {
     { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: true, enableSorting: true },
     { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
     { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: true, enableSorting: true },
+    { id: 'reuCondenado', header: 'Réu Condenado?', accessorKey: 'reuCondenado', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
     { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
     { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: true, enableSorting: true },
@@ -843,6 +845,7 @@ export default function DocumentosPage() {
         tipoBaixa: "",
         dataBaixa: undefined,
         codigoClassificacaoJudicialId: "",
+        reuCondenado: undefined,
         nomeClasseProcessualDisplay: "",
         prazoGuardaClasseProcessualDisplay: "",
         destinacaoFinalClasseProcessualDisplay: "",
@@ -1636,7 +1639,7 @@ export default function DocumentosPage() {
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
       'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
-      'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
+      'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 'reuCondenado',
       'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvRows = [headers.join(',')];
@@ -1697,7 +1700,7 @@ export default function DocumentosPage() {
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
-        'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 
+        'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 'reuCondenado',
         'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvContent = templateHeaders.join(',');
@@ -1929,6 +1932,7 @@ export default function DocumentosPage() {
                     codigoAtoM: newItemData.codigoAtoM,
                     observacoesGerais: newItemData.observacoesGerais,
                     codigoClassificacaoJudicialId: newItemData.codigoClassificacaoJudicialId,
+                    reuCondenado: newItemData.reuCondenado as 'Sim' | 'Não' | undefined,
                     numeroListagemEliminacao: newItemData.numeroListagemEliminacao,
                     numeroDocumentoTransferencia: newItemData.numeroDocumentoTransferencia,
                 };
@@ -2801,6 +2805,16 @@ export default function DocumentosPage() {
                                                   </p>
                                               )}
                                           </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="reuCondenado">Réu condenado?</Label>
+                                            <Select onValueChange={handleSelectChange('reuCondenado')} value={formState.reuCondenado} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}>
+                                              <SelectTrigger id="reuCondenado"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="Sim">Sim</SelectItem>
+                                                <SelectItem value="Não">Não</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
@@ -3606,6 +3620,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 
