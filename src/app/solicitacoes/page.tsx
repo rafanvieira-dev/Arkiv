@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -1030,7 +1031,7 @@ export default function SolicitacoesPage() {
                     </div>
                   </div>
 
-                  {!isDocumentSelectionVisible && (
+                  {!isDocumentSelectionVisible && !isEditing && (
                     <div className="mt-4 flex justify-center">
                       <Button type="button" onClick={() => setIsDocumentSelectionVisible(true)} variant="outline">
                         <ListFilter className="mr-2 h-4 w-4" /> Selecionar Documentos
@@ -1050,6 +1051,7 @@ export default function SolicitacoesPage() {
                               value={dialogDocFilters.searchTerm} 
                               onChange={handleDialogDocFilterChange}
                               className="w-full"
+                              disabled={isEditing}
                             />
                           </div>
                         </CardHeader>
@@ -1070,32 +1072,32 @@ export default function SolicitacoesPage() {
                                                 setSelectedDocIdsInDialog(prev => prev.filter(id => !selectableIdsSet.has(id)));
                                             }
                                         }}
-                                        disabled={documentsForDialog.filter(isDocumentSelectable).length === 0}
+                                        disabled={documentsForDialog.filter(isDocumentSelectable).length === 0 || isEditing}
                                         aria-label="Selecionar todos os documentos disponíveis"
                                     />
                                   </TableHead>
                                   <TableHead className="py-1 px-2 sticky left-12 bg-card z-10">
-                                    <Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('numeroDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs" disabled={isEditing}>
                                       Nº Doc {renderDialogDocSortIcon('numeroDocumento')}
                                     </Button>
                                   </TableHead>
                                   <TableHead className="py-1 px-2">
-                                    <Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('tipoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs" disabled={isEditing}>
                                       Espécie {renderDialogDocSortIcon('tipoDocumento')}
                                     </Button>
                                   </TableHead>
                                   <TableHead className="py-1 px-2">
-                                    <Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('descricaoDocumento')} className="px-1 py-0 h-auto -ml-1 text-xs" disabled={isEditing}>
                                       Descrição {renderDialogDocSortIcon('descricaoDocumento')}
                                     </Button>
                                   </TableHead>
                                    <TableHead className="py-1 px-2">
-                                    <Button variant="ghost" onClick={() => handleDialogDocSort('codigosCaixa')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('codigosCaixa')} className="px-1 py-0 h-auto -ml-1 text-xs" disabled={isEditing}>
                                       Caixa(s) {renderDialogDocSortIcon('codigosCaixa')}
                                     </Button>
                                   </TableHead>
                                   <TableHead className="py-1 px-2">
-                                    <Button variant="ghost" onClick={() => handleDialogDocSort('status')} className="px-1 py-0 h-auto -ml-1 text-xs">
+                                    <Button variant="ghost" onClick={() => handleDialogDocSort('status')} className="px-1 py-0 h-auto -ml-1 text-xs" disabled={isEditing}>
                                       Status Acervo {renderDialogDocSortIcon('status')}
                                     </Button>
                                   </TableHead>
@@ -1112,7 +1114,7 @@ export default function SolicitacoesPage() {
                                           onCheckedChange={(value) => {
                                             setSelectedDocIdsInDialog(prev => value ? [...prev, doc.id] : prev.filter(id => id !== doc.id));
                                           }}
-                                          disabled={!selectable}
+                                          disabled={!selectable || isEditing}
                                         />
                                       </TableCell>
                                       <TableCell className="py-1 px-2 sticky left-12 bg-card z-10 font-medium">{doc.numeroDocumento || "N/A"}</TableCell>
@@ -1508,4 +1510,5 @@ export default function SolicitacoesPage() {
 
 
     
+
 
