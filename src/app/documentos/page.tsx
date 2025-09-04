@@ -2292,32 +2292,87 @@ export default function DocumentosPage() {
     };
 
     React.useEffect(() => {
-        if (currentClasseJudicial) {
-            let prazo: number | undefined = currentClasseJudicial.prazoGuardaAnos;
-            let dest: DestinacaoFinal | string | undefined = currentClasseJudicial.destinacaoFinal;
+        if (!currentClasseJudicial) return;
 
-            if (currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0) {
-                for (const cond of currentClasseJudicial.condicoes) {
-                    const resposta = formState.respostasCondicionais?.[cond.id];
-                    if (resposta === 'Sim') {
+        let prazo: number | undefined = currentClasseJudicial.prazoGuardaAnos;
+        let dest: typeof currentClasseJudicial.destinacaoFinal | string | undefined = currentClasseJudicial.destinacaoFinal;
+        let flowEnded = false;
+
+        if (currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0) {
+            for (const cond of currentClasseJudicial.condicoes) {
+                const resposta = formState.respostasCondicionais?.[cond.id];
+                if (!resposta) {
+                    // Stop processing if we haven't answered the current question yet
+                    flowEnded = false;
+                    break; 
+                }
+
+                if (resposta === 'Sim') {
+                    if (cond.proximaPerguntaSeSim) {
+                        continue; // Move to the next question in the loop
+                    } else {
                         prazo = cond.prazoSeSim;
                         dest = cond.destinacaoSeSim;
-                        break; 
-                    } else if (resposta === 'Não') {
+                        flowEnded = true;
+                        break;
+                    }
+                } else if (resposta === 'Não') {
+                    if (cond.proximaPerguntaSeNao) {
+                        continue; // Move to the next question
+                    } else {
                         prazo = cond.prazoSeNao;
                         dest = cond.destinacaoSeNao;
-                        break; 
+                        flowEnded = true;
+                        break;
                     }
                 }
             }
+        } else {
+            flowEnded = true; // No conditions, flow is immediately ended
+        }
 
+        if (flowEnded) {
             setFormState(prev => ({
                 ...prev,
                 prazoGuardaClasseProcessualDisplay: prazo !== undefined ? `${prazo} anos` : 'N/A',
                 destinacaoFinalClasseProcessualDisplay: dest || 'N/A',
             }));
+        } else {
+           // Clear if flow is in progress
+           setFormState(prev => ({
+               ...prev,
+               prazoGuardaClasseProcessualDisplay: '',
+               destinacaoFinalClasseProcessualDisplay: '',
+           }));
         }
     }, [formState.respostasCondicionais, currentClasseJudicial]);
+
+    const getVisibleConditions = () => {
+        if (!currentClasseJudicial?.condicoes || currentClasseJudicial.condicoes.length === 0) {
+            return [];
+        }
+
+        const visible: CondicaoTemporalidade[] = [];
+        for (const cond of currentClasseJudicial.condicoes) {
+            visible.push(cond);
+            const resposta = formState.respostasCondicionais?.[cond.id];
+            if (!resposta) {
+                // If this question isn't answered, stop showing more questions
+                break;
+            }
+            if ((resposta === 'Sim' && cond.proximaPerguntaSeSim) || (resposta === 'Não' && cond.proximaPerguntaSeNao)) {
+                // If the answer leads to the next question, continue the loop
+                continue;
+            } else {
+                // If the answer leads to a final disposition, stop showing more questions
+                break;
+            }
+        }
+        return visible;
+    };
+    
+    const visibleConditions = getVisibleConditions();
+
 
   return (
     <TooltipProvider>
@@ -2855,9 +2910,9 @@ export default function DocumentosPage() {
                                             </Select>
                                           </div>
                                       </div>
-                                      {currentClasseJudicial && currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0 && (
+                                      {visibleConditions.length > 0 && (
                                           <div className="mt-4 space-y-4 pt-4 border-t">
-                                              {currentClasseJudicial.condicoes.map((cond, index) => (
+                                              {visibleConditions.map((cond, index) => (
                                                   <div key={cond.id} className="space-y-2">
                                                       <Label htmlFor={`condicao-resp-${index}`} className="font-semibold">{cond.pergunta}</Label>
                                                       <Select 
@@ -3696,6 +3751,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 
