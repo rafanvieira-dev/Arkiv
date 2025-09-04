@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe, AuditLog } from "@/types";
+import type { Documento, ListagemEliminacao, Solicitacao, Classificacao, TipoOrigem, Caixa, ParteDocumento, ParteDetalhe, MidiaDetalhe, ClasseJudicial, ApensoDetalhe, AuditLog, CondicaoTemporalidade } from "@/types";
 import { 
   PlusCircle, Edit, Trash2, Search, RotateCcw, FilterIcon, 
   ChevronDown, ChevronUp, ArrowUpDown, ColumnsIcon, ArrowUp, ArrowDown,
@@ -129,6 +130,7 @@ const initialFormState: Partial<Documento> & {
   observacoesGerais: "",
   codigoClassificacaoJudicialId: "",
   reuCondenado: undefined,
+  respostasCondicionais: {},
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
   nomeClasseProcessualDisplay: "",
@@ -255,6 +257,7 @@ export default function DocumentosPage() {
     isClassificationInactive?: boolean;
     isClasseJudicialInactive?: boolean;
     necessidadeReclassificacao?: 'Sim' | 'Não';
+    respostasCondicionais?: { [condicaoId: string]: 'Sim' | 'Não' };
   }>(initialFormState);
   const [originalDocOnEdit, setOriginalDocOnEdit] = React.useState<Documento | null>(null);
   const [documentIdToDisplay, setDocumentIdToDisplay] = React.useState("(Automático após salvar)");
@@ -846,6 +849,7 @@ export default function DocumentosPage() {
         dataBaixa: undefined,
         codigoClassificacaoJudicialId: "",
         reuCondenado: undefined,
+        respostasCondicionais: {},
         nomeClasseProcessualDisplay: "",
         prazoGuardaClasseProcessualDisplay: "",
         destinacaoFinalClasseProcessualDisplay: "",
@@ -907,6 +911,7 @@ export default function DocumentosPage() {
                 prazoGuardaClasseProcessualDisplay: foundClasse.prazoGuardaAnos !== undefined ? `${foundClasse.prazoGuardaAnos} anos` : 'N/A',
                 destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinal,
                 isClasseJudicialInactive: foundClasse.inativo,
+                respostasCondicionais: {}, // Reset answers on new code
             }));
         } else {
             setFormState(prev => ({
@@ -915,6 +920,7 @@ export default function DocumentosPage() {
                 prazoGuardaClasseProcessualDisplay: "",
                 destinacaoFinalClasseProcessualDisplay: "",
                 isClasseJudicialInactive: false,
+                respostasCondicionais: {},
             }));
         }
     } else {
@@ -925,6 +931,7 @@ export default function DocumentosPage() {
             prazoGuardaClasseProcessualDisplay: "",
             destinacaoFinalClasseProcessualDisplay: "",
             isClasseJudicialInactive: false,
+            respostasCondicionais: {},
         }));
     }
   };
@@ -2266,6 +2273,51 @@ export default function DocumentosPage() {
         </pre>
     );
   };
+  
+    const currentClasseJudicial = React.useMemo(() => {
+      if (formState.codigoClassificacaoJudicialId) {
+        return classesJudiciais.find(c => c.codigo === formState.codigoClassificacaoJudicialId);
+      }
+      return undefined;
+    }, [formState.codigoClassificacaoJudicialId, classesJudiciais]);
+
+    const handleConditionalResponse = (condicaoId: string, resposta: 'Sim' | 'Não') => {
+      setFormState(prev => ({
+        ...prev,
+        respostasCondicionais: {
+          ...prev.respostasCondicionais,
+          [condicaoId]: resposta,
+        }
+      }));
+    };
+
+    React.useEffect(() => {
+        if (currentClasseJudicial) {
+            let prazo: number | undefined = currentClasseJudicial.prazoGuardaAnos;
+            let dest: DestinacaoFinal | string | undefined = currentClasseJudicial.destinacaoFinal;
+
+            if (currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0) {
+                for (const cond of currentClasseJudicial.condicoes) {
+                    const resposta = formState.respostasCondicionais?.[cond.id];
+                    if (resposta === 'Sim') {
+                        prazo = cond.prazoSeSim;
+                        dest = cond.destinacaoSeSim;
+                        break; 
+                    } else if (resposta === 'Não') {
+                        prazo = cond.prazoSeNao;
+                        dest = cond.destinacaoSeNao;
+                        break; 
+                    }
+                }
+            }
+
+            setFormState(prev => ({
+                ...prev,
+                prazoGuardaClasseProcessualDisplay: prazo !== undefined ? `${prazo} anos` : 'N/A',
+                destinacaoFinalClasseProcessualDisplay: dest || 'N/A',
+            }));
+        }
+    }, [formState.respostasCondicionais, currentClasseJudicial]);
 
   return (
     <TooltipProvider>
@@ -2793,19 +2845,6 @@ export default function DocumentosPage() {
                                             <Input id="nomeClasseProcessualDisplay" value={formState.nomeClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                                           </div>
                                           <div className="space-y-2">
-                                              <Label htmlFor="prazoGuardaClasseProcessualDisplay">Prazo de Guarda</Label>
-                                              <Input id="prazoGuardaClasseProcessualDisplay" value={formState.prazoGuardaClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="destinacaoFinalClasseProcessualDisplay">Destinação Final</Label>
-                                              <Input id="destinacaoFinalClasseProcessualDisplay" value={formState.destinacaoFinalClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                              {formState.isClasseJudicialInactive && (
-                                                  <p className="text-sm font-medium text-destructive">
-                                                      Código Inativo. Reclassificar.
-                                                  </p>
-                                              )}
-                                          </div>
-                                          <div className="space-y-2">
                                             <Label htmlFor="reuCondenado">Réu condenado?</Label>
                                             <Select onValueChange={handleSelectChange('reuCondenado')} value={formState.reuCondenado} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}>
                                               <SelectTrigger id="reuCondenado"><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -2815,6 +2854,43 @@ export default function DocumentosPage() {
                                               </SelectContent>
                                             </Select>
                                           </div>
+                                      </div>
+                                      {currentClasseJudicial && currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0 && (
+                                          <div className="mt-4 space-y-4 pt-4 border-t">
+                                              {currentClasseJudicial.condicoes.map((cond, index) => (
+                                                  <div key={cond.id} className="space-y-2">
+                                                      <Label htmlFor={`condicao-resp-${index}`} className="font-semibold">{cond.pergunta}</Label>
+                                                      <Select 
+                                                        onValueChange={(value: 'Sim' | 'Não') => handleConditionalResponse(cond.id, value)} 
+                                                        value={formState.respostasCondicionais?.[cond.id]}
+                                                        disabled={isFormDisabled}
+                                                      >
+                                                          <SelectTrigger id={`condicao-resp-${index}`}>
+                                                              <SelectValue placeholder="Selecione a resposta..." />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                              <SelectItem value="Sim">Sim</SelectItem>
+                                                              <SelectItem value="Não">Não</SelectItem>
+                                                          </SelectContent>
+                                                      </Select>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                      )}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4 mt-4 border-t">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="prazoGuardaClasseProcessualDisplay">Prazo de Guarda (Calculado)</Label>
+                                            <Input id="prazoGuardaClasseProcessualDisplay" value={formState.prazoGuardaClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="destinacaoFinalClasseProcessualDisplay">Destinação Final (Calculada)</Label>
+                                            <Input id="destinacaoFinalClasseProcessualDisplay" value={formState.destinacaoFinalClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                            {formState.isClasseJudicialInactive && (
+                                                <p className="text-sm font-medium text-destructive">
+                                                    Código Inativo. Reclassificar.
+                                                </p>
+                                            )}
+                                        </div>
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
@@ -3620,6 +3696,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 

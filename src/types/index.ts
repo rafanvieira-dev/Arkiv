@@ -79,7 +79,7 @@ export interface Documento {
   codigoAtoM?: string; // 1.33
   observacoesGerais?: string; // 1.35
   codigoClassificacaoJudicialId?: string; // 1.36 - Habilitado se categoria for "Processo Judicial"
-  respostaCondicionalClasseJudicial?: 'Sim' | 'Não'; // New field for conditional flow answer
+  respostasCondicionais?: { [condicaoId: string]: 'Sim' | 'Não' }; // Armazena as respostas do usuário para cada condição
   reuCondenado?: 'Sim' | 'Não'; // 1.37 - Habilitado se categoria for "Processo Judicial"
   numeroListagemEliminacao?: string; // New field for elimination list number
   numeroDocumentoTransferencia?: string;
@@ -103,7 +103,8 @@ export interface Classificacao {
 
 export type DestinacaoFinal = 'Não se Aplica' | 'Vide Guia de Aplicação' | 'Eliminação' | 'Guarda Permanente';
 
-export interface FluxoCondicional {
+export interface CondicaoTemporalidade {
+  id: string;
   pergunta: string;
   prazoSeSim?: number;
   destinacaoSeSim: DestinacaoFinal;
@@ -115,12 +116,12 @@ export interface ClasseJudicial {
   id: string;
   codigo: string;
   descricao: string;
-  prazoGuardaAnos?: number; // Legacy/default, used if no flow
-  destinacaoFinal: DestinacaoFinal; // Legacy/default
+  // Fallback if no conditions are met
+  prazoGuardaAnos?: number; 
+  destinacaoFinal: DestinacaoFinal; 
   observacoes?: string;
   inativo: boolean;
-  temFluxoCondicional: boolean;
-  fluxoCondicional?: FluxoCondicional;
+  condicoes?: CondicaoTemporalidade[];
 }
 
 
