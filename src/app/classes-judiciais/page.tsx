@@ -250,14 +250,30 @@ export default function ClassesJudiciaisPage() {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
   
-  const handleCondicaoInputChange = (index: number, field: keyof CondicaoTemporalidade, value: string | number | undefined) => {
+  const handleCondicaoInputChange = (index: number, field: keyof CondicaoTemporalidade, value: string | number | undefined | boolean) => {
     setFormState(prev => {
-      const newCondicoes = [...(prev.condicoes || [])];
-      newCondicoes[index] = { ...newCondicoes[index], [field]: value };
-      return { ...prev, condicoes: newCondicoes };
+        const newCondicoes = [...(prev.condicoes || [])];
+        const condicao = { ...newCondicoes[index] };
+        
+        // Handle checkbox logic
+        if (field === 'proximaPerguntaSeSim') {
+            condicao[field] = value as boolean;
+            if (value === true) {
+                condicao.prazoSeSim = undefined;
+            }
+        } else if (field === 'proximaPerguntaSeNao') {
+            condicao[field] = value as boolean;
+            if (value === true) {
+                condicao.prazoSeNao = undefined;
+            }
+        } else {
+            (condicao as any)[field] = value;
+        }
+
+        newCondicoes[index] = condicao;
+        return { ...prev, condicoes: newCondicoes };
     });
   };
-
 
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -304,8 +320,10 @@ export default function ClassesJudiciaisPage() {
       pergunta: '',
       prazoSeSim: undefined,
       destinacaoSeSim: 'Eliminação',
+      proximaPerguntaSeSim: false,
       prazoSeNao: undefined,
       destinacaoSeNao: 'Guarda Permanente',
+      proximaPerguntaSeNao: false,
     };
     setFormState(prev => ({ ...prev, condicoes: [...(prev.condicoes || []), newCondicao] }));
   };
@@ -823,15 +841,19 @@ export default function ClassesJudiciaisPage() {
                                           <Input id={`pergunta-${index}`} value={cond.pergunta || ''} onChange={(e) => handleCondicaoInputChange(index, 'pergunta', e.target.value)} placeholder="Ex: Há integral cumprimento dos comandos da decisão final?" />
                                       </div>
                                       <div className="grid grid-cols-2 gap-4">
-                                          <Card className="p-3">
+                                          <Card className="p-3 space-y-2">
                                               <Label className="font-semibold text-green-600">Se a resposta for SIM:</Label>
-                                              <div className="space-y-2 mt-2">
-                                                  <Label htmlFor={`prazoSeSim-${index}`}>Prazo de Guarda (Anos)</Label>
-                                                  <Input id={`prazoSeSim-${index}`} type="number" value={cond.prazoSeSim ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeSim', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 2" />
+                                              <div className="flex items-center space-x-2">
+                                                <Checkbox id={`prox-pergunta-sim-${index}`} checked={cond.proximaPerguntaSeSim} onCheckedChange={(checked) => handleCondicaoInputChange(index, 'proximaPerguntaSeSim', !!checked)} disabled={index === (formState.condicoes?.length || 0) - 1} />
+                                                <Label htmlFor={`prox-pergunta-sim-${index}`} className="text-xs font-normal">Ir para a próxima pergunta</Label>
                                               </div>
-                                              <div className="space-y-2 mt-2">
+                                              <div className="space-y-2">
+                                                  <Label htmlFor={`prazoSeSim-${index}`}>Prazo de Guarda (Anos)</Label>
+                                                  <Input id={`prazoSeSim-${index}`} type="number" value={cond.prazoSeSim ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeSim', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 2" disabled={cond.proximaPerguntaSeSim} />
+                                              </div>
+                                              <div className="space-y-2">
                                                   <Label htmlFor={`destinacaoSeSim-${index}`}>Destinação Final*</Label>
-                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeSim')} value={cond.destinacaoSeSim}>
+                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeSim')} value={cond.destinacaoSeSim} disabled={cond.proximaPerguntaSeSim}>
                                                       <SelectTrigger id={`destinacaoSeSim-${index}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                       <SelectContent>
                                                           <SelectItem value="Eliminação">Eliminação</SelectItem>
@@ -840,15 +862,19 @@ export default function ClassesJudiciaisPage() {
                                                   </Select>
                                               </div>
                                           </Card>
-                                          <Card className="p-3">
+                                          <Card className="p-3 space-y-2">
                                               <Label className="font-semibold text-red-600">Se a resposta for NÃO:</Label>
-                                              <div className="space-y-2 mt-2">
-                                                  <Label htmlFor={`prazoSeNao-${index}`}>Prazo de Guarda (Anos)</Label>
-                                                  <Input id={`prazoSeNao-${index}`} type="number" value={cond.prazoSeNao ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeNao', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 5" />
+                                              <div className="flex items-center space-x-2">
+                                                <Checkbox id={`prox-pergunta-nao-${index}`} checked={cond.proximaPerguntaSeNao} onCheckedChange={(checked) => handleCondicaoInputChange(index, 'proximaPerguntaSeNao', !!checked)} disabled={index === (formState.condicoes?.length || 0) - 1} />
+                                                <Label htmlFor={`prox-pergunta-nao-${index}`} className="text-xs font-normal">Ir para a próxima pergunta</Label>
                                               </div>
-                                              <div className="space-y-2 mt-2">
+                                              <div className="space-y-2">
+                                                  <Label htmlFor={`prazoSeNao-${index}`}>Prazo de Guarda (Anos)</Label>
+                                                  <Input id={`prazoSeNao-${index}`} type="number" value={cond.prazoSeNao ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeNao', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 5" disabled={cond.proximaPerguntaSeNao} />
+                                              </div>
+                                              <div className="space-y-2">
                                                   <Label htmlFor={`destinacaoSeNao-${index}`}>Destinação Final*</Label>
-                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeNao')} value={cond.destinacaoSeNao}>
+                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeNao')} value={cond.destinacaoSeNao} disabled={cond.proximaPerguntaSeNao}>
                                                       <SelectTrigger id={`destinacaoSeNao-${index}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                       <SelectContent>
                                                           <SelectItem value="Eliminação">Eliminação</SelectItem>

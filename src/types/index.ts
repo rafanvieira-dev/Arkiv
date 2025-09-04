@@ -106,10 +106,14 @@ export type DestinacaoFinal = 'Não se Aplica' | 'Vide Guia de Aplicação' | 'E
 export interface CondicaoTemporalidade {
   id: string;
   pergunta: string;
+  // Sim path
   prazoSeSim?: number;
   destinacaoSeSim: DestinacaoFinal;
+  proximaPerguntaSeSim?: boolean;
+  // Não path
   prazoSeNao?: number;
   destinacaoSeNao: DestinacaoFinal;
+  proximaPerguntaSeNao?: boolean;
 }
 
 export interface ClasseJudicial {
