@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import type { ClasseJudicial } from "@/types";
+import type { ClasseJudicial, DestinacaoFinal } from "@/types";
 import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -59,15 +59,24 @@ import { logAction } from "@/lib/audit";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useUserSession } from "@/hooks/use-user-session";
 import { initialClassesJudiciais } from "@/lib/mock-data";
+import { Switch } from "@/components/ui/switch";
 
 
-const initialFormState: Omit<ClasseJudicial, 'id'> = {
+const initialFormState: Partial<ClasseJudicial> = {
   codigo: "",
   descricao: "",
   prazoGuardaAnos: undefined, 
   destinacaoFinal: "Não se Aplica", 
   observacoes: "",
   inativo: false,
+  temFluxoCondicional: false,
+  fluxoCondicional: {
+    pergunta: "",
+    prazoSeSim: undefined,
+    destinacaoSeSim: "Não se Aplica",
+    prazoSeNao: undefined,
+    destinacaoSeNao: "Não se Aplica",
+  }
 };
 
 const initialFiltersState = {
@@ -170,7 +179,7 @@ export default function ClassesJudiciaisPage() {
   const { permissions } = useUserSession();
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState(initialFormState);
+  const [formState, setFormState] = React.useState<Partial<ClasseJudicial>>(initialFormState);
   const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([]);
   
   const [classesJudiciais, setClassesJudiciais] = React.useState<ClasseJudicial[]>([]);
@@ -247,18 +256,40 @@ export default function ClassesJudiciaisPage() {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value }));
   };
+  
+  const handleFluxoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    const isNumeric = id === 'prazoSeSim' || id === 'prazoSeNao';
+    setFormState(prev => ({
+      ...prev,
+      fluxoCondicional: {
+        ...prev.fluxoCondicional!,
+        [id]: isNumeric ? (value === '' ? undefined : parseInt(value, 10)) : value,
+      }
+    }));
+  };
 
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value === "" ? undefined : parseInt(value, 10) }));
   };
   
-  const handleSelectChange = (value: ClasseJudicial['destinacaoFinal']) => {
+  const handleSelectChange = (value: DestinacaoFinal) => {
     setFormState(prev => ({ ...prev, destinacaoFinal: value }));
   };
 
-  const handleFormCheckboxChange = (checked: boolean) => {
-    setFormState(prev => ({ ...prev, inativo: checked }));
+  const handleFluxoSelectChange = (field: 'destinacaoSeSim' | 'destinacaoSeNao') => (value: DestinacaoFinal) => {
+    setFormState(prev => ({
+      ...prev,
+      fluxoCondicional: {
+        ...prev.fluxoCondicional!,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleFormCheckboxChange = (id: keyof ClasseJudicial) => (checked: boolean) => {
+    setFormState(prev => ({ ...prev, [id]: checked }));
   };
 
   const resetForm = () => {
@@ -271,7 +302,11 @@ export default function ClassesJudiciaisPage() {
     if (item) {
         setIsEditing(true);
         setEditingId(item.id);
-        setFormState(item);
+        setFormState({
+            ...initialFormState,
+            ...item,
+            fluxoCondicional: item.fluxoCondicional || initialFormState.fluxoCondicional,
+        });
     } else {
         resetForm();
     }
@@ -282,7 +317,7 @@ export default function ClassesJudiciaisPage() {
     const finalFormState: ClasseJudicial = {
       ...formState,
       id: isEditing && editingId ? editingId : `CJ${Date.now()}`,
-    };
+    } as ClasseJudicial;
     
     if (isEditing) {
         setClassesJudiciais(prev => prev.map(c => c.id === editingId ? finalFormState : c));
@@ -469,18 +504,15 @@ export default function ClassesJudiciaisPage() {
       toast({ variant: "destructive", description: "Nenhuma classe judicial selecionada para exportar." });
       return;
     }
-    const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+    const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo', 'temFluxoCondicional', 'fluxoCondicional'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(item => {
         const rowData = {
-          id: item.id,
-          codigo: item.codigo,
-          descricao: item.descricao,
+          ...item,
           prazoGuardaAnos: item.prazoGuardaAnos ?? '',
-          destinacaoFinal: item.destinacaoFinal,
           observacoes: item.observacoes || '',
-          inativo: item.inativo
+          fluxoCondicional: JSON.stringify(item.fluxoCondicional || {}),
         };
         const row = headers.map(header => `"${String(rowData[header as keyof typeof rowData]).replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
@@ -508,7 +540,7 @@ export default function ClassesJudiciaisPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+    const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo', 'temFluxoCondicional', 'fluxoCondicional'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -539,11 +571,11 @@ export default function ClassesJudiciaisPage() {
             if (!headerRow) throw new Error("Arquivo CSV vazio ou sem cabeçalho.");
             
             const headers = parseCsvRow(headerRow);
-            const expectedHeaders = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo'];
+            const expectedHeaders = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo', 'temFluxoCondicional', 'fluxoCondicional'];
             
-            const hasAllHeaders = expectedHeaders.every(h => headers.includes(h));
+            const hasAllHeaders = ['codigo', 'descricao'].every(h => headers.includes(h));
             if (!hasAllHeaders) {
-                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Por favor, utilize o modelo fornecido." });
+                 toast({ variant: "destructive", title: "Erro de Importação", description: "O cabeçalho do arquivo CSV é inválido. Colunas 'codigo' e 'descricao' são obrigatórias." });
                  return;
             }
 
@@ -556,15 +588,24 @@ export default function ClassesJudiciaisPage() {
                 });
                 
                 const prazoAnos = newItemData.prazoGuardaAnos ? parseInt(newItemData.prazoGuardaAnos, 10) : undefined;
+                let fluxoCondicional;
+                try {
+                  fluxoCondicional = newItemData.fluxoCondicional ? JSON.parse(newItemData.fluxoCondicional) : undefined;
+                } catch(e) {
+                  console.warn(`Could not parse 'fluxoCondicional' on row ${index+2}`);
+                  fluxoCondicional = undefined;
+                }
 
                 const newItem: ClasseJudicial = {
                     id: `CJ_IMP_${Date.now()}_${index}`,
                     codigo: newItemData.codigo,
                     descricao: newItemData.descricao,
                     prazoGuardaAnos: isNaN(prazoAnos as number) ? undefined : prazoAnos,
-                    destinacaoFinal: (newItemData.destinacaoFinal as ClasseJudicial['destinacaoFinal']) || 'Não se Aplica',
+                    destinacaoFinal: (newItemData.destinacaoFinal as DestinacaoFinal) || 'Não se Aplica',
                     observacoes: newItemData.observacoes,
-                    inativo: newItemData.inativo.toLowerCase() === 'true',
+                    inativo: newItemData.inativo?.toLowerCase() === 'true',
+                    temFluxoCondicional: newItemData.temFluxoCondicional?.toLowerCase() === 'true',
+                    fluxoCondicional: fluxoCondicional,
                 };
                 newItemsFromCsv.push(newItem);
             });
@@ -717,7 +758,7 @@ export default function ClassesJudiciaisPage() {
                         Nova Classe Judicial
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[525px]">
+                    <DialogContent className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle className="font-headline text-primary">{isEditing ? 'Editar Classe Judicial' : 'Nova Classe Judicial'}</DialogTitle>
                         <DialogDescription>
@@ -725,40 +766,94 @@ export default function ClassesJudiciaisPage() {
                         </DialogDescription>
                       </DialogHeader>
                       <ScrollArea className="max-h-[70vh] pr-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="codigo">Código Judicial*</Label>
-                          <Input id="codigo" value={formState.codigo} onChange={handleInputChange} placeholder="Ex: 1116" />
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="codigo">Código Judicial*</Label>
+                            <Input id="codigo" value={formState.codigo || ''} onChange={handleInputChange} placeholder="Ex: 1116" />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="descricao">Nome da Classe*</Label>
+                            <Input id="descricao" value={formState.descricao || ''} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="descricao">Nome da Classe*</Label>
-                          <Input id="descricao" value={formState.descricao} onChange={handleInputChange} placeholder="Ex: Procedimento Comum Cível" />
+                        <div className="flex items-center space-x-2">
+                            <Switch id="temFluxoCondicional" checked={formState.temFluxoCondicional} onCheckedChange={(checked) => handleFormCheckboxChange('temFluxoCondicional')(checked)} />
+                            <Label htmlFor="temFluxoCondicional">Habilitar Fluxo Condicional de Temporalidade</Label>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
-                          <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5, pode ser 0)" />
+
+                        {!formState.temFluxoCondicional ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="prazoGuardaAnos">Prazo Guarda (Anos)</Label>
+                                <Input id="prazoGuardaAnos" type="number" value={formState.prazoGuardaAnos ?? ""} onChange={handleNumericInputChange} placeholder="Nº de anos (ex: 5)" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
+                                <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
+                                    <SelectTrigger id="destinacaoFinal"><SelectValue placeholder="Selecione a destinação" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
+                                        <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
+                                        <SelectItem value="Eliminação">Eliminação</SelectItem>
+                                        <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                          </div>
+                        ) : (
+                          <Card className="bg-muted/50 p-4 mt-4">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="pergunta">Pergunta para a Condição*</Label>
+                                    <Input id="pergunta" value={formState.fluxoCondicional?.pergunta || ''} onChange={handleFluxoInputChange} placeholder="Ex: Há integral cumprimento dos comandos da decisão final?" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Card className="p-3">
+                                        <Label className="font-semibold text-green-600">Se a resposta for SIM:</Label>
+                                        <div className="space-y-2 mt-2">
+                                            <Label htmlFor="prazoSeSim">Prazo de Guarda (Anos)</Label>
+                                            <Input id="prazoSeSim" type="number" value={formState.fluxoCondicional?.prazoSeSim ?? ""} onChange={handleFluxoInputChange} placeholder="Ex: 2" />
+                                        </div>
+                                        <div className="space-y-2 mt-2">
+                                            <Label htmlFor="destinacaoSeSim">Destinação Final*</Label>
+                                            <Select onValueChange={handleFluxoSelectChange('destinacaoSeSim')} value={formState.fluxoCondicional?.destinacaoSeSim}>
+                                                <SelectTrigger id="destinacaoSeSim"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                                                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </Card>
+                                    <Card className="p-3">
+                                        <Label className="font-semibold text-red-600">Se a resposta for NÃO:</Label>
+                                         <div className="space-y-2 mt-2">
+                                            <Label htmlFor="prazoSeNao">Prazo de Guarda (Anos)</Label>
+                                            <Input id="prazoSeNao" type="number" value={formState.fluxoCondicional?.prazoSeNao ?? ""} onChange={handleFluxoInputChange} placeholder="Ex: 5" />
+                                        </div>
+                                        <div className="space-y-2 mt-2">
+                                            <Label htmlFor="destinacaoSeNao">Destinação Final*</Label>
+                                            <Select onValueChange={handleFluxoSelectChange('destinacaoSeNao')} value={formState.fluxoCondicional?.destinacaoSeNao}>
+                                                <SelectTrigger id="destinacaoSeNao"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Eliminação">Eliminação</SelectItem>
+                                                    <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </Card>
+                                </div>
+                            </div>
+                          </Card>
+                        )}
+                        <div className="space-y-2 pt-2">
+                            <Label htmlFor="observacoes">Observações</Label>
+                            <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="destinacaoFinal">Destinação Final*</Label>
-                          <Select onValueChange={handleSelectChange} value={formState.destinacaoFinal}>
-                            <SelectTrigger id="destinacaoFinal">
-                              <SelectValue placeholder="Selecione a destinação" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Não se Aplica">Não se Aplica</SelectItem>
-                              <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
-                              <SelectItem value="Eliminação">Eliminação</SelectItem>
-                              <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="observacoes">Observações</Label>
-                          <Textarea id="observacoes" value={formState.observacoes || ""} onChange={handleInputChange} placeholder="Detalhes adicionais" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2 flex items-center gap-2">
-                          <Checkbox id="inativo" checked={formState.inativo} onCheckedChange={handleFormCheckboxChange} />
-                          <Label htmlFor="inativo" className="mb-0">Inativo</Label>
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch id="inativo" checked={formState.inativo} onCheckedChange={(checked) => handleFormCheckboxChange('inativo')(checked)} />
+                            <Label htmlFor="inativo">Inativar esta Classe Judicial</Label>
                         </div>
                       </div>
                       </ScrollArea>
@@ -1013,5 +1108,3 @@ export default function ClassesJudiciaisPage() {
     </TooltipProvider>
   );
 }
-
-    
