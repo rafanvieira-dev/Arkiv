@@ -80,7 +80,6 @@ export interface Documento {
   observacoesGerais?: string; // 1.35
   codigoClassificacaoJudicialId?: string; // 1.36 - Habilitado se categoria for "Processo Judicial"
   respostasCondicionais?: { [condicaoId: string]: 'Sim' | 'Não' }; // Armazena as respostas do usuário para cada condição
-  reuCondenado?: 'Sim' | 'Não'; // 1.37 - Habilitado se categoria for "Processo Judicial"
   numeroListagemEliminacao?: string; // New field for elimination list number
   numeroDocumentoTransferencia?: string;
   dataCadastro: string; // ISO Date string - system set (não é campo de formulário direto)

@@ -129,7 +129,6 @@ const initialFormState: Partial<Documento> & {
   documentosRelacionadosIds: "",
   observacoesGerais: "",
   codigoClassificacaoJudicialId: "",
-  reuCondenado: undefined,
   respostasCondicionais: {},
   numeroListagemEliminacao: "",
   numeroDocumentoTransferencia: "",
@@ -506,7 +505,6 @@ export default function DocumentosPage() {
     { id: 'prazoArquivoIntermediarioDisplay', header: 'Prazo Arq. Interm.', accessorKey: 'prazoArquivoIntermediarioDisplay', defaultVisible: true, enableSorting: true },
     { id: 'destinacaoFinalDisplay', header: 'Destinação Final', accessorKey: 'destinacaoFinalDisplay', defaultVisible: true, enableSorting: true },
     { id: 'anoEliminacaoPrevisto', header: 'Ano Elim. Prev.', accessorKey: 'anoEliminacaoPrevisto', defaultVisible: true, enableSorting: true },
-    { id: 'reuCondenado', header: 'Réu Condenado?', accessorKey: 'reuCondenado', defaultVisible: false, enableSorting: true },
     { id: 'segredoJustica', header: 'Segredo de Justiça', accessorKey: 'segredoJustica', defaultVisible: true, enableSorting: true },
     { id: 'grauSigilo', header: 'Sigilo LAI', accessorKey: 'grauSigilo', defaultVisible: true, enableSorting: true },
     { id: 'codigosCaixa', header: 'Código da Caixa', accessorKey: 'codigosCaixa', defaultVisible: true, enableSorting: true },
@@ -871,23 +869,28 @@ export default function DocumentosPage() {
   };
 
   const handleSelectChange = (id: keyof Partial<Documento> | 'tipoPlanoClassificacao') => (value: string) => {
+    let newState: any = { [id]: value };
     if (id === 'categoria' && value !== 'Processo Judicial') {
-      setFormState(prev => ({ 
-        ...prev, 
-        [id]: value,
+      newState = {
+        ...newState,
         tipoBaixa: "",
         dataBaixa: undefined,
         codigoClassificacaoJudicialId: "",
-        reuCondenado: undefined,
         respostasCondicionais: {},
         nomeClasseProcessualDisplay: "",
         prazoGuardaClasseProcessualDisplay: "",
         destinacaoFinalClasseProcessualDisplay: "",
-      }));
-    } else {
-      setFormState(prev => ({ ...prev, [id]: value }));
+      };
     }
-};
+     // Auto-fill and disable tipoDocumento if Processo Judicial is selected
+     if (id === 'categoria' && value === 'Processo Judicial') {
+      newState = { ...newState, tipoDocumento: formState.nomeClasseProcessualDisplay || '' };
+    } else if (id === 'categoria' && value !== 'Processo Judicial') {
+      newState = { ...newState, tipoDocumento: '' }; // Clear it if not a judicial process
+    }
+    
+    setFormState(prev => ({ ...prev, ...newState }));
+  };
 
   const handleDateChange = (id: keyof Partial<Documento>) => (date?: Date) => {
     setFormState(prev => ({ ...prev, [id]: date?.toISOString() }));
@@ -938,6 +941,7 @@ export default function DocumentosPage() {
             setFormState(prev => ({
                 ...prev,
                 nomeClasseProcessualDisplay: foundClasse.descricao,
+                tipoDocumento: foundClasse.descricao, // Auto-fill
                 prazoGuardaClasseProcessualDisplay: foundClasse.prazoGuardaAnos !== undefined ? `${foundClasse.prazoGuardaAnos} anos` : 'N/A',
                 destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinal,
                 isClasseJudicialInactive: foundClasse.inativo,
@@ -1676,7 +1680,7 @@ export default function DocumentosPage() {
       'digitalizado', 'tipoBaixa', 'dataBaixa', 
       'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
       'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
-      'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 'reuCondenado',
+      'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId',
       'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvRows = [headers.join(',')];
@@ -1737,7 +1741,7 @@ export default function DocumentosPage() {
         'digitalizado', 'tipoBaixa', 'dataBaixa', 
         'tipoPlanoClassificacao', 'codigoClassificacaoArquivistica',
         'alteracaoDestinacaoFinal', 'necessidadeReclassificacao', 'segredoJustica', 'grauSigilo', 'codigosCaixa', 
-        'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId', 'reuCondenado',
+        'codigoAtoM', 'observacoesGerais', 'codigoClassificacaoJudicialId',
         'numeroListagemEliminacao', 'numeroDocumentoTransferencia'
     ];
     const csvContent = templateHeaders.join(',');
@@ -1969,7 +1973,6 @@ export default function DocumentosPage() {
                     codigoAtoM: newItemData.codigoAtoM,
                     observacoesGerais: newItemData.observacoesGerais,
                     codigoClassificacaoJudicialId: newItemData.codigoClassificacaoJudicialId,
-                    reuCondenado: newItemData.reuCondenado as 'Sim' | 'Não' | undefined,
                     numeroListagemEliminacao: newItemData.numeroListagemEliminacao,
                     numeroDocumentoTransferencia: newItemData.numeroDocumentoTransferencia,
                 };
@@ -2556,7 +2559,7 @@ export default function DocumentosPage() {
                                           </div>
                                           <div className="space-y-2">
                                               <Label htmlFor="tipoDocumento">Espécie de Documento*</Label>
-                                              <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled}>
+                                              <Select onValueChange={handleSelectChange('tipoDocumento')} value={formState.tipoDocumento} disabled={isFormDisabled || formState.categoria === 'Processo Judicial'}>
                                               <SelectTrigger id="tipoDocumento"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                                               <SelectContent>
                                                   {tiposDocumento.sort((a, b) => a.localeCompare(b)).map(tipo => (
@@ -2895,16 +2898,6 @@ export default function DocumentosPage() {
                                           <div className="space-y-2">
                                             <Label htmlFor="nomeClasseProcessualDisplay">Nome da Classe Processual</Label>
                                             <Input id="nomeClasseProcessualDisplay" value={formState.nomeClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label htmlFor="reuCondenado">Réu condenado?</Label>
-                                            <Select onValueChange={handleSelectChange('reuCondenado')} value={formState.reuCondenado} disabled={isFormDisabled || formState.categoria !== 'Processo Judicial'}>
-                                              <SelectTrigger id="reuCondenado"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="Sim">Sim</SelectItem>
-                                                <SelectItem value="Não">Não</SelectItem>
-                                              </SelectContent>
-                                            </Select>
                                           </div>
                                       </div>
                                       {visibleConditions.length > 0 && (
@@ -3780,6 +3773,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 
