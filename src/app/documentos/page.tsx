@@ -672,84 +672,114 @@ export default function DocumentosPage() {
     });
   }, [documentos, solicitacoes, listagens, isDataLoaded]);
 
+  const currentClasseJudicial = React.useMemo(() => {
+    if (formState.codigoClassificacaoJudicialId) {
+        return classesJudiciais.find(c => c.codigo === formState.codigoClassificacaoJudicialId);
+    }
+    return undefined;
+  }, [formState.codigoClassificacaoJudicialId, classesJudiciais]);
+
 
   React.useEffect(() => {
+    // --- Get Archival Classification data ---
     const classification = classificacoes.find(c => c.id === formState.classificacaoArquivisticaId);
+    let archivalPrazo: number | undefined = undefined;
+    let archivalDestinacao: Classificacao['destinacaoFinal'] | undefined = undefined;
     
-    if (classification) {
-       if (classification.status === 'Pendente de Complemento') {
-         setFormState(prev => ({
-          ...prev,
-          assuntoClassificacaoDisplay: `Pendente de complemento (Cód: ${classification.codigo})`,
-          prazoArquivoCorrenteDisplay: "",
-          prazoArquivoIntermediarioDisplay: "",
-          destinacaoFinalDisplay: undefined,
-          anoEliminacaoPrevisto: "",
-          isClassificationInactive: false,
-          necessidadeReclassificacao: 'Não',
-        }));
-        return;
-      }
-      
-      let prazoCorrente = "";
-      if (classification.tipoPrazoFaseCorrente === "Anos" && typeof classification.prazoGuardaFaseCorrenteAnos === 'number') {
-        prazoCorrente = `${classification.prazoGuardaFaseCorrenteAnos} Anos`;
-      } else if (classification.tipoPrazoFaseCorrente === "Condição Textual") {
-        prazoCorrente = classification.prazoGuardaFaseCorrenteCondicaoTextual || "";
-      }
-      
-      const prazoIntermediario = typeof classification.prazoGuardaFaseIntermediariaAnos === 'number' 
-        ? `${classification.prazoGuardaFaseIntermediariaAnos} Anos` 
-        : "";
-      
-      const destinacao = classification.destinacaoFinal;
+    if (classification && classification.status !== 'Pendente de Complemento') {
+      archivalPrazo = classification.prazoGuardaFaseIntermediariaAnos;
+      archivalDestinacao = classification.destinacaoFinal;
+    }
 
-      let anoEliminacao = "";
-      let effectiveDestination = destinacao;
-      if (formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Guarda Amostral' || formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Decisão da CPAD') {
-        effectiveDestination = 'Guarda Permanente';
-      }
+    // --- Get Judicial Class data ---
+    let judicialPrazo: number | undefined = undefined;
+    let judicialDestinacao: ClasseJudicial['destinacaoFinal'] | undefined = undefined;
+    
+    if (formState.categoria === 'Processo Judicial' && currentClasseJudicial) {
+      judicialPrazo = currentClasseJudicial.prazoGuardaAnos;
+      judicialDestinacao = currentClasseJudicial.destinacaoFinal;
 
-      if (formState.dataArquivamento && isValid(parseISO(formState.dataArquivamento)) && effectiveDestination === 'Eliminação') {
-          const dataArquivamentoDate = parseISO(formState.dataArquivamento);
-          let prazoIntermediarioAnosNum = 0;
-          if (typeof classification.prazoGuardaFaseIntermediariaAnos === 'number') {
-            prazoIntermediarioAnosNum = classification.prazoGuardaFaseIntermediariaAnos;
+      if (currentClasseJudicial.condicoes && currentClasseJudicial.condicoes.length > 0) {
+        for (const cond of currentClasseJudicial.condicoes) {
+          const resposta = formState.respostasCondicionais?.[cond.id];
+          if (!resposta) break; // Stop if flow is incomplete
+          if (resposta === 'Sim') {
+            if (cond.proximaPerguntaSeSim) continue;
+            judicialPrazo = cond.prazoSeSim;
+            judicialDestinacao = cond.destinacaoSeSim;
+            break;
+          } else { // Resposta é 'Não'
+            if (cond.proximaPerguntaSeNao) continue;
+            judicialPrazo = cond.prazoSeNao;
+            judicialDestinacao = cond.destinacaoSeNao;
+            break;
           }
-          
-          if (!isNaN(prazoIntermediarioAnosNum)) {
-            const anoArquivamento = getYear(dataArquivamentoDate);
-            anoEliminacao = (anoArquivamento + prazoIntermediarioAnosNum + 1).toString();
-          }
+        }
       }
-      const isInactive = classification.status === 'Inativo';
+    }
+    
+    // --- Determine Final Destination and Period ---
+    let finalDestinacao: string | undefined = archivalDestinacao;
+    let finalPrazo: number | undefined = archivalPrazo;
 
-      setFormState(prev => ({
+    if (formState.categoria === 'Processo Judicial') {
+      // If either is permanent, the result is permanent
+      if (archivalDestinacao === 'Guarda Permanente' || judicialDestinacao === 'Guarda Permanente') {
+        finalDestinacao = 'Guarda Permanente';
+      } else if (archivalDestinacao === 'Eliminação' && judicialDestinacao === 'Eliminação') {
+        // If both are elimination, use the longer period
+        finalDestinacao = 'Eliminação';
+        finalPrazo = Math.max(archivalPrazo ?? -1, judicialPrazo ?? -1);
+      } else {
+        // Fallback or mixed cases
+        finalDestinacao = archivalDestinacao || judicialDestinacao;
+        finalPrazo = archivalPrazo ?? judicialPrazo;
+      }
+    }
+
+    // --- Handle Manual Override ---
+    if (formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Guarda Amostral' || formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Decisão da CPAD') {
+      finalDestinacao = 'Guarda Permanente';
+    }
+
+    // --- Calculate Elimination Year ---
+    let anoEliminacao = "";
+    if (finalDestinacao === 'Eliminação' && finalPrazo !== undefined && finalPrazo >= 0 && formState.dataArquivamento && isValid(parseISO(formState.dataArquivamento))) {
+        const anoArquivamento = getYear(parseISO(formState.dataArquivamento));
+        anoEliminacao = (anoArquivamento + finalPrazo + 1).toString();
+    } else if (finalDestinacao === 'Guarda Permanente') {
+        anoEliminacao = "Guarda Permanente";
+    }
+
+    // --- Update Form State ---
+    const isInactive = classification?.status === 'Inativo';
+    const prazoCorrenteDisplay = classification?.tipoPrazoFaseCorrente === 'Anos'
+      ? `${classification.prazoGuardaFaseCorrenteAnos ?? 'N/A'} Anos`
+      : classification?.prazoGuardaFaseCorrenteCondicaoTextual || '';
+
+    setFormState(prev => ({
         ...prev,
-        assuntoClassificacaoDisplay: classification.descricao,
-        prazoArquivoCorrenteDisplay: prazoCorrente,
-        prazoArquivoIntermediarioDisplay: prazoIntermediario,
-        destinacaoFinalDisplay: destinacao,
+        assuntoClassificacaoDisplay: classification?.descricao || "Pendente ou inválido",
+        prazoArquivoCorrenteDisplay: prazoCorrenteDisplay,
+        prazoArquivoIntermediarioDisplay: archivalPrazo !== undefined ? `${archivalPrazo} Anos` : "",
+        destinacaoFinalDisplay: archivalDestinacao,
         anoEliminacaoPrevisto: anoEliminacao,
         isClassificationInactive: isInactive,
         necessidadeReclassificacao: isInactive ? 'Sim' : 'Não',
-      }));
+    }));
 
-    } else { 
-       if (!formState.codigoClassificacaoArquivisticaInput) {
-            setFormState(prev => ({
-                ...prev,
-                assuntoClassificacaoDisplay: "",
-                prazoArquivoCorrenteDisplay: "",
-                prazoArquivoIntermediarioDisplay: "",
-                destinacaoFinalDisplay: undefined,
-                anoEliminacaoPrevisto: "",
-                isClassificationInactive: false,
-                necessidadeReclassificacao: 'Não',
-            }));
-       }
-    }
-  }, [formState.classificacaoArquivisticaId, formState.codigoClassificacaoArquivisticaInput, formState.dataArquivamento, formState.alteracaoDestinacaoFinal, classificacoes]);
+  }, [
+      formState.classificacaoArquivisticaId, 
+      formState.codigoClassificacaoJudicialId, 
+      formState.dataArquivamento, 
+      formState.alteracaoDestinacaoFinal, 
+      formState.respostasCondicionais,
+      formState.categoria,
+      classificacoes, 
+      classesJudiciais, 
+      currentClasseJudicial
+  ]);
+
 
   React.useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -2274,13 +2304,6 @@ export default function DocumentosPage() {
     );
   };
   
-    const currentClasseJudicial = React.useMemo(() => {
-      if (formState.codigoClassificacaoJudicialId) {
-        return classesJudiciais.find(c => c.codigo === formState.codigoClassificacaoJudicialId);
-      }
-      return undefined;
-    }, [formState.codigoClassificacaoJudicialId, classesJudiciais]);
-
     const handleConditionalResponse = (condicaoId: string, resposta: 'Sim' | 'Não') => {
       setFormState(prev => ({
         ...prev,
@@ -2292,7 +2315,7 @@ export default function DocumentosPage() {
     };
 
     React.useEffect(() => {
-        if (!currentClasseJudicial) return;
+        if (!currentClasseJudicial || !formState.respostasCondicionais) return;
 
         let prazo: number | undefined = currentClasseJudicial.prazoGuardaAnos;
         let dest: typeof currentClasseJudicial.destinacaoFinal | string | undefined = currentClasseJudicial.destinacaoFinal;
@@ -2302,29 +2325,22 @@ export default function DocumentosPage() {
             for (const cond of currentClasseJudicial.condicoes) {
                 const resposta = formState.respostasCondicionais?.[cond.id];
                 if (!resposta) {
-                    // Stop processing if we haven't answered the current question yet
                     flowEnded = false;
                     break; 
                 }
 
                 if (resposta === 'Sim') {
-                    if (cond.proximaPerguntaSeSim) {
-                        continue; // Move to the next question in the loop
-                    } else {
-                        prazo = cond.prazoSeSim;
-                        dest = cond.destinacaoSeSim;
-                        flowEnded = true;
-                        break;
-                    }
-                } else if (resposta === 'Não') {
-                    if (cond.proximaPerguntaSeNao) {
-                        continue; // Move to the next question
-                    } else {
-                        prazo = cond.prazoSeNao;
-                        dest = cond.destinacaoSeNao;
-                        flowEnded = true;
-                        break;
-                    }
+                    if (cond.proximaPerguntaSeSim) continue;
+                    prazo = cond.prazoSeSim;
+                    dest = cond.destinacaoSeSim;
+                    flowEnded = true;
+                    break;
+                } else { // Resposta é 'Não'
+                    if (cond.proximaPerguntaSeNao) continue; 
+                    prazo = cond.prazoSeNao;
+                    dest = cond.destinacaoSeNao;
+                    flowEnded = true;
+                    break;
                 }
             }
         } else {
@@ -2338,7 +2354,6 @@ export default function DocumentosPage() {
                 destinacaoFinalClasseProcessualDisplay: dest || 'N/A',
             }));
         } else {
-           // Clear if flow is in progress
            setFormState(prev => ({
                ...prev,
                prazoGuardaClasseProcessualDisplay: '',
@@ -2357,14 +2372,11 @@ export default function DocumentosPage() {
             visible.push(cond);
             const resposta = formState.respostasCondicionais?.[cond.id];
             if (!resposta) {
-                // If this question isn't answered, stop showing more questions
                 break;
             }
             if ((resposta === 'Sim' && cond.proximaPerguntaSeSim) || (resposta === 'Não' && cond.proximaPerguntaSeNao)) {
-                // If the answer leads to the next question, continue the loop
                 continue;
             } else {
-                // If the answer leads to a final disposition, stop showing more questions
                 break;
             }
         }
@@ -2481,7 +2493,7 @@ export default function DocumentosPage() {
                         </DialogDescription>
                       </DialogHeader>
                       <ScrollArea className="max-h-[75vh] pr-6">
-                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4"]} className="w-full">
+                          <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-4", "item-9"]} className="w-full">
                               <AccordionItem value="item-1">
                                   <AccordionTrigger className="font-semibold">Identificação Principal</AccordionTrigger>
                                   <AccordionContent>
@@ -2847,22 +2859,7 @@ export default function DocumentosPage() {
                                               <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Classif.)</Label>
                                               <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                                           </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
-                                              <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
-                                              <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
-                                              <SelectContent>
-                                                  <SelectItem value="Não Alterar">Não Alterar</SelectItem>
-                                                  <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
-                                                  <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
-                                              </SelectContent>
-                                              </Select>
-                                          </div>
-                                          <div className="space-y-2">
-                                              <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
-                                              <Input id="anoEliminacaoPrevisto" value={formState.anoEliminacaoPrevisto || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
-                                          </div>
-                                          <div className="space-y-2">
+                                          <div className="space-y-2 sm:col-span-3">
                                               <Label htmlFor="necessidadeReclassificacao">Necessidade de Reclassificação?</Label>
                                               <Select onValueChange={handleSelectChange('necessidadeReclassificacao')} value={formState.necessidadeReclassificacao || 'Não'} disabled={isFormDisabled}>
                                                 <SelectTrigger id="necessidadeReclassificacao"><SelectValue /></SelectTrigger>
@@ -2946,6 +2943,38 @@ export default function DocumentosPage() {
                                                 </p>
                                             )}
                                         </div>
+                                      </div>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              <AccordionItem value="item-9">
+                                  <AccordionTrigger className="font-semibold">Previsão de Eliminação</AccordionTrigger>
+                                  <AccordionContent>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3 pt-4">
+                                          <div className="space-y-2">
+                                              <Label htmlFor="alteracaoDestinacaoFinal">Alteração de Destinação Final</Label>
+                                              <Select onValueChange={handleSelectChange('alteracaoDestinacaoFinal')} value={formState.alteracaoDestinacaoFinal} disabled={isFormDisabled}>
+                                              <SelectTrigger id="alteracaoDestinacaoFinal"><SelectValue /></SelectTrigger>
+                                              <SelectContent>
+                                                  <SelectItem value="Não Alterar">Não Alterar</SelectItem>
+                                                  <SelectItem value="Guarda Permanente – Guarda Amostral">Guarda Permanente – Guarda Amostral</SelectItem>
+                                                  <SelectItem value="Guarda Permanente – Decisão da CPAD">Guarda Permanente – Decisão da CPAD</SelectItem>
+                                              </SelectContent>
+                                              </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                              <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
+                                              <Input 
+                                                  id="anoEliminacaoPrevisto" 
+                                                  value={formState.anoEliminacaoPrevisto === "Guarda Permanente" ? "" : formState.anoEliminacaoPrevisto || ""} 
+                                                  readOnly 
+                                                  className="bg-muted/50 cursor-not-allowed" 
+                                              />
+                                              {formState.anoEliminacaoPrevisto === "Guarda Permanente" && (
+                                                <p className="text-sm font-semibold text-destructive">
+                                                  Guarda Permanente
+                                                </p>
+                                              )}
+                                          </div>
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
@@ -3751,6 +3780,7 @@ export default function DocumentosPage() {
 }
 
     
+
 
 
 
