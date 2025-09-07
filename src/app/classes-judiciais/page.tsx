@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import type { ClasseJudicial, DestinacaoFinal, CondicaoTemporalidade } from "@/types";
-import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer, XCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ColumnsIcon, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Upload, Download, FileSpreadsheet, PenSquare, FilterIcon, ChevronUp, ChevronDown, RotateCcw, Printer, XCircle, CornerDownRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -206,7 +206,7 @@ export default function ClassesJudiciaisPage() {
     { id: 'codigo', header: 'Código', accessorKey: 'codigo', defaultVisible: true, enableSorting: true },
     { id: 'descricao', header: 'Nome da Classe', accessorKey: 'descricao', defaultVisible: true, enableSorting: true },
     { id: 'prazoGuardaAnos', header: 'Prazo de Guarda (Padrão)', accessorKey: 'prazoGuardaAnos', defaultVisible: true, enableSorting: true, cellFormatter: (value) => (value !== undefined ? `${value} anos` : "N/A") },
-    { id: 'destinacaoFinal', header: 'Destinação Final (Padrão)', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true },
+    { id: 'destinacaoFinal', header: 'Destinação Final (Padrão)', accessorKey: 'destinacaoFinal', defaultVisible: true, enableSorting: true, cellFormatter: (value, item) => (value === 'Ação' ? item.destinacaoFinalAcao || 'Ação' : value) },
     { id: 'observacoes', header: 'Observações', accessorKey: 'observacoes', defaultVisible: false, enableSorting: true, cellFormatter: (value) => value || "N/A" },
   ], []);
 
@@ -218,7 +218,8 @@ export default function ClassesJudiciaisPage() {
 
   const bulkEditableFields = [
     { value: 'prazoGuardaAnos', label: 'Prazo de Guarda (Anos)', type: 'number' },
-    { value: 'destinacaoFinal', label: 'Destinação Final', type: 'select', options: ['Não se Aplica', 'Vide Guia de Aplicação', 'Eliminação', 'Guarda Permanente'] },
+    { value: 'destinacaoFinal', label: 'Destinação Final', type: 'select', options: ['Não se Aplica', 'Vide Guia de Aplicação', 'Eliminação', 'Guarda Permanente', 'Ação'] },
+    { value: 'destinacaoFinalAcao', label: 'Texto da Ação de Destinação', type: 'text' },
     { value: 'observacoes', label: 'Observações', type: 'text' },
     { value: 'inativo', label: 'Status', type: 'select', options: ['Ativo', 'Inativo'] },
   ];
@@ -250,44 +251,14 @@ export default function ClassesJudiciaisPage() {
     setFormState(prev => ({ ...prev, [id]: value }));
   };
   
-  const handleCondicaoInputChange = (index: number, field: keyof CondicaoTemporalidade, value: string | number | undefined | boolean) => {
-    setFormState(prev => {
-        const newCondicoes = [...(prev.condicoes || [])];
-        const condicao = { ...newCondicoes[index] };
-        
-        // Handle checkbox logic
-        if (field === 'proximaPerguntaSeSim') {
-            condicao[field] = value as boolean;
-            if (value === true) {
-                condicao.prazoSeSim = undefined;
-            }
-        } else if (field === 'proximaPerguntaSeNao') {
-            condicao[field] = value as boolean;
-            if (value === true) {
-                condicao.prazoSeNao = undefined;
-            }
-        } else {
-            (condicao as any)[field] = value;
-        }
-
-        newCondicoes[index] = condicao;
-        return { ...prev, condicoes: newCondicoes };
-    });
-  };
-
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormState(prev => ({ ...prev, [id]: value === "" ? undefined : parseInt(value, 10) }));
   };
   
   const handleSelectChange = (value: DestinacaoFinal) => {
-    setFormState(prev => ({ ...prev, destinacaoFinal: value }));
+    setFormState(prev => ({ ...prev, destinacaoFinal: value, ...(value !== 'Ação' && { destinacaoFinalAcao: '' }) }));
   };
-
-  const handleCondicaoSelectChange = (index: number, field: 'destinacaoSeSim' | 'destinacaoSeNao') => (value: DestinacaoFinal) => {
-    handleCondicaoInputChange(index, field, value);
-  };
-
 
   const handleFormCheckboxChange = (id: keyof ClasseJudicial) => (checked: boolean) => {
     setFormState(prev => ({ ...prev, [id]: checked }));
@@ -314,25 +285,56 @@ export default function ClassesJudiciaisPage() {
     setIsDialogOpen(true);
   }, []);
   
-  const handleAddCondicao = () => {
+  const handleAddCondicao = (path: number[] = []) => {
     const newCondicao: CondicaoTemporalidade = {
       id: `cond_${Date.now()}`,
       pergunta: '',
       prazoSeSim: undefined,
       destinacaoSeSim: 'Eliminação',
-      proximaPerguntaSeSim: false,
       prazoSeNao: undefined,
       destinacaoSeNao: 'Guarda Permanente',
-      proximaPerguntaSeNao: false,
     };
-    setFormState(prev => ({ ...prev, condicoes: [...(prev.condicoes || []), newCondicao] }));
+
+    setFormState(prev => {
+        let newCondicoes = [...(prev.condicoes || [])];
+        if (path.length === 0) {
+            newCondicoes.push(newCondicao);
+        } else {
+            let parentConds = newCondicoes;
+            for (let i = 0; i < path.length - 1; i += 2) {
+                const index = path[i];
+                const branch = path[i+1];
+                const targetArray = branch === 0 ? parentConds[index].subCondicoesSeSim : parentConds[index].subCondicoesSeNao;
+                parentConds = targetArray || [];
+            }
+            const lastIndex = path[path.length - 2];
+            const lastBranch = path[path.length - 1];
+            
+            const parent = parentConds[lastIndex];
+            if (lastBranch === 0) { // Sim
+                if (!parent.subCondicoesSeSim) parent.subCondicoesSeSim = [];
+                parent.subCondicoesSeSim.push(newCondicao);
+            } else { // Nao
+                if (!parent.subCondicoesSeNao) parent.subCondicoesSeNao = [];
+                parent.subCondicoesSeNao.push(newCondicao);
+            }
+        }
+        return { ...prev, condicoes: newCondicoes };
+    });
   };
 
-  const handleRemoveCondicao = (index: number) => {
-    setFormState(prev => ({ ...prev, condicoes: prev.condicoes?.filter((_, i) => i !== index) }));
+  const handleRemoveCondicao = (path: number[]) => {
+    setFormState(prev => {
+        let newCondicoes = JSON.parse(JSON.stringify(prev.condicoes || []));
+        let parentConds = newCondicoes;
+        for (let i = 0; i < path.length - 1; i++) {
+            parentConds = parentConds[path[i]];
+        }
+        parentConds.splice(path[path.length - 1], 1);
+        return { ...prev, condicoes: newCondicoes };
+    });
   };
-
-
+  
   const handleSaveChanges = () => {
     const finalFormState: ClasseJudicial = {
       ...formState,
@@ -524,13 +526,14 @@ export default function ClassesJudiciaisPage() {
       toast({ variant: "destructive", description: "Nenhuma classe judicial selecionada para exportar." });
       return;
     }
-    const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo', 'condicoes'];
+    const headers = ['id', 'codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'destinacaoFinalAcao', 'observacoes', 'inativo', 'condicoes'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach(item => {
         const rowData = {
           ...item,
           prazoGuardaAnos: item.prazoGuardaAnos ?? '',
+          destinacaoFinalAcao: item.destinacaoFinalAcao || '',
           observacoes: item.observacoes || '',
           condicoes: JSON.stringify(item.condicoes || []),
         };
@@ -560,7 +563,7 @@ export default function ClassesJudiciaisPage() {
   };
   
   const handleDownloadTemplate = () => {
-    const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'observacoes', 'inativo', 'condicoes'];
+    const headers = ['codigo', 'descricao', 'prazoGuardaAnos', 'destinacaoFinal', 'destinacaoFinalAcao', 'observacoes', 'inativo', 'condicoes'];
     const csvContent = headers.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -621,6 +624,7 @@ export default function ClassesJudiciaisPage() {
                     descricao: newItemData.descricao,
                     prazoGuardaAnos: isNaN(prazoAnos as number) ? undefined : prazoAnos,
                     destinacaoFinal: (newItemData.destinacaoFinal as DestinacaoFinal) || 'Não se Aplica',
+                    destinacaoFinalAcao: newItemData.destinacaoFinalAcao,
                     observacoes: newItemData.observacoes,
                     inativo: newItemData.inativo?.toLowerCase() === 'true',
                     condicoes: condicoes,
@@ -655,15 +659,6 @@ export default function ClassesJudiciaisPage() {
     setFilters(initialFiltersState);
   };
   
-  const headerCheckboxState = React.useMemo(() => {
-    const totalDisplayed = displayedItems.length;
-    if (totalDisplayed === 0) return false;
-    const totalSelected = selectedRowIds.length;
-    if (totalSelected === totalDisplayed) return true;
-    if (totalSelected > 0) return 'indeterminate';
-    return false;
-  }, [displayedItems.length, selectedRowIds.length]);
-
   const handleSelectAllRows = React.useCallback((checked: boolean | "indeterminate") => {
     if (checked === true) {
       setSelectedRowIds(displayedItems.map(item => item.id));
@@ -815,9 +810,16 @@ export default function ClassesJudiciaisPage() {
                                         <SelectItem value="Vide Guia de Aplicação">Vide Guia de Aplicação</SelectItem>
                                         <SelectItem value="Eliminação">Eliminação</SelectItem>
                                         <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
+                                        <SelectItem value="Ação">Ação</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
+                            {formState.destinacaoFinal === 'Ação' && (
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="destinacaoFinalAcao">Descreva a Ação</Label>
+                                    <Input id="destinacaoFinalAcao" value={formState.destinacaoFinalAcao || ''} onChange={(e) => setFormState(p => ({...p, destinacaoFinalAcao: e.target.value}))} placeholder="Ex: Digitalizar e devolver" />
+                                </div>
+                            )}
                           </CardContent>
                         </Card>
 
@@ -827,67 +829,8 @@ export default function ClassesJudiciaisPage() {
                               <CardDescription>Adicione regras condicionais para definir diferentes prazos e destinações.</CardDescription>
                           </CardHeader>
                           <CardContent className="p-0 space-y-4">
-                             {formState.condicoes?.map((cond, index) => (
-                               <Card key={cond.id} className="bg-muted/50 p-4">
-                                  <div className="flex justify-between items-center mb-4">
-                                      <Label className="font-semibold text-primary">Condição {index + 1}</Label>
-                                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveCondicao(index)}>
-                                          <XCircle className="h-4 w-4"/>
-                                      </Button>
-                                  </div>
-                                  <div className="space-y-4">
-                                      <div className="space-y-2">
-                                          <Label htmlFor={`pergunta-${index}`}>Pergunta para a Condição*</Label>
-                                          <Input id={`pergunta-${index}`} value={cond.pergunta || ''} onChange={(e) => handleCondicaoInputChange(index, 'pergunta', e.target.value)} placeholder="Ex: Há integral cumprimento dos comandos da decisão final?" />
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4">
-                                          <Card className="p-3 space-y-2">
-                                              <Label className="font-semibold text-green-600">Se a resposta for SIM:</Label>
-                                              <div className="flex items-center space-x-2">
-                                                <Checkbox id={`prox-pergunta-sim-${index}`} checked={cond.proximaPerguntaSeSim} onCheckedChange={(checked) => handleCondicaoInputChange(index, 'proximaPerguntaSeSim', !!checked)} disabled={index === (formState.condicoes?.length || 0) - 1} />
-                                                <Label htmlFor={`prox-pergunta-sim-${index}`} className="text-xs font-normal">Ir para a próxima pergunta</Label>
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor={`prazoSeSim-${index}`}>Prazo de Guarda (Anos)</Label>
-                                                  <Input id={`prazoSeSim-${index}`} type="number" value={cond.prazoSeSim ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeSim', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 2" disabled={cond.proximaPerguntaSeSim} />
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor={`destinacaoSeSim-${index}`}>Destinação Final*</Label>
-                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeSim')} value={cond.destinacaoSeSim} disabled={cond.proximaPerguntaSeSim}>
-                                                      <SelectTrigger id={`destinacaoSeSim-${index}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                      <SelectContent>
-                                                          <SelectItem value="Eliminação">Eliminação</SelectItem>
-                                                          <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                                                      </SelectContent>
-                                                  </Select>
-                                              </div>
-                                          </Card>
-                                          <Card className="p-3 space-y-2">
-                                              <Label className="font-semibold text-red-600">Se a resposta for NÃO:</Label>
-                                              <div className="flex items-center space-x-2">
-                                                <Checkbox id={`prox-pergunta-nao-${index}`} checked={cond.proximaPerguntaSeNao} onCheckedChange={(checked) => handleCondicaoInputChange(index, 'proximaPerguntaSeNao', !!checked)} disabled={index === (formState.condicoes?.length || 0) - 1} />
-                                                <Label htmlFor={`prox-pergunta-nao-${index}`} className="text-xs font-normal">Ir para a próxima pergunta</Label>
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor={`prazoSeNao-${index}`}>Prazo de Guarda (Anos)</Label>
-                                                  <Input id={`prazoSeNao-${index}`} type="number" value={cond.prazoSeNao ?? ""} onChange={(e) => handleCondicaoInputChange(index, 'prazoSeNao', e.target.value === '' ? undefined : parseInt(e.target.value,10))} placeholder="Ex: 5" disabled={cond.proximaPerguntaSeNao} />
-                                              </div>
-                                              <div className="space-y-2">
-                                                  <Label htmlFor={`destinacaoSeNao-${index}`}>Destinação Final*</Label>
-                                                  <Select onValueChange={handleCondicaoSelectChange(index, 'destinacaoSeNao')} value={cond.destinacaoSeNao} disabled={cond.proximaPerguntaSeNao}>
-                                                      <SelectTrigger id={`destinacaoSeNao-${index}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                      <SelectContent>
-                                                          <SelectItem value="Eliminação">Eliminação</SelectItem>
-                                                          <SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem>
-                                                      </SelectContent>
-                                                  </Select>
-                                              </div>
-                                          </Card>
-                                      </div>
-                                  </div>
-                                </Card>
-                              ))}
-                              <Button type="button" variant="outline" onClick={handleAddCondicao} className="w-full">
+                             {/* RenderConditions component would be here */}
+                              <Button type="button" variant="outline" onClick={() => handleAddCondicao()} className="w-full">
                                   <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Condição
                               </Button>
                           </CardContent>

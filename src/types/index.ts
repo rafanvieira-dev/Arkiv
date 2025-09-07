@@ -100,7 +100,7 @@ export interface Classificacao {
   observacoes?: string;
 }
 
-export type DestinacaoFinal = 'Não se Aplica' | 'Vide Guia de Aplicação' | 'Eliminação' | 'Guarda Permanente';
+export type DestinacaoFinal = 'Não se Aplica' | 'Vide Guia de Aplicação' | 'Eliminação' | 'Guarda Permanente' | 'Ação';
 
 export interface CondicaoTemporalidade {
   id: string;
@@ -108,11 +108,13 @@ export interface CondicaoTemporalidade {
   // Sim path
   prazoSeSim?: number;
   destinacaoSeSim: DestinacaoFinal;
-  proximaPerguntaSeSim?: boolean;
+  destinacaoFinalAcaoSeSim?: string;
+  subCondicoesSeSim?: CondicaoTemporalidade[];
   // Não path
   prazoSeNao?: number;
   destinacaoSeNao: DestinacaoFinal;
-  proximaPerguntaSeNao?: boolean;
+  destinacaoFinalAcaoSeNao?: string;
+  subCondicoesSeNao?: CondicaoTemporalidade[];
 }
 
 export interface ClasseJudicial {
@@ -122,6 +124,7 @@ export interface ClasseJudicial {
   // Fallback if no conditions are met
   prazoGuardaAnos?: number; 
   destinacaoFinal: DestinacaoFinal; 
+  destinacaoFinalAcao?: string;
   observacoes?: string;
   inativo: boolean;
   condicoes?: CondicaoTemporalidade[];
