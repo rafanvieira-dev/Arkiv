@@ -285,43 +285,41 @@ export default function ClassesJudiciaisPage() {
     setIsDialogOpen(true);
   }, []);
   
-  const handleAddCondicao = (path: number[] = []) => {
+  const handleAddCondicao = (path: (string | number)[]) => {
     const newCondicao: CondicaoTemporalidade = {
-      id: `cond_${Date.now()}`,
-      pergunta: '',
-      prazoSeSim: undefined,
-      destinacaoSeSim: 'Eliminação',
-      prazoSeNao: undefined,
-      destinacaoSeNao: 'Guarda Permanente',
+        id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        pergunta: '',
+        prazoSeSim: undefined,
+        destinacaoSeSim: 'Eliminação',
+        prazoSeNao: undefined,
+        destinacaoSeNao: 'Guarda Permanente',
     };
 
     setFormState(prev => {
-        let newCondicoes = [...(prev.condicoes || [])];
-        if (path.length === 0) {
-            newCondicoes.push(newCondicao);
-        } else {
-            let parentConds = newCondicoes;
-            for (let i = 0; i < path.length - 1; i += 2) {
-                const index = path[i];
-                const branch = path[i+1];
-                const targetArray = branch === 0 ? parentConds[index].subCondicoesSeSim : parentConds[index].subCondicoesSeNao;
-                parentConds = targetArray || [];
-            }
-            const lastIndex = path[path.length - 2];
-            const lastBranch = path[path.length - 1];
-            
-            const parent = parentConds[lastIndex];
-            if (lastBranch === 0) { // Sim
-                if (!parent.subCondicoesSeSim) parent.subCondicoesSeSim = [];
-                parent.subCondicoesSeSim.push(newCondicao);
-            } else { // Nao
-                if (!parent.subCondicoesSeNao) parent.subCondicoesSeNao = [];
-                parent.subCondicoesSeNao.push(newCondicao);
+        const newCondicoes = JSON.parse(JSON.stringify(prev.condicoes || []));
+        let parentArray = newCondicoes;
+        
+        for (let i = 0; i < path.length; i++) {
+            const segment = path[i];
+            const currentItem = parentArray.find((item: any) => item.id === segment);
+            if (currentItem) {
+                const nextSegment = path[i + 1];
+                if (nextSegment === 'subCondicoesSeSim') {
+                    if (!currentItem.subCondicoesSeSim) currentItem.subCondicoesSeSim = [];
+                    parentArray = currentItem.subCondicoesSeSim;
+                    i++;
+                } else if (nextSegment === 'subCondicoesSeNao') {
+                    if (!currentItem.subCondicoesSeNao) currentItem.subCondicoesSeNao = [];
+                    parentArray = currentItem.subCondicoesSeNao;
+                    i++;
+                }
             }
         }
+        
+        parentArray.push(newCondicao);
         return { ...prev, condicoes: newCondicoes };
     });
-  };
+};
 
   const handleRemoveCondicao = (path: number[]) => {
     setFormState(prev => {
@@ -838,7 +836,7 @@ export default function ClassesJudiciaisPage() {
                           </CardHeader>
                           <CardContent className="p-0 space-y-4">
                              {/* RenderConditions component would be here */}
-                              <Button type="button" variant="outline" onClick={() => handleAddCondicao()} className="w-full">
+                              <Button type="button" variant="outline" onClick={() => handleAddCondicao([])} className="w-full">
                                   <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Condição
                               </Button>
                           </CardContent>
@@ -951,7 +949,7 @@ export default function ClassesJudiciaisPage() {
                       {ALL_COLUMNS_CONFIG.map((column) => (
                         <DropdownMenuCheckboxItem
                           key={column.id as string}
-                          checked={columnVisibility[column.id as string]}
+                          checked={columnVisibility[column.id as string] ?? false}
                           onCheckedChange={() => toggleColumnVisibility(column.id as string)}
                         >
                           {column.header}
