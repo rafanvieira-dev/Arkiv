@@ -682,6 +682,14 @@ export default function ClassesJudiciaisPage() {
     return ALL_COLUMNS_CONFIG.filter(col => columnVisibility[col.id as string]);
   }, [ALL_COLUMNS_CONFIG, columnVisibility]);
 
+  const headerCheckboxState = React.useMemo(() => {
+    const totalDisplayed = displayedItems.length;
+    if (totalDisplayed === 0) return false;
+    const totalSelected = selectedRowIds.length;
+    if (totalSelected === totalDisplayed) return true;
+    if (totalSelected > 0) return 'indeterminate';
+    return false;
+  }, [displayedItems.length, selectedRowIds.length]);
 
   if (isPrinting) {
     return (
