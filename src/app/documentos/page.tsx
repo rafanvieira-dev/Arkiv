@@ -337,13 +337,13 @@ export default function DocumentosPage() {
         classId = doc.classificacaoArquivisticaId || "";
       }
 
-      let nomeClasse = "", prazoClasse = "", destinacaoClasse = "", isClasseJudicialInactive = false;
+      let nomeClasse = "", prazoClasse = "", destinacaoClasse: string | undefined = "", isClasseJudicialInactive = false;
       if (doc.codigoClassificacaoJudicialId) {
         const classeJudicial = classesJudiciais.find(c => c.codigo === doc.codigoClassificacaoJudicialId);
         if (classeJudicial) {
           nomeClasse = classeJudicial.descricao;
           prazoClasse = classeJudicial.prazoGuardaAnos !== undefined ? `${classeJudicial.prazoGuardaAnos} anos` : 'N/A';
-          destinacaoClasse = classeJudicial.destinacaoFinal;
+          destinacaoClasse = classeJudicial.destinacaoFinalAcao || classeJudicial.destinacaoFinal;
           isClasseJudicialInactive = classeJudicial.inativo;
         } else if (doc.codigoClassificacaoJudicialId) {
             nomeClasse = "Código não encontrado.";
@@ -684,42 +684,49 @@ export default function DocumentosPage() {
     let archivalDestinacao: Classificacao['destinacaoFinal'] | undefined = undefined;
 
     if (classification && classification.status !== 'Pendente de Complemento') {
-      archivalPrazo = classification.prazoGuardaFaseIntermediariaAnos;
-      archivalDestinacao = classification.destinacaoFinal;
+        archivalPrazo = classification.prazoGuardaFaseIntermediariaAnos;
+        archivalDestinacao = classification.destinacaoFinal;
     }
 
     let judicialPrazo: number | undefined = undefined;
-    let judicialDestinacao: ClasseJudicial['destinacaoFinal'] | string | undefined = undefined;
+    let judicialDestinacao: string | undefined = undefined;
 
     if (formState.categoria === 'Processo Judicial' && currentClasseJudicial) {
-      judicialPrazo = currentClasseJudicial.prazoGuardaAnos;
-      judicialDestinacao = currentClasseJudicial.destinacaoFinalAcao || currentClasseJudicial.destinacaoFinal;
+        let prazo: number | undefined = currentClasseJudicial.prazoGuardaAnos;
+        let dest: string | undefined = currentClasseJudicial.destinacaoFinalAcao || currentClasseJudicial.destinacaoFinal;
+        
+        let flowEnded = false;
+        let currentConditions = currentClasseJudicial.condicoes;
 
-      let currentConditions = currentClasseJudicial.condicoes;
-      if (currentConditions && currentConditions.length > 0) {
-        for (const cond of currentConditions) {
-          const resposta = formState.respostasCondicionais?.[cond.id];
-          if (!resposta) break;
+        while(currentConditions && currentConditions.length > 0 && !flowEnded) {
+            const currentCond = currentConditions[0];
+            const resposta = formState.respostasCondicionais?.[currentCond.id];
 
-          if (resposta === 'Sim') {
-            if (cond.proximaPerguntaSeSim && cond.subCondicoesSeSim && cond.subCondicoesSeSim.length > 0) {
-              currentConditions = cond.subCondicoesSeSim;
-              continue;
+            if (!resposta) {
+                flowEnded = true; 
+                break;
             }
-            judicialPrazo = cond.prazoSeSim;
-            judicialDestinacao = cond.destinacaoFinalAcaoSeSim || cond.destinacaoSeSim;
-            break;
-          } else { // Resposta é 'Não'
-            if (cond.proximaPerguntaSeNao && cond.subCondicoesSeNao && cond.subCondicoesSeNao.length > 0) {
-              currentConditions = cond.subCondicoesSeNao;
-              continue;
+            
+            if (resposta === 'Sim') {
+                if (currentCond.proximaPerguntaSeSim && currentCond.subCondicoesSeSim && currentCond.subCondicoesSeSim.length > 0) {
+                    currentConditions = currentCond.subCondicoesSeSim;
+                } else {
+                    prazo = currentCond.prazoSeSim;
+                    dest = currentCond.destinacaoFinalAcaoSeSim || currentCond.destinacaoSeSim;
+                    flowEnded = true;
+                }
+            } else { // Resposta é 'Não'
+                if (currentCond.proximaPerguntaSeNao && currentCond.subCondicoesSeNao && currentCond.subCondicoesSeNao.length > 0) {
+                    currentConditions = currentCond.subCondicoesSeNao;
+                } else {
+                    prazo = currentCond.prazoSeNao;
+                    dest = currentCond.destinacaoFinalAcaoSeNao || currentCond.destinacaoSeNao;
+                    flowEnded = true;
+                }
             }
-            judicialPrazo = cond.prazoSeNao;
-            judicialDestinacao = cond.destinacaoFinalAcaoSeNao || cond.destinacaoSeNao;
-            break;
-          }
         }
-      }
+        judicialPrazo = prazo;
+        judicialDestinacao = dest;
     }
 
     let finalDestinacao: string | undefined = archivalDestinacao;
@@ -727,21 +734,26 @@ export default function DocumentosPage() {
 
     if (formState.categoria === 'Processo Judicial') {
       if (archivalDestinacao === 'Guarda Permanente' || judicialDestinacao === 'Guarda Permanente') {
-        finalDestinacao = 'Guarda Permanente';
+          finalDestinacao = 'Guarda Permanente';
+          finalPrazo = undefined; // Permanent storage has no elimination term
       } else if (archivalDestinacao === 'Eliminação' && judicialDestinacao === 'Eliminação') {
-        finalDestinacao = 'Eliminação';
-        finalPrazo = Math.max(archivalPrazo ?? -1, judicialPrazo ?? -1);
-      } else if (archivalDestinacao !== judicialDestinacao) {
-          finalDestinacao = "Guarda Permanente"; // One is elimination, other is action/vide/etc. -> Default to permanent
+          finalDestinacao = 'Eliminação';
+          // Use the greater of the two terms
+          finalPrazo = Math.max(archivalPrazo ?? -1, judicialPrazo ?? -1);
+      } else if (judicialDestinacao && archivalDestinacao !== judicialDestinacao) {
+          // If one is elimination and the other is action/vide/etc, default to permanent for safety, or a more complex rule
+          finalDestinacao = "Guarda Permanente";
           finalPrazo = undefined;
       } else {
-        finalDestinacao = archivalDestinacao || judicialDestinacao;
-        finalPrazo = archivalPrazo ?? judicialPrazo;
+          // Default case if one is undefined or they are the same non-elimination/permanent
+          finalDestinacao = archivalDestinacao || judicialDestinacao;
+          finalPrazo = archivalPrazo ?? judicialPrazo;
       }
     }
 
     if (formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Guarda Amostral' || formState.alteracaoDestinacaoFinal === 'Guarda Permanente – Decisão da CPAD') {
       finalDestinacao = 'Guarda Permanente';
+      finalPrazo = undefined;
     }
 
     let anoEliminacao = "";
@@ -766,6 +778,8 @@ export default function DocumentosPage() {
         anoEliminacaoPrevisto: anoEliminacao,
         isClassificationInactive: isInactive,
         necessidadeReclassificacao: isInactive ? 'Sim' : 'Não',
+        prazoGuardaClasseProcessualDisplay: judicialPrazo !== undefined ? `${judicialPrazo} anos` : 'N/A',
+        destinacaoFinalClasseProcessualDisplay: judicialDestinacao || 'N/A',
     }));
 
   }, [
@@ -944,7 +958,7 @@ export default function DocumentosPage() {
                 nomeClasseProcessualDisplay: foundClasse.descricao,
                 tipoDocumento: foundClasse.descricao, // Auto-fill
                 prazoGuardaClasseProcessualDisplay: foundClasse.prazoGuardaAnos !== undefined ? `${foundClasse.prazoGuardaAnos} anos` : 'N/A',
-                destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinal,
+                destinacaoFinalClasseProcessualDisplay: foundClasse.destinacaoFinalAcao || foundClasse.destinacaoFinal,
                 isClasseJudicialInactive: foundClasse.inativo,
                 respostasCondicionais: {}, // Reset answers on new code
             }));
@@ -2426,60 +2440,52 @@ export default function DocumentosPage() {
     const RenderConditions = ({ conditions, level = 0 }: { conditions: CondicaoTemporalidade[], level?: number }) => {
       if (!conditions || conditions.length === 0) return null;
     
-      let nextConditions: CondicaoTemporalidade[] | undefined = undefined;
-      let conditionToRender: CondicaoTemporalidade | undefined = undefined;
+      let currentConditions: CondicaoTemporalidade[] | undefined = conditions;
+      let elements: JSX.Element[] = [];
     
-      let currentLevelConditions = conditions;
-      while(currentLevelConditions && currentLevelConditions.length > 0) {
-          const currentCond = currentLevelConditions[0];
-          const resposta = formState.respostasCondicionais?.[currentCond.id];
+      while(currentConditions && currentConditions.length > 0) {
+          const condition = currentConditions[0];
+          const resposta = formState.respostasCondicionais?.[condition.id];
           
-          if (!resposta) {
-              conditionToRender = currentCond;
-              break;
-          }
+          elements.push(
+            <div key={condition.id} className="space-y-2 mt-4 pt-4 border-t border-dashed" style={{ marginLeft: `${level * 20}px` }}>
+              <Label htmlFor={`condicao-resp-${condition.id}`} className="font-semibold">{condition.pergunta}</Label>
+              <Select 
+                onValueChange={(value: 'Sim' | 'Não') => handleConditionalResponse(condition.id, value)} 
+                value={resposta}
+                disabled={isFormDisabled}
+              >
+                <SelectTrigger id={`condicao-resp-${condition.id}`}>
+                  <SelectValue placeholder="Selecione a resposta..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          );
           
-          if (resposta === 'Sim' && currentCond.proximaPerguntaSeSim && currentCond.subCondicoesSeSim) {
-              currentLevelConditions = currentCond.subCondicoesSeSim;
-          } else if (resposta === 'Não' && currentCond.proximaPerguntaSeNao && currentCond.subCondicoesSeNao) {
-              currentLevelConditions = currentCond.subCondicoesSeNao;
-          } else {
-              break; 
+          if (!resposta) break;
+      
+          if (resposta === 'Sim') {
+              if (condition.proximaPerguntaSeSim && condition.subCondicoesSeSim && condition.subCondicoesSeSim.length > 0) {
+                  currentConditions = condition.subCondicoesSeSim;
+                  level++;
+              } else {
+                  currentConditions = undefined;
+              }
+          } else { // Resposta é 'Não'
+              if (condition.proximaPerguntaSeNao && condition.subCondicoesSeNao && condition.subCondicoesSeNao.length > 0) {
+                  currentConditions = condition.subCondicoesSeNao;
+                  level++;
+              } else {
+                  currentConditions = undefined;
+              }
           }
       }
     
-      if (!conditionToRender) return null;
-    
-      return (
-        <div style={{ marginLeft: `${level * 20}px` }} className="mt-4 pt-4 border-t border-dashed">
-          <div key={conditionToRender.id} className="space-y-2">
-            <Label htmlFor={`condicao-resp-${conditionToRender.id}`} className="font-semibold">{conditionToRender.pergunta}</Label>
-            <Select 
-              onValueChange={(value: 'Sim' | 'Não') => handleConditionalResponse(conditionToRender!.id, value)} 
-              value={formState.respostasCondicionais?.[conditionToRender.id]}
-              disabled={isFormDisabled}
-            >
-              <SelectTrigger id={`condicao-resp-${conditionToRender.id}`}>
-                <SelectValue placeholder="Selecione a resposta..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Sim">Sim</SelectItem>
-                <SelectItem value="Não">Não</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {formState.respostasCondicionais?.[conditionToRender.id] && (
-            <RenderConditions
-              conditions={
-                formState.respostasCondicionais?.[conditionToRender.id] === 'Sim'
-                  ? conditionToRender.subCondicoesSeSim || []
-                  : conditionToRender.subCondicoesSeNao || []
-              }
-              level={level + 1}
-            />
-          )}
-        </div>
-      );
+      return <>{elements}</>;
     };
 
 
@@ -2990,8 +2996,8 @@ export default function DocumentosPage() {
                                             <Input id="nomeClasseProcessualDisplay" value={formState.nomeClasseProcessualDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
                                           </div>
                                       </div>
-                                       {currentClasseJudicial?.condicoes && currentClasseJudicial.condicoes.length > 0 && (
-                                          <RenderConditions conditions={currentClasseJudicial.condicoes} />
+                                       {currentClasseJudicial?.condicoes && (
+                                          <RenderConditions conditions={currentClasseJudicial.condicoes} level={0} formState={formState} setFormState={setFormState} isFormDisabled={isFormDisabled} />
                                        )}
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-4 mt-4 border-t">
                                         <div className="space-y-2">
@@ -3026,18 +3032,19 @@ export default function DocumentosPage() {
                                               </Select>
                                           </div>
                                           <div className="space-y-2">
+                                              <Label htmlFor="destinacaoFinalDisplay">Destinação Final (Consolidada)</Label>
+                                              <Input id="destinacaoFinalDisplay" value={formState.destinacaoFinalDisplay || ""} readOnly className="bg-muted/50 cursor-not-allowed" />
+                                          </div>
+                                          <div className="space-y-2">
                                               <Label htmlFor="anoEliminacaoPrevisto">Ano de Eliminação Previsto</Label>
                                               <Input 
                                                   id="anoEliminacaoPrevisto" 
-                                                  value={formState.anoEliminacaoPrevisto === "Guarda Permanente" ? "" : formState.anoEliminacaoPrevisto || ""} 
+                                                  value={formState.anoEliminacaoPrevisto || ""} 
                                                   readOnly 
-                                                  className="bg-muted/50 cursor-not-allowed" 
+                                                  className={cn("bg-muted/50 cursor-not-allowed", {
+                                                      "font-bold text-destructive": formState.anoEliminacaoPrevisto === "Guarda Permanente"
+                                                  })} 
                                               />
-                                              {formState.anoEliminacaoPrevisto === "Guarda Permanente" && (
-                                                <p className="text-sm font-semibold text-destructive">
-                                                  Guarda Permanente
-                                                </p>
-                                              )}
                                           </div>
                                       </div>
                                   </AccordionContent>
@@ -3861,67 +3868,68 @@ const RenderConditions = ({
   let level = 0;
 
   while(currentConditions && currentConditions.length > 0) {
-    const condition = currentConditions[0];
-    const resposta = formState.respostasCondicionais?.[condition.id];
-    
-    elements.push(
-      <div key={condition.id} className="space-y-2 mt-4 pt-4 border-t border-dashed" style={{ marginLeft: `${level * 20}px` }}>
-        <Label htmlFor={`condicao-resp-${condition.id}`} className="font-semibold">{condition.pergunta}</Label>
-        <Select 
-          onValueChange={(value: 'Sim' | 'Não') => {
-            setFormState(prev => {
-                const newRespostas = { ...prev.respostasCondicionais };
-                // Clear any deeper answers when a higher-level answer changes
-                const clearSubsequentAnswers = (conds: CondicaoTemporalidade[]) => {
-                    for(const c of conds) {
-                        delete newRespostas[c.id];
-                        if (c.subCondicoesSeSim) clearSubsequentAnswers(c.subCondicoesSeSim);
-                        if (c.subCondicoesSeNao) clearSubsequentAnswers(c.subCondicoesSeNao);
-                    }
-                }
-                if (condition.subCondicoesSeSim) clearSubsequentAnswers(condition.subCondicoesSeSim);
-                if (condition.subCondicoesSeNao) clearSubsequentAnswers(condition.subCondicoesSeNao);
-                newRespostas[condition.id] = value;
-                return { ...prev, respostasCondicionais: newRespostas };
-            });
-          }}
-          value={resposta}
-          disabled={isFormDisabled}
-        >
-          <SelectTrigger id={`condicao-resp-${condition.id}`}>
-            <SelectValue placeholder="Selecione a resposta..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Sim">Sim</SelectItem>
-            <SelectItem value="Não">Não</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    );
-    
-    if (!resposta) break;
-
-    if (resposta === 'Sim') {
-        if (condition.proximaPerguntaSeSim && condition.subCondicoesSeSim) {
-            currentConditions = condition.subCondicoesSeSim;
-            level++;
-        } else {
-            currentConditions = undefined;
-        }
-    } else { // Resposta é 'Não'
-        if (condition.proximaPerguntaSeNao && condition.subCondicoesSeNao) {
-            currentConditions = condition.subCondicoesSeNao;
-            level++;
-        } else {
-            currentConditions = undefined;
-        }
-    }
+      const condition = currentConditions[0];
+      const resposta = formState.respostasCondicionais?.[condition.id];
+      
+      elements.push(
+        <div key={condition.id} className="space-y-2 mt-4 pt-4 border-t border-dashed" style={{ marginLeft: `${level * 20}px` }}>
+          <Label htmlFor={`condicao-resp-${condition.id}`} className="font-semibold">{condition.pergunta}</Label>
+          <Select 
+            onValueChange={(value: 'Sim' | 'Não') => {
+              setFormState(prev => {
+                  const newRespostas = { ...prev.respostasCondicionais };
+                  // Clear any deeper answers when a higher-level answer changes
+                  const clearSubsequentAnswers = (conds: CondicaoTemporalidade[]) => {
+                      for(const c of conds) {
+                          delete newRespostas[c.id];
+                          if (c.subCondicoesSeSim) clearSubsequentAnswers(c.subCondicoesSeSim);
+                          if (c.subCondicoesSeNao) clearSubsequentAnswers(c.subCondicoesSeNao);
+                      }
+                  }
+                  if (condition.subCondicoesSeSim) clearSubsequentAnswers(condition.subCondicoesSeSim);
+                  if (condition.subCondicoesSeNao) clearSubsequentAnswers(condition.subCondicoesSeNao);
+                  newRespostas[condition.id] = value;
+                  return { ...prev, respostasCondicionais: newRespostas };
+              });
+            }}
+            value={resposta}
+            disabled={isFormDisabled}
+          >
+            <SelectTrigger id={`condicao-resp-${condition.id}`}>
+              <SelectValue placeholder="Selecione a resposta..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Sim">Sim</SelectItem>
+              <SelectItem value="Não">Não</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+      
+      if (!resposta) break;
+  
+      if (resposta === 'Sim') {
+          if (condition.proximaPerguntaSeSim && condition.subCondicoesSeSim && condition.subCondicoesSeSim.length > 0) {
+              currentConditions = condition.subCondicoesSeSim;
+              level++;
+          } else {
+              currentConditions = undefined;
+          }
+      } else { // Resposta é 'Não'
+          if (condition.proximaPerguntaSeNao && condition.subCondicoesSeNao && condition.subCondicoesSeNao.length > 0) {
+              currentConditions = condition.subCondicoesSeNao;
+              level++;
+          } else {
+              currentConditions = undefined;
+          }
+      }
   }
 
   return <>{elements}</>;
 };
 
     
+
 
 
 
