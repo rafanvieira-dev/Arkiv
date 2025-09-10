@@ -286,63 +286,41 @@ export default function ClassesJudiciaisPage() {
     setIsDialogOpen(true);
   }, []);
   
-const handleAddCondicao = (path: (string | number)[]) => {
-    const newCondicao: CondicaoTemporalidade = {
-        id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        pergunta: '',
-        prazoSeSim: undefined,
-        destinacaoSeSim: 'Eliminação',
-        proximaPerguntaSeSim: false,
-        subCondicoesSeSim: [],
-        prazoSeNao: undefined,
-        destinacaoSeNao: 'Guarda Permanente',
-        proximaPerguntaSeNao: false,
-        subCondicoesSeNao: [],
-    };
+  const handleAddCondicao = (path: (string | number)[]) => {
+      setFormState(prev => {
+          const newState = JSON.parse(JSON.stringify(prev));
+          let parent: any = newState;
 
-    setFormState(prev => {
-        const newState = JSON.parse(JSON.stringify(prev)); // Deep copy
+          // Traverse to the parent object that holds the array
+          for (let i = 0; i < path.length - 1; i++) {
+              parent = parent[path[i]];
+          }
 
-        let currentLevel = newState;
-        let parent: any = null;
-        let lastKey: string | number | null = null;
-        let parentPath: (string | number)[] = [];
+          const arrayKey = path[path.length - 1];
 
-        for (const key of path) {
-            parent = currentLevel;
-            parentPath.push(key);
-            if (typeof key === 'number') {
-                if (currentLevel.condicoes && currentLevel.condicoes[key]) {
-                    currentLevel = currentLevel.condicoes[key];
-                } else if (currentLevel.subCondicoesSeSim && currentLevel.subCondicoesSeSim[key]) {
-                    currentLevel = currentLevel.subCondicoesSeSim[key];
-                } else if (currentLevel.subCondicoesSeNao && currentLevel.subCondicoesSeNao[key]) {
-                    currentLevel = currentLevel.subCondicoesSeNao[key];
-                } else {
-                    console.error("Invalid path segment during traversal", key, "in", path);
-                    return prev; 
-                }
-            } else if (key === 'subCondicoesSeSim' || key === 'subCondicoesSeNao') {
-                 if (!currentLevel[key]) currentLevel[key] = [];
-                 currentLevel = currentLevel[key];
-            }
-             lastKey = key;
-        }
+          // Ensure the array exists
+          if (!parent[arrayKey]) {
+              parent[arrayKey] = [];
+          }
 
-        if (Array.isArray(currentLevel)) {
-            currentLevel.push(newCondicao);
-        } else if(currentLevel && typeof currentLevel === 'object' && !Array.isArray(currentLevel)){
-            if (!currentLevel.condicoes) {
-                currentLevel.condicoes = [];
-            }
-            currentLevel.condicoes.push(newCondicao);
-        } else {
-            newState.condicoes = [newCondicao];
-        }
+          const newCondicao: CondicaoTemporalidade = {
+              id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              pergunta: '',
+              prazoSeSim: undefined,
+              destinacaoSeSim: 'Eliminação',
+              proximaPerguntaSeSim: false,
+              subCondicoesSeSim: [],
+              prazoSeNao: undefined,
+              destinacaoSeNao: 'Guarda Permanente',
+              proximaPerguntaSeNao: false,
+              subCondicoesSeNao: [],
+          };
 
-        return newState;
-    });
-};
+          parent[arrayKey].push(newCondicao);
+
+          return newState;
+      });
+  };
 
   const handleRemoveCondicao = (idToRemove: string) => {
       setFormState(prev => {
@@ -873,9 +851,9 @@ const handleAddCondicao = (path: (string | number)[]) => {
                                 setFormState={setFormState} 
                                 onAddCondicao={handleAddCondicao}
                                 onRemoveCondicao={handleRemoveCondicao}
-                                path={[]} 
+                                path={['condicoes']} 
                               />
-                              <Button type="button" variant="outline" onClick={() => handleAddCondicao([])} className="w-full">
+                              <Button type="button" variant="outline" onClick={() => handleAddCondicao(['condicoes'])} className="w-full">
                                   <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Condição Principal
                               </Button>
                           </CardContent>
@@ -1185,7 +1163,7 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
           {condicoes.map((cond, index) => (
               <div key={cond.id} className="p-4 border rounded-md bg-muted/30 relative">
                   {parentQuestion && parentAnswer && (
-                    <div className={cn("mb-4 text-xs text-muted-foreground p-2 bg-background/50 rounded-md border", level > 0 && `pl-${level * 4}`)}>
+                    <div className={cn("mb-4 text-xs text-muted-foreground p-2 bg-background/50 rounded-md border")}>
                         <span className="font-semibold">
                             Sub-pergunta para a resposta "{parentAnswer}" da condição:
                         </span>
