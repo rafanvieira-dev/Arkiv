@@ -302,50 +302,38 @@ export default function ClassesJudiciaisPage() {
     setFormState(prev => {
         const newState = JSON.parse(JSON.stringify(prev)); // Deep copy
         
-        let currentLevel = newState;
+        // Find the target array to push the new condition into
+        let targetArray = newState.condicoes;
+        if (!targetArray) {
+            newState.condicoes = [];
+            targetArray = newState.condicoes;
+        }
+
         if (path.length > 0) {
-            let parent = newState;
-            for(const key of path) {
-                if (typeof key === 'number') {
-                    parent = parent.condicoes[key];
-                } else if (key === 'subCondicoesSeSim' || key === 'subCondicoesSeNao') {
-                    if (!parent[key]) parent[key] = [];
-                    currentLevel = parent[key];
-                }
-            }
-        }
-        
-        if (!currentLevel.condicoes) currentLevel.condicoes = [];
-        
-        // This is the tricky part, we need to find the correct array to push to.
-        if (path.length === 0) {
-            newState.condicoes.push(newCondicao);
-        } else {
-            let targetArray = newState.condicoes;
-            let currentPathIndex = 0;
-            while(currentPathIndex < path.length) {
-                const segment = path[currentPathIndex];
-                if(typeof segment === 'number') {
-                    const nextSegment = path[currentPathIndex+1];
-                    if (nextSegment === 'subCondicoesSeSim') {
-                         if (!targetArray[segment].subCondicoesSeSim) targetArray[segment].subCondicoesSeSim = [];
-                         targetArray = targetArray[segment].subCondicoesSeSim!;
-                         currentPathIndex += 2;
-                    } else if (nextSegment === 'subCondicoesSeNao') {
-                         if (!targetArray[segment].subCondicoesSeNao) targetArray[segment].subCondicoesSeNao = [];
-                         targetArray = targetArray[segment].subCondicoesSeNao!;
-                         currentPathIndex += 2;
+            let currentLevel = newState;
+            for (let i = 0; i < path.length; i++) {
+                const segment = path[i];
+                if (typeof segment === 'number') {
+                    if (currentLevel.condicoes && currentLevel.condicoes[segment]) {
+                        currentLevel = currentLevel.condicoes[segment];
+                    } else if (currentLevel.subCondicoesSeSim && currentLevel.subCondicoesSeSim[segment]) {
+                        currentLevel = currentLevel.subCondicoesSeSim[segment];
+                    } else if (currentLevel.subCondicoesSeNao && currentLevel.subCondicoesSeNao[segment]) {
+                         currentLevel = currentLevel.subCondicoesSeNao[segment];
                     } else {
-                        // Should not happen with current logic, but as a safeguard.
-                        break;
+                        console.error("Invalid path segment", segment, "in", path);
+                        return prev; // Invalid path, abort
                     }
-                } else {
-                    break;
+                } else if (segment === 'subCondicoesSeSim' || segment === 'subCondicoesSeNao') {
+                    if (!currentLevel[segment]) {
+                        currentLevel[segment] = [];
+                    }
+                    targetArray = currentLevel[segment]!;
                 }
             }
-            targetArray.push(newCondicao);
         }
         
+        targetArray.push(newCondicao);
         return newState;
     });
 };
@@ -1291,3 +1279,4 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
       </div>
   );
 };
+
