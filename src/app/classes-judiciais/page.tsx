@@ -60,6 +60,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useUserSession } from "@/hooks/use-user-session";
 import { initialClassesJudiciais } from "@/lib/mock-data";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils"
 
 
 const initialFormState: Partial<ClasseJudicial> = {
@@ -285,7 +286,7 @@ export default function ClassesJudiciaisPage() {
     setIsDialogOpen(true);
   }, []);
   
-  const handleAddCondicao = (path: (string | number)[]) => {
+const handleAddCondicao = (path: (string | number)[]) => {
     const newCondicao: CondicaoTemporalidade = {
         id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         pergunta: '',
@@ -301,39 +302,44 @@ export default function ClassesJudiciaisPage() {
 
     setFormState(prev => {
         const newState = JSON.parse(JSON.stringify(prev)); // Deep copy
-        
-        // Find the target array to push the new condition into
-        let targetArray = newState.condicoes;
-        if (!targetArray) {
-            newState.condicoes = [];
-            targetArray = newState.condicoes;
+
+        let currentLevel = newState;
+        let parent: any = null;
+        let lastKey: string | number | null = null;
+        let parentPath: (string | number)[] = [];
+
+        for (const key of path) {
+            parent = currentLevel;
+            parentPath.push(key);
+            if (typeof key === 'number') {
+                if (currentLevel.condicoes && currentLevel.condicoes[key]) {
+                    currentLevel = currentLevel.condicoes[key];
+                } else if (currentLevel.subCondicoesSeSim && currentLevel.subCondicoesSeSim[key]) {
+                    currentLevel = currentLevel.subCondicoesSeSim[key];
+                } else if (currentLevel.subCondicoesSeNao && currentLevel.subCondicoesSeNao[key]) {
+                    currentLevel = currentLevel.subCondicoesSeNao[key];
+                } else {
+                    console.error("Invalid path segment during traversal", key, "in", path);
+                    return prev; 
+                }
+            } else if (key === 'subCondicoesSeSim' || key === 'subCondicoesSeNao') {
+                 if (!currentLevel[key]) currentLevel[key] = [];
+                 currentLevel = currentLevel[key];
+            }
+             lastKey = key;
         }
 
-        if (path.length > 0) {
-            let currentLevel = newState;
-            for (let i = 0; i < path.length; i++) {
-                const segment = path[i];
-                if (typeof segment === 'number') {
-                    if (currentLevel.condicoes && currentLevel.condicoes[segment]) {
-                        currentLevel = currentLevel.condicoes[segment];
-                    } else if (currentLevel.subCondicoesSeSim && currentLevel.subCondicoesSeSim[segment]) {
-                        currentLevel = currentLevel.subCondicoesSeSim[segment];
-                    } else if (currentLevel.subCondicoesSeNao && currentLevel.subCondicoesSeNao[segment]) {
-                         currentLevel = currentLevel.subCondicoesSeNao[segment];
-                    } else {
-                        console.error("Invalid path segment", segment, "in", path);
-                        return prev; // Invalid path, abort
-                    }
-                } else if (segment === 'subCondicoesSeSim' || segment === 'subCondicoesSeNao') {
-                    if (!currentLevel[segment]) {
-                        currentLevel[segment] = [];
-                    }
-                    targetArray = currentLevel[segment]!;
-                }
+        if (Array.isArray(currentLevel)) {
+            currentLevel.push(newCondicao);
+        } else if(currentLevel && typeof currentLevel === 'object' && !Array.isArray(currentLevel)){
+            if (!currentLevel.condicoes) {
+                currentLevel.condicoes = [];
             }
+            currentLevel.condicoes.push(newCondicao);
+        } else {
+            newState.condicoes = [newCondicao];
         }
-        
-        targetArray.push(newCondicao);
+
         return newState;
     });
 };
@@ -1175,11 +1181,11 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
   if (!condicoes || condicoes.length === 0) return null;
 
   return (
-      <div className="space-y-4" style={{ marginLeft: `${level * 10}px` }}>
+      <div className="space-y-4">
           {condicoes.map((cond, index) => (
               <div key={cond.id} className="p-4 border rounded-md bg-muted/30 relative">
                   {parentQuestion && parentAnswer && (
-                    <div className="mb-4 text-xs text-muted-foreground p-2 bg-background/50 rounded-md border">
+                    <div className={cn("mb-4 text-xs text-muted-foreground p-2 bg-background/50 rounded-md border", level > 0 && `pl-${level * 4}`)}>
                         <span className="font-semibold">
                             Sub-pergunta para a resposta "{parentAnswer}" da condição:
                         </span>
@@ -1279,4 +1285,3 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
       </div>
   );
 };
-
