@@ -286,49 +286,69 @@ export default function ClassesJudiciaisPage() {
   }, []);
   
   const handleAddCondicao = (path: (string | number)[]) => {
-      const newCondicao: CondicaoTemporalidade = {
-          id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          pergunta: '',
-          prazoSeSim: undefined,
-          destinacaoSeSim: 'Eliminação',
-          proximaPerguntaSeSim: false,
-          subCondicoesSeSim: [],
-          prazoSeNao: undefined,
-          destinacaoSeNao: 'Guarda Permanente',
-          proximaPerguntaSeNao: false,
-          subCondicoesSeNao: [],
-      };
+    const newCondicao: CondicaoTemporalidade = {
+        id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        pergunta: '',
+        prazoSeSim: undefined,
+        destinacaoSeSim: 'Eliminação',
+        proximaPerguntaSeSim: false,
+        subCondicoesSeSim: [],
+        prazoSeNao: undefined,
+        destinacaoSeNao: 'Guarda Permanente',
+        proximaPerguntaSeNao: false,
+        subCondicoesSeNao: [],
+    };
 
-      setFormState(prev => {
-          const newState = JSON.parse(JSON.stringify(prev)); // Deep copy
-          
-          if (path.length === 0) {
-              if (!newState.condicoes) newState.condicoes = [];
-              newState.condicoes.push(newCondicao);
-              return newState;
-          }
-
-          let currentSubArray = newState.condicoes;
-          for (let i = 0; i < path.length; i++) {
-              const part = path[i];
-              if (typeof part === 'number') { // index
-                  if (!currentSubArray[part]) break;
-                  if (i === path.length - 1) { // This is the target array itself
-                    // This case should not happen with the new structure
-                  } else {
-                      const nextPart = path[i + 1] as keyof CondicaoTemporalidade;
-                      if (!currentSubArray[part][nextPart]) {
-                           currentSubArray[part][nextPart] = [];
-                      }
-                      currentSubArray = currentSubArray[part][nextPart];
-                      i++;
-                  }
-              }
-          }
-          currentSubArray.push(newCondicao);
-          return newState;
-      });
-  };
+    setFormState(prev => {
+        const newState = JSON.parse(JSON.stringify(prev)); // Deep copy
+        
+        let currentLevel = newState;
+        if (path.length > 0) {
+            let parent = newState;
+            for(const key of path) {
+                if (typeof key === 'number') {
+                    parent = parent.condicoes[key];
+                } else if (key === 'subCondicoesSeSim' || key === 'subCondicoesSeNao') {
+                    if (!parent[key]) parent[key] = [];
+                    currentLevel = parent[key];
+                }
+            }
+        }
+        
+        if (!currentLevel.condicoes) currentLevel.condicoes = [];
+        
+        // This is the tricky part, we need to find the correct array to push to.
+        if (path.length === 0) {
+            newState.condicoes.push(newCondicao);
+        } else {
+            let targetArray = newState.condicoes;
+            let currentPathIndex = 0;
+            while(currentPathIndex < path.length) {
+                const segment = path[currentPathIndex];
+                if(typeof segment === 'number') {
+                    const nextSegment = path[currentPathIndex+1];
+                    if (nextSegment === 'subCondicoesSeSim') {
+                         if (!targetArray[segment].subCondicoesSeSim) targetArray[segment].subCondicoesSeSim = [];
+                         targetArray = targetArray[segment].subCondicoesSeSim!;
+                         currentPathIndex += 2;
+                    } else if (nextSegment === 'subCondicoesSeNao') {
+                         if (!targetArray[segment].subCondicoesSeNao) targetArray[segment].subCondicoesSeNao = [];
+                         targetArray = targetArray[segment].subCondicoesSeNao!;
+                         currentPathIndex += 2;
+                    } else {
+                        // Should not happen with current logic, but as a safeguard.
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            targetArray.push(newCondicao);
+        }
+        
+        return newState;
+    });
+};
 
   const handleRemoveCondicao = (idToRemove: string) => {
       setFormState(prev => {
@@ -851,7 +871,7 @@ export default function ClassesJudiciaisPage() {
                         <Card className="p-4">
                           <CardHeader className="p-0 mb-4">
                               <CardTitle className="text-lg">Condições de Temporalidade</CardTitle>
-                              <CardDescription>Adicione regras condicionais para definir diferentes prazos e destinações.</CardDescription>
+                              <CardDescription>Adicione regras condicionais para definir diferentes prazos e destinações. As perguntas serão avaliadas na ordem em que aparecem.</CardDescription>
                           </CardHeader>
                           <CardContent className="p-0 space-y-4">
                               <RenderCondicoes 
@@ -859,7 +879,7 @@ export default function ClassesJudiciaisPage() {
                                 setFormState={setFormState} 
                                 onAddCondicao={handleAddCondicao}
                                 onRemoveCondicao={handleRemoveCondicao}
-                                path={['condicoes']} 
+                                path={[]} 
                               />
                               <Button type="button" variant="outline" onClick={() => handleAddCondicao([])} className="w-full">
                                   <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Condição Principal
@@ -1136,9 +1156,11 @@ interface RenderCondicoesProps {
   onRemoveCondicao: (idToRemove: string) => void;
   path: (string | number)[];
   level?: number;
+  parentQuestion?: string;
+  parentAnswer?: "Sim" | "Não";
 }
 
-const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormState, onAddCondicao, onRemoveCondicao, path, level = 0 }) => {
+const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormState, onAddCondicao, onRemoveCondicao, path, level = 0, parentQuestion, parentAnswer }) => {
     const handleCondicaoChange = (id: string, field: keyof CondicaoTemporalidade | 'destinacaoFinalAcaoSeSim' | 'destinacaoFinalAcaoSeNao', value: any) => {
         setFormState(prev => {
             const newState = JSON.parse(JSON.stringify(prev));
@@ -1168,6 +1190,14 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
       <div className="space-y-4" style={{ marginLeft: `${level * 10}px` }}>
           {condicoes.map((cond, index) => (
               <div key={cond.id} className="p-4 border rounded-md bg-muted/30 relative">
+                  {parentQuestion && parentAnswer && (
+                    <div className="mb-4 text-xs text-muted-foreground p-2 bg-background/50 rounded-md border">
+                        <span className="font-semibold">
+                            Sub-pergunta para a resposta "{parentAnswer}" da condição:
+                        </span>
+                        <span className="italic"> "{parentQuestion}"</span>
+                    </div>
+                  )}
                   <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => onRemoveCondicao(cond.id)}>
                       <XCircle className="h-4 w-4" />
                   </Button>
@@ -1247,13 +1277,13 @@ const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormSta
                   </div>
                   {/* Render sub-conditions */}
                   {cond.proximaPerguntaSeSim && cond.subCondicoesSeSim && (
-                      <div className="mt-4 pl-4 border-l-2 border-dashed border-green-500">
-                          <RenderCondicoes condicoes={cond.subCondicoesSeSim} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeSim']} level={level + 1} />
+                      <div className="mt-4">
+                          <RenderCondicoes condicoes={cond.subCondicoesSeSim} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeSim']} level={level + 1} parentQuestion={cond.pergunta} parentAnswer="Sim" />
                       </div>
                   )}
                   {cond.proximaPerguntaSeNao && cond.subCondicoesSeNao && (
-                      <div className="mt-4 pl-4 border-l-2 border-dashed border-red-500">
-                          <RenderCondicoes condicoes={cond.subCondicoesSeNao} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeNao']} level={level + 1} />
+                      <div className="mt-4">
+                          <RenderCondicoes condicoes={cond.subCondicoesSeNao} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeNao']} level={level + 1} parentQuestion={cond.pergunta} parentAnswer="Não" />
                       </div>
                   )}
               </div>
