@@ -308,25 +308,16 @@ export default function ClassesJudiciaisPage() {
           } else {
               let currentLevel = parentArray;
               for (let i = 0; i < path.length; i += 2) {
-                  const id = path[i];
-                  const branch = path[i+1];
+                  const id = path[i] as string;
+                  const branch = path[i+1] as 'subCondicoesSeSim' | 'subCondicoesSeNao';
                   const item = currentLevel.find((c: CondicaoTemporalidade) => c.id === id);
                   if(item) {
-                      if (!branch) { // This should not happen if path is correct
+                      if(i + 2 >= path.length) {
+                          if (!item[branch]) item[branch] = [];
+                          item[branch]!.push(newCondicao);
                           break;
                       }
-                      if(i + 2 >= path.length) { // End of path, push here
-                          if(branch === 'subCondicoesSeSim') {
-                              if(!item.subCondicoesSeSim) item.subCondicoesSeSim = [];
-                              item.subCondicoesSeSim.push(newCondicao);
-                          } else { // subCondicoesSeNao
-                              if(!item.subCondicoesSeNao) item.subCondicoesSeNao = [];
-                              item.subCondicoesSeNao.push(newCondicao);
-                          }
-                          break;
-                      }
-                      // Navigate deeper
-                      currentLevel = item[branch as 'subCondicoesSeSim' | 'subCondicoesSeNao'];
+                      currentLevel = item[branch]!;
                   }
               }
           }
@@ -336,40 +327,27 @@ export default function ClassesJudiciaisPage() {
       });
   };
 
-    const handleRemoveCondicao = (path: (string | number)[]) => {
+  const handleRemoveCondicao = (idToRemove: string) => {
       setFormState(prev => {
           const newFormState = JSON.parse(JSON.stringify(prev));
-          let parentArray = newFormState.condicoes || [];
-          let currentLevel = parentArray;
 
-          if (path.length === 1) { // Top-level removal
-              const indexToRemove = currentLevel.findIndex((c: CondicaoTemporalidade) => c.id === path[0]);
-              if (indexToRemove > -1) {
-                  currentLevel.splice(indexToRemove, 1);
+          const findAndRemove = (conds: CondicaoTemporalidade[], id: string): CondicaoTemporalidade[] => {
+              const index = conds.findIndex(c => c.id === id);
+              if (index > -1) {
+                  conds.splice(index, 1);
+                  return conds;
               }
-          } else {
-              for (let i = 0; i < path.length - 2; i += 2) {
-                  const id = path[i];
-                  const branch = path[i+1];
-                  const item = currentLevel.find((c: CondicaoTemporalidade) => c.id === id);
-                  if (item) {
-                      currentLevel = item[branch as 'subCondicoesSeSim' | 'subCondicoesSeNao'];
-                  } else {
-                      return prev; // Item not found, something is wrong
-                  }
+              for (const cond of conds) {
+                  if (cond.subCondicoesSeSim) cond.subCondicoesSeSim = findAndRemove(cond.subCondicoesSeSim, id);
+                  if (cond.subCondicoesSeNao) cond.subCondicoesSeNao = findAndRemove(cond.subCondicoesSeNao, id);
               }
+              return conds;
+          };
 
-              // Now currentLevel is the direct parent array of the item to remove
-              const idToRemove = path[path.length - 1];
-              const indexToRemove = currentLevel.findIndex((c: CondicaoTemporalidade) => c.id === idToRemove);
-              if (indexToRemove > -1) {
-                  currentLevel.splice(indexToRemove, 1);
-              }
-          }
-
+          newFormState.condicoes = findAndRemove(newFormState.condicoes || [], idToRemove);
           return newFormState;
       });
-    };
+  };
   
   const handleSaveChanges = () => {
     const finalFormState: ClasseJudicial = {
@@ -873,7 +851,13 @@ export default function ClassesJudiciaisPage() {
                               <CardDescription>Adicione regras condicionais para definir diferentes prazos e destinações.</CardDescription>
                           </CardHeader>
                           <CardContent className="p-0 space-y-4">
-                              <RenderCondicoes condicoes={formState.condicoes || []} setFormState={setFormState} path={[]} />
+                              <RenderCondicoes 
+                                condicoes={formState.condicoes || []} 
+                                setFormState={setFormState} 
+                                onAddCondicao={handleAddCondicao}
+                                onRemoveCondicao={handleRemoveCondicao}
+                                path={[]} 
+                              />
                               <Button type="button" variant="outline" onClick={() => handleAddCondicao([])} className="w-full">
                                   <PlusCircle className="mr-2 h-4 w-4"/> Adicionar Condição Principal
                               </Button>
@@ -1145,170 +1129,127 @@ export default function ClassesJudiciaisPage() {
 interface RenderCondicoesProps {
   condicoes: CondicaoTemporalidade[];
   setFormState: React.Dispatch<React.SetStateAction<Partial<ClasseJudicial>>>;
+  onAddCondicao: (path: (string | number)[]) => void;
+  onRemoveCondicao: (idToRemove: string) => void;
   path: (string | number)[];
   level?: number;
 }
 
-const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormState, path, level = 0 }) => {
-
-    const handleCondicaoChange = (index: number, field: keyof CondicaoTemporalidade, value: any) => {
-      setFormState(prev => {
-        const newFormState = JSON.parse(JSON.stringify(prev));
-        const conds = path.reduce((acc, curr, i) => i % 2 === 1 ? acc.find((c: any) => c.id === path[i-1])[curr] : acc, newFormState.condicoes);
-        conds[index][field] = value;
-        // Reset sub-conditions if the "next question" checkbox is unchecked
-        if (field === 'proximaPerguntaSeSim' && !value) {
-            conds[index].subCondicoesSeSim = [];
-        }
-        if (field === 'proximaPerguntaSeNao' && !value) {
-            conds[index].subCondicoesSeNao = [];
-        }
-        return newFormState;
+const RenderCondicoes: React.FC<RenderCondicoesProps> = ({ condicoes, setFormState, onAddCondicao, onRemoveCondicao, path, level = 0 }) => {
+  const handleCondicaoChange = (index: number, field: keyof CondicaoTemporalidade, value: any) => {
+    setFormState(prev => {
+      const newFormState = JSON.parse(JSON.stringify(prev));
+      // This is a simplified traversal. For deep nesting, a recursive function would be better.
+      let conds = newFormState.condicoes;
+      path.forEach(p => {
+        if (typeof p === 'number') conds = conds[p];
+        else conds = conds[p];
       });
-    };
+      conds[index][field] = value;
+      
+      if (field === 'proximaPerguntaSeSim' && !value) conds[index].subCondicoesSeSim = [];
+      if (field === 'proximaPerguntaSeNao' && !value) conds[index].subCondicoesSeNao = [];
+      
+      return newFormState;
+    });
+  };
 
-    const addCondicao = (currentPath: (string|number)[]) => {
-      setFormState(prev => {
-        const newFormState = JSON.parse(JSON.stringify(prev));
-        let conds = newFormState.condicoes;
+  if (!condicoes || condicoes.length === 0) return null;
 
-        let targetArray = conds;
-        if(currentPath.length > 0) {
-            let currentItem = conds.find((c: any) => c.id === currentPath[0]);
-            for(let i=1; i<currentPath.length; i++) {
-              if (currentItem) {
-                targetArray = currentItem[currentPath[i]];
-                currentItem = targetArray.find((c: any) => c.id === currentPath[i+1]);
-                i++;
-              }
-            }
-        }
-        
-        targetArray.push({
-            id: `cond_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            pergunta: '',
-            prazoSeSim: undefined, destinacaoSeSim: 'Eliminação', proximaPerguntaSeSim: false, subCondicoesSeSim: [],
-            prazoSeNao: undefined, destinacaoSeNao: 'Guarda Permanente', proximaPerguntaSeNao: false, subCondicoesSeNao: [],
-        });
-        return newFormState;
-      });
-    }
+  return (
+      <div className="space-y-4" style={{ marginLeft: `${level * 10}px` }}>
+          {condicoes.map((cond, index) => (
+              <div key={cond.id} className="p-4 border rounded-md bg-muted/30 relative">
+                  <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => onRemoveCondicao(cond.id)}>
+                      <XCircle className="h-4 w-4" />
+                  </Button>
+                  <div className="space-y-2">
+                      <Label htmlFor={`pergunta-${cond.id}`}>Pergunta da Condição {level > 0 ? `${path.filter(p => typeof p === 'number').join('.')}.${index + 1}` : index + 1}</Label>
+                      <Input id={`pergunta-${cond.id}`} value={cond.pergunta} onChange={e => handleCondicaoChange(index, 'pergunta', e.target.value)} />
+                  </div>
 
-    const removeCondicao = (idToRemove: string) => {
-       setFormState(prev => {
-            const newFormState = JSON.parse(JSON.stringify(prev));
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Resposta SIM */}
+                      <div className="p-3 border rounded-md space-y-3">
+                          <h4 className="font-semibold text-green-600">Se a resposta for SIM:</h4>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox id={`prox-pergunta-sim-${cond.id}`} checked={cond.proximaPerguntaSeSim} onCheckedChange={checked => handleCondicaoChange(index, 'proximaPerguntaSeSim', !!checked)} />
+                              <Label htmlFor={`prox-pergunta-sim-${cond.id}`} className="font-normal">Ir para a próxima pergunta</Label>
+                          </div>
+                          {!cond.proximaPerguntaSeSim ? (
+                            <>
+                              <div className="space-y-2">
+                                  <Label htmlFor={`prazo-sim-${cond.id}`}>Prazo Guarda (Anos)</Label>
+                                  <Input type="number" id={`prazo-sim-${cond.id}`} value={cond.prazoSeSim ?? ""} onChange={e => handleCondicaoChange(index, 'prazoSeSim', e.target.value === "" ? undefined : parseInt(e.target.value, 10))} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor={`dest-sim-${cond.id}`}>Destinação Final</Label>
+                                  <Select value={cond.destinacaoSeSim} onValueChange={value => handleCondicaoChange(index, 'destinacaoSeSim', value)}>
+                                    <SelectTrigger id={`dest-sim-${cond.id}`}><SelectValue /></SelectTrigger>
+                                    <SelectContent><SelectItem value="Eliminação">Eliminação</SelectItem><SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem><SelectItem value="Ação">Ação</SelectItem></SelectContent>
+                                  </Select>
+                              </div>
+                              {cond.destinacaoSeSim === 'Ação' && (
+                                  <div className="space-y-2">
+                                      <Label htmlFor={`acao-sim-${cond.id}`}>Descreva a Ação</Label>
+                                      <Input id={`acao-sim-${cond.id}`} value={cond.destinacaoFinalAcaoSeSim || ''} onChange={e => handleCondicaoChange(index, 'destinacaoFinalAcaoSeSim', e.target.value)} />
+                                  </div>
+                              )}
+                            </>
+                          ) : (
+                            <Button type="button" variant="outline" size="sm" className="w-full mt-2" onClick={() => onAddCondicao([...path, index, 'subCondicoesSeSim'])}>
+                                <PlusCircle className="mr-2 h-3 w-3" /> Adicionar Sub-pergunta (Sim)
+                            </Button>
+                          )}
+                      </div>
 
-            const findAndRemove = (conds: CondicaoTemporalidade[], id: string): CondicaoTemporalidade[] => {
-                const index = conds.findIndex(c => c.id === id);
-                if (index > -1) {
-                    conds.splice(index, 1);
-                    return conds;
-                }
-                for (const cond of conds) {
-                    if (cond.subCondicoesSeSim) cond.subCondicoesSeSim = findAndRemove(cond.subCondicoesSeSim, id);
-                    if (cond.subCondicoesSeNao) cond.subCondicoesSeNao = findAndRemove(cond.subCondicoesSeNao, id);
-                }
-                return conds;
-            };
-
-            newFormState.condicoes = findAndRemove(newFormState.condicoes || [], idToRemove);
-            return newFormState;
-        });
-    };
-
-    if (!condicoes || condicoes.length === 0) return null;
-
-    return (
-        <div className="space-y-4" style={{ marginLeft: `${level * 20}px` }}>
-            {condicoes.map((cond, index) => (
-                <div key={cond.id} className="p-4 border rounded-md bg-muted/30 relative">
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeCondicao(cond.id)}>
-                        <XCircle className="h-4 w-4" />
-                    </Button>
-                    <div className="space-y-2">
-                        <Label htmlFor={`pergunta-${cond.id}`}>Pergunta da Condição {level > 0 ? `${path.join('.')}.${index + 1}` : index + 1}</Label>
-                        <Input id={`pergunta-${cond.id}`} value={cond.pergunta} onChange={e => handleCondicaoChange(index, 'pergunta', e.target.value)} />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Resposta SIM */}
+                      {/* Resposta NÃO */}
                         <div className="p-3 border rounded-md space-y-3">
-                            <h4 className="font-semibold text-green-600">Se a resposta for SIM:</h4>
-                             <div className="flex items-center space-x-2">
-                                <Checkbox id={`prox-pergunta-sim-${cond.id}`} checked={cond.proximaPerguntaSeSim} onCheckedChange={checked => handleCondicaoChange(index, 'proximaPerguntaSeSim', !!checked)} />
-                                <Label htmlFor={`prox-pergunta-sim-${cond.id}`} className="font-normal">Ir para a próxima pergunta</Label>
-                            </div>
-                            {!cond.proximaPerguntaSeSim && (
-                              <>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`prazo-sim-${cond.id}`}>Prazo Guarda (Anos)</Label>
-                                    <Input type="number" id={`prazo-sim-${cond.id}`} value={cond.prazoSeSim ?? ""} onChange={e => handleCondicaoChange(index, 'prazoSeSim', e.target.value === "" ? undefined : parseInt(e.target.value, 10))} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`dest-sim-${cond.id}`}>Destinação Final</Label>
-                                    <Select value={cond.destinacaoSeSim} onValueChange={value => handleCondicaoChange(index, 'destinacaoSeSim', value)}>
-                                      <SelectTrigger id={`dest-sim-${cond.id}`}><SelectValue /></SelectTrigger>
-                                      <SelectContent><SelectItem value="Eliminação">Eliminação</SelectItem><SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem><SelectItem value="Ação">Ação</SelectItem></SelectContent>
-                                    </Select>
-                                </div>
-                                {cond.destinacaoSeSim === 'Ação' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`acao-sim-${cond.id}`}>Descreva a Ação</Label>
-                                        <Input id={`acao-sim-${cond.id}`} value={cond.destinacaoFinalAcaoSeSim || ''} onChange={e => handleCondicaoChange(index, 'destinacaoFinalAcaoSeSim', e.target.value)} />
-                                    </div>
-                                )}
-                              </>
-                            )}
-                             {cond.proximaPerguntaSeSim && (
-                                <div className="pl-4 border-l-2 border-dashed">
-                                    <RenderCondicoes condicoes={cond.subCondicoesSeSim || []} setFormState={setFormState} path={[...path, cond.id, 'subCondicoesSeSim']} level={level + 1} />
-                                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addCondicao([...path, cond.id, 'subCondicoesSeSim'])}>
-                                        <PlusCircle className="mr-2 h-3 w-3" /> Adicionar Sub-pergunta
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Resposta NÃO */}
-                         <div className="p-3 border rounded-md space-y-3">
-                            <h4 className="font-semibold text-red-600">Se a resposta for NÃO:</h4>
-                             <div className="flex items-center space-x-2">
-                                <Checkbox id={`prox-pergunta-nao-${cond.id}`} checked={cond.proximaPerguntaSeNao} onCheckedChange={checked => handleCondicaoChange(index, 'proximaPerguntaSeNao', !!checked)} />
-                                <Label htmlFor={`prox-pergunta-nao-${cond.id}`} className="font-normal">Ir para a próxima pergunta</Label>
-                            </div>
-                            {!cond.proximaPerguntaSeNao && (
-                              <>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`prazo-nao-${cond.id}`}>Prazo Guarda (Anos)</Label>
-                                    <Input type="number" id={`prazo-nao-${cond.id}`} value={cond.prazoSeNao ?? ""} onChange={e => handleCondicaoChange(index, 'prazoSeNao', e.target.value === "" ? undefined : parseInt(e.target.value, 10))} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`dest-nao-${cond.id}`}>Destinação Final</Label>
-                                    <Select value={cond.destinacaoSeNao} onValueChange={value => handleCondicaoChange(index, 'destinacaoSeNao', value)}>
-                                      <SelectTrigger id={`dest-nao-${cond.id}`}><SelectValue /></SelectTrigger>
-                                      <SelectContent><SelectItem value="Eliminação">Eliminação</SelectItem><SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem><SelectItem value="Ação">Ação</SelectItem></SelectContent>
-                                    </Select>
-                                </div>
-                                 {cond.destinacaoSeNao === 'Ação' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`acao-nao-${cond.id}`}>Descreva a Ação</Label>
-                                        <Input id={`acao-nao-${cond.id}`} value={cond.destinacaoFinalAcaoSeNao || ''} onChange={e => handleCondicaoChange(index, 'destinacaoFinalAcaoSeNao', e.target.value)} />
-                                    </div>
-                                )}
-                              </>
-                            )}
-                            {cond.proximaPerguntaSeNao && (
-                                <div className="pl-4 border-l-2 border-dashed">
-                                    <RenderCondicoes condicoes={cond.subCondicoesSeNao || []} setFormState={setFormState} path={[...path, cond.id, 'subCondicoesSeNao']} level={level + 1} />
-                                     <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addCondicao([...path, cond.id, 'subCondicoesSeNao'])}>
-                                        <PlusCircle className="mr-2 h-3 w-3" /> Adicionar Sub-pergunta
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+                          <h4 className="font-semibold text-red-600">Se a resposta for NÃO:</h4>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox id={`prox-pergunta-nao-${cond.id}`} checked={cond.proximaPerguntaSeNao} onCheckedChange={checked => handleCondicaoChange(index, 'proximaPerguntaSeNao', !!checked)} />
+                              <Label htmlFor={`prox-pergunta-nao-${cond.id}`} className="font-normal">Ir para a próxima pergunta</Label>
+                          </div>
+                          {!cond.proximaPerguntaSeNao ? (
+                            <>
+                              <div className="space-y-2">
+                                  <Label htmlFor={`prazo-nao-${cond.id}`}>Prazo Guarda (Anos)</Label>
+                                  <Input type="number" id={`prazo-nao-${cond.id}`} value={cond.prazoSeNao ?? ""} onChange={e => handleCondicaoChange(index, 'prazoSeNao', e.target.value === "" ? undefined : parseInt(e.target.value, 10))} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor={`dest-nao-${cond.id}`}>Destinação Final</Label>
+                                  <Select value={cond.destinacaoSeNao} onValueChange={value => handleCondicaoChange(index, 'destinacaoSeNao', value)}>
+                                    <SelectTrigger id={`dest-nao-${cond.id}`}><SelectValue /></SelectTrigger>
+                                    <SelectContent><SelectItem value="Eliminação">Eliminação</SelectItem><SelectItem value="Guarda Permanente">Guarda Permanente</SelectItem><SelectItem value="Ação">Ação</SelectItem></SelectContent>
+                                  </Select>
+                              </div>
+                                {cond.destinacaoSeNao === 'Ação' && (
+                                  <div className="space-y-2">
+                                      <Label htmlFor={`acao-nao-${cond.id}`}>Descreva a Ação</Label>
+                                      <Input id={`acao-nao-${cond.id}`} value={cond.destinacaoFinalAcaoSeNao || ''} onChange={e => handleCondicaoChange(index, 'destinacaoFinalAcaoSeNao', e.target.value)} />
+                                  </div>
+                              )}
+                            </>
+                          ) : (
+                              <Button type="button" variant="outline" size="sm" className="w-full mt-2" onClick={() => onAddCondicao([...path, index, 'subCondicoesSeNao'])}>
+                                  <PlusCircle className="mr-2 h-3 w-3" /> Adicionar Sub-pergunta (Não)
+                              </Button>
+                          )}
+                      </div>
+                  </div>
+                  {/* Render sub-conditions outside the grid */}
+                  {cond.proximaPerguntaSeSim && (
+                      <div className="mt-4 pl-4 border-l-2 border-dashed border-green-500">
+                          <RenderCondicoes condicoes={cond.subCondicoesSeSim || []} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeSim']} level={level + 1} />
+                      </div>
+                  )}
+                  {cond.proximaPerguntaSeNao && (
+                      <div className="mt-4 pl-4 border-l-2 border-dashed border-red-500">
+                          <RenderCondicoes condicoes={cond.subCondicoesSeNao || []} setFormState={setFormState} onAddCondicao={onAddCondicao} onRemoveCondicao={onRemoveCondicao} path={[...path, index, 'subCondicoesSeNao']} level={level + 1} />
+                      </div>
+                  )}
+              </div>
+          ))}
+      </div>
+  );
 };
