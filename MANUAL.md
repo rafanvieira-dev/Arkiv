@@ -55,7 +55,37 @@ Gerenciamento da Tabela de Temporalidade e Destinação de Documentos (TTDD) par
 
 ### 4.4. Classes Judiciais (`/classes-judiciais`)
 
-Tabela de temporalidade específica para classes judiciais (ex: Procedimento Comum Cível). Funciona de forma similar à tela de Classificação, mas é focada nos códigos e prazos do âmbito judicial.
+Esta tela permite criar um "roteiro" inteligente para decidir o destino de processos judiciais. Pense nela como uma árvore de decisão "Se-Então" que o sistema seguirá ao cadastrar um documento no acervo.
+
+**Conceitos Principais:**
+
+*   **Temporalidade Padrão:** É a regra geral aplicada se nenhuma condição especial for atendida. Você define um prazo de guarda e uma destinação final padrão. A opção **"Ação"** permite que você escreva uma instrução personalizada (ex: "Digitalizar e devolver à vara de origem").
+
+*   **Condições de Temporalidade (A Árvore de Decisão):** Aqui está o poder da ferramenta. Você pode criar um fluxo de perguntas para definir o destino do processo com base nas respostas.
+
+**Como Construir uma Árvore de Decisão (Passo a Passo):**
+
+1.  **Crie a Primeira Pergunta:**
+    *   Clique em **"Adicionar Condição Principal"**.
+    *   No campo **"Pergunta da Condição"**, escreva sua pergunta. Exemplo: `O processo resultou em jurisprudência relevante?`
+
+2.  **Defina o Ramo "SIM":**
+    *   Na seção **"Se a resposta for SIM"**, defina o que acontece.
+    *   **Opção 1: Definir um Fim:** Se a resposta "Sim" já define o destino, desmarque a caixa "Ir para a próxima pergunta" e preencha o `Prazo de Guarda` e a `Destinação Final`. Ex: Para a pergunta acima, se a resposta for "Sim", a destinação pode ser "Guarda Permanente".
+    *   **Opção 2: Fazer uma Nova Pergunta (Sub-pergunta):** Se a resposta "Sim" levar a outra dúvida, marque a caixa **"Ir para a próxima pergunta"**. Um botão **"Adicionar Sub-pergunta (Sim)"** aparecerá. Clique nele para criar uma nova pergunta que só será feita se a anterior for respondida com "Sim".
+
+3.  **Defina o Ramo "NÃO":**
+    *   Faça o mesmo para a seção **"Se a resposta for NÃO"**. Você pode definir um destino final ou criar uma sub-pergunta completamente diferente.
+    *   Exemplo: Se a resposta para `O processo resultou em jurisprudência?` for "Não", você pode adicionar uma sub-pergunta como `O processo envolveu ente público?`.
+
+4.  **Construa a Árvore:**
+    *   Continue adicionando sub-perguntas para cada resposta, criando diferentes caminhos.
+    *   Cada nova sub-pergunta aparecerá com um título indicando sua origem (ex: *Sub-pergunta para a resposta "Sim" da condição: "O processo resultou em jurisprudência relevante?"*), tornando o fluxo claro.
+    *   O objetivo é que cada "galho" da sua árvore termine com uma destinação e um prazo definidos.
+
+**Como Funciona no Acervo:**
+
+Quando um usuário estiver cadastrando um "Processo Judicial" no Acervo e selecionar a Classe Judicial que você configurou, o sistema apresentará a primeira pergunta. Com base na resposta (Sim ou Não), o sistema mostrará a próxima sub-pergunta daquele caminho, guiando o usuário até que a temporalidade final seja calculada e aplicada automaticamente.
 
 ### 4.5. Listagens de Eliminação (`/listagens-eliminacao`)
 
